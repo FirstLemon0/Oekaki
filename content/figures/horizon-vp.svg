@@ -1,21 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
   <line x1="20" y1="230" x2="780" y2="230" stroke="#7BB661" stroke-width="3"/>
-  <text x="30" y="218" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">地平線＝目の高さ</text>
   <circle cx="400" cy="230" r="7" fill="#7BB661" stroke="none"/>
-  <text x="400" y="212" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">消失点</text>
-  <line x1="250" y1="440" x2="400" y2="230" stroke-width="3"/>
-  <line x1="550" y1="440" x2="400" y2="230" stroke-width="3"/>
-  <line x1="400" y1="419" x2="400" y2="395.2" stroke-width="3"/>
-  <line x1="400" y1="345.5" x2="400" y2="329.4" stroke-width="3"/>
-  <line x1="400" y1="297.2" x2="400" y2="286.2" stroke-width="3"/>
-  <line x1="110" y1="440" x2="110" y2="240" stroke-width="3"/>
-  <line x1="240.5" y1="345.5" x2="240.5" y2="235.5" stroke-width="3"/>
-  <line x1="307.2" y1="297.2" x2="307.2" y2="233.2" stroke-width="3"/>
-  <line x1="110" y1="240" x2="400" y2="230" stroke-dasharray="8 8" opacity="0.6"/>
-  <line x1="110" y1="440" x2="400" y2="230" stroke-dasharray="8 8" opacity="0.6"/>
-  <text x="620" y="150" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">目より上の線は</text>
-  <text x="620" y="178" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">下がって消失点へ</text>
-  <text x="620" y="330" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">目より下の線は</text>
-  <text x="620" y="358" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">上がって消失点へ</text>
-  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">平行な線は、遠くで1点（消失点）に集まって見える</text>
+  <text x="400" y="214" font-size="17" fill="#7BB661" stroke="none" text-anchor="middle">消失点</text>
+  <text x="72" y="218" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">地平線＝目の高さ</text>
+  <line x1="60" y1="50" x2="250" y2="150.6"/>
+  <line x1="60" y1="440" x2="250" y2="322.6"/>
+  <line x1="250" y1="150.6" x2="250" y2="322.6"/>
+  <line x1="740" y1="50" x2="550" y2="150.6"/>
+  <line x1="740" y1="440" x2="550" y2="322.6"/>
+  <line x1="550" y1="150.6" x2="550" y2="322.6"/>
+  <line x1="250" y1="150.6" x2="400" y2="230" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="250" y1="322.6" x2="400" y2="230" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="550" y1="150.6" x2="400" y2="230" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="550" y1="322.6" x2="400" y2="230" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="126.5" y1="85.2" x2="202.5" y2="125.4" stroke="#7BB661" stroke-width="3"/>
+  <path d="M188.5,124.9 L202.5,125.4 L194.2,114.2" stroke="#7BB661" stroke-width="3"/>
+  <line x1="126.5" y1="398.9" x2="202.5" y2="352" stroke="#7BB661" stroke-width="3"/>
+  <path d="M195,363.8 L202.5,352 L188.6,353.4" stroke="#7BB661" stroke-width="3"/>
+  <text x="400" y="82" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">目より上の線（天井の縁）は</text>
+  <text x="400" y="108" font-size="19" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">下がって消失点へ</text>
+  <text x="400" y="372" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">目より下の線（床の縁）は</text>
+  <text x="400" y="398" font-size="19" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">上がって消失点へ</text>
+  <text x="400" y="470" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">平行な線は、遠くで1点（消失点）に集まって見える</text>
 </svg>

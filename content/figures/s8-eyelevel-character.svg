@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <rect x="25" y="50" width="230" height="362" rx="4" stroke-width="2"/>
+  <circle cx="140" cy="128" r="24"/>
+  <line x1="134" y1="152" x2="134" y2="162"/>
+  <line x1="146" y1="152" x2="146" y2="162"/>
+  <path d="M110,170 Q140,160 170,170 L166,260 L114,260 Z"/>
+  <path d="M110,172 L100,250 M170,172 L180,250"/>
+  <path d="M114,260 L120,390 M138,270 L134,390 M142,270 L146,390 M166,260 L160,390"/>
+  <path d="M120,390 L110,398 M160,390 L170,398"/>
+  <line x1="25" y1="260" x2="94" y2="260" stroke="#7BB661" stroke-width="3"/>
+  <line x1="186" y1="260" x2="255" y2="260" stroke="#7BB661" stroke-width="3"/>
+  <text x="140" y="36" font-size="21" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">アオリ</text>
+  <text x="140" y="438" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">地平線が腰</text>
+  <rect x="285" y="50" width="230" height="362" rx="4" stroke-width="2"/>
+  <circle cx="400" cy="128" r="24"/>
+  <line x1="394" y1="152" x2="394" y2="162"/>
+  <line x1="406" y1="152" x2="406" y2="162"/>
+  <path d="M370,170 Q400,160 430,170 L426,260 L374,260 Z"/>
+  <path d="M370,172 L360,250 M430,172 L440,250"/>
+  <path d="M374,260 L380,390 M398,270 L394,390 M402,270 L406,390 M426,260 L420,390"/>
+  <path d="M380,390 L370,398 M420,390 L430,398"/>
+  <line x1="285" y1="128" x2="370" y2="128" stroke="#7BB661" stroke-width="3"/>
+  <line x1="430" y1="128" x2="515" y2="128" stroke="#7BB661" stroke-width="3"/>
+  <text x="400" y="36" font-size="21" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">目の高さ</text>
+  <text x="400" y="438" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">地平線が目</text>
+  <rect x="545" y="50" width="230" height="362" rx="4" stroke-width="2"/>
+  <circle cx="660" cy="128" r="24"/>
+  <line x1="654" y1="152" x2="654" y2="162"/>
+  <line x1="666" y1="152" x2="666" y2="162"/>
+  <path d="M630,170 Q660,160 690,170 L686,260 L634,260 Z"/>
+  <path d="M630,172 L620,250 M690,172 L700,250"/>
+  <path d="M634,260 L640,390 M658,270 L654,390 M662,270 L666,390 M686,260 L680,390"/>
+  <path d="M640,390 L630,398 M680,390 L690,398"/>
+  <line x1="545" y1="66" x2="775" y2="66" stroke="#7BB661" stroke-width="3"/>
+  <text x="660" y="36" font-size="21" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">俯瞰</text>
+  <text x="660" y="438" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">地平線が頭の上</text>
+  <text x="400" y="470" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">地平線（目の高さ）がキャラのどこを通るかで、見上げ・水平・見下ろしが決まる</text>
+</svg>

@@ -12,19 +12,19 @@
   <path d="M207.5,230.3 L210,240 L216,232" stroke="#7BB661" stroke-width="2.5"/>
   <text x="245" y="85" font-size="20" fill="#7BB661" stroke="none" text-anchor="start">つむじ</text>
   <text x="200" y="475" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">つむじから毛先へ流す</text>
-  <path d="M415,120 Q415,264 469,360 Q505,252 505,120" stroke-width="3.5"/>
-  <line x1="525" y1="240" x2="560" y2="240" stroke-width="2"/>
-  <path d="M549.2,245.2 L560,240 L549.2,234.8" stroke-width="2"/>
-  <path d="M578,120 Q578,256.8 604.4,348 Q622,245.4 622,120" stroke-width="3"/>
-  <path d="M624,120 Q624,235.2 650.4,312 Q668,225.6 668,120" stroke-width="3"/>
-  <line x1="690" y1="240" x2="715" y2="240" stroke-width="2"/>
-  <path d="M704.2,245.2 L715,240 L704.2,234.8" stroke-width="2"/>
-  <path d="M720,120 Q720,249.6 732,336 Q740,238.8 740,120" stroke-width="2"/>
-  <path d="M738,120 Q738,228 750,300 Q758,219 758,120" stroke-width="2"/>
-  <path d="M756,120 Q756,256.8 768,348 Q776,245.4 776,120" stroke-width="2"/>
-  <path d="M774,120 Q774,220.8 786,288 Q794,212.4 794,120" stroke-width="2"/>
-  <text x="460" y="405" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">大きな束</text>
-  <text x="623" y="405" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">2つに分ける</text>
-  <text x="757" y="405" font-size="19" fill="#7BB661" stroke="none" text-anchor="middle">細かく</text>
-  <text x="600" y="90" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">大きい束 → 小さい束の順に</text>
+  <path d="M405,120 Q405,264 459,360 Q495,252 495,120" stroke-width="3.5"/>
+  <line x1="510" y1="240" x2="540" y2="240" stroke-width="2"/>
+  <path d="M530.1,244.8 L540,240 L530.1,235.2" stroke-width="2"/>
+  <path d="M555,120 Q555,256.8 581.4,348 Q599,245.4 599,120" stroke-width="3"/>
+  <path d="M601,120 Q601,235.2 627.4,312 Q645,225.6 645,120" stroke-width="3"/>
+  <line x1="658" y1="240" x2="682" y2="240" stroke-width="2"/>
+  <path d="M672.1,244.8 L682,240 L672.1,235.2" stroke-width="2"/>
+  <path d="M693,120 Q693,249.6 705,336 Q713,238.8 713,120" stroke-width="2"/>
+  <path d="M711,120 Q711,228 723,300 Q731,219 731,120" stroke-width="2"/>
+  <path d="M729,120 Q729,256.8 741,348 Q749,245.4 749,120" stroke-width="2"/>
+  <path d="M747,120 Q747,220.8 759,288 Q767,212.4 767,120" stroke-width="2"/>
+  <text x="450" y="405" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">大きな束</text>
+  <text x="600" y="405" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">2つに分ける</text>
+  <text x="730" y="405" font-size="19" fill="#7BB661" stroke="none" text-anchor="middle">細かく</text>
+  <text x="590" y="90" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">大きい束 → 小さい束の順に</text>
 </svg>

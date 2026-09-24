@@ -1,36 +1,32 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
-  <line x1="80" y1="90" x2="420" y2="90"/>
-  <line x1="80" y1="145" x2="420" y2="145"/>
-  <line x1="80" y1="200" x2="420" y2="200"/>
-  <line x1="80" y1="255" x2="420" y2="255"/>
-  <line x1="80" y1="310" x2="420" y2="310"/>
-  <line x1="80" y1="365" x2="420" y2="365"/>
-  <line x1="450" y1="94" x2="450" y2="141" stroke="#7BB661" stroke-width="2"/>
-  <path d="M446.1,132.9 L450,141 L453.9,132.9" stroke="#7BB661" stroke-width="2"/>
-  <line x1="450" y1="141" x2="450" y2="94" stroke="#7BB661" stroke-width="2"/>
-  <path d="M453.9,102.1 L450,94 L446.1,102.1" stroke="#7BB661" stroke-width="2"/>
-  <line x1="450" y1="149" x2="450" y2="196" stroke="#7BB661" stroke-width="2"/>
-  <path d="M446.1,187.9 L450,196 L453.9,187.9" stroke="#7BB661" stroke-width="2"/>
-  <line x1="450" y1="196" x2="450" y2="149" stroke="#7BB661" stroke-width="2"/>
-  <path d="M453.9,157.1 L450,149 L446.1,157.1" stroke="#7BB661" stroke-width="2"/>
-  <line x1="450" y1="204" x2="450" y2="251" stroke="#7BB661" stroke-width="2"/>
-  <path d="M446.1,242.9 L450,251 L453.9,242.9" stroke="#7BB661" stroke-width="2"/>
-  <line x1="450" y1="251" x2="450" y2="204" stroke="#7BB661" stroke-width="2"/>
-  <path d="M453.9,212.1 L450,204 L446.1,212.1" stroke="#7BB661" stroke-width="2"/>
-  <line x1="450" y1="259" x2="450" y2="306" stroke="#7BB661" stroke-width="2"/>
-  <path d="M446.1,297.9 L450,306 L453.9,297.9" stroke="#7BB661" stroke-width="2"/>
-  <line x1="450" y1="306" x2="450" y2="259" stroke="#7BB661" stroke-width="2"/>
-  <path d="M453.9,267.1 L450,259 L446.1,267.1" stroke="#7BB661" stroke-width="2"/>
-  <line x1="450" y1="314" x2="450" y2="361" stroke="#7BB661" stroke-width="2"/>
-  <path d="M446.1,352.9 L450,361 L453.9,352.9" stroke="#7BB661" stroke-width="2"/>
-  <line x1="450" y1="361" x2="450" y2="314" stroke="#7BB661" stroke-width="2"/>
-  <path d="M453.9,322.1 L450,314 L446.1,322.1" stroke="#7BB661" stroke-width="2"/>
-  <text x="470" y="260" font-size="22" fill="#7BB661" stroke="none" text-anchor="start">同じ間隔</text>
-  <line x1="560" y1="380" x2="640" y2="120"/>
-  <line x1="590" y1="380" x2="670" y2="120"/>
-  <line x1="620" y1="380" x2="700" y2="120"/>
-  <line x1="650" y1="380" x2="730" y2="120"/>
-  <line x1="680" y1="380" x2="760" y2="120"/>
-  <text x="640" y="430" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">斜めでも同じ</text>
-  <text x="250" y="450" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">1本目を基準に、隣との間を見ながら引く</text>
+  <line x1="60" y1="90" x2="350" y2="90"/>
+  <line x1="60" y1="145" x2="350" y2="145"/>
+  <line x1="60" y1="200" x2="350" y2="200"/>
+  <line x1="60" y1="255" x2="350" y2="255"/>
+  <line x1="60" y1="310" x2="350" y2="310"/>
+  <line x1="60" y1="365" x2="350" y2="365"/>
+  <line x1="378" y1="94" x2="378" y2="141" stroke="#7BB661" stroke-width="2"/>
+  <path d="M381.9,102.1 L378,94 L374.1,102.1" stroke="#7BB661" stroke-width="2"/>
+  <path d="M374.1,132.9 L378,141 L381.9,132.9" stroke="#7BB661" stroke-width="2"/>
+  <line x1="378" y1="149" x2="378" y2="196" stroke="#7BB661" stroke-width="2"/>
+  <path d="M381.9,157.1 L378,149 L374.1,157.1" stroke="#7BB661" stroke-width="2"/>
+  <path d="M374.1,187.9 L378,196 L381.9,187.9" stroke="#7BB661" stroke-width="2"/>
+  <line x1="378" y1="204" x2="378" y2="251" stroke="#7BB661" stroke-width="2"/>
+  <path d="M381.9,212.1 L378,204 L374.1,212.1" stroke="#7BB661" stroke-width="2"/>
+  <path d="M374.1,242.9 L378,251 L381.9,242.9" stroke="#7BB661" stroke-width="2"/>
+  <line x1="378" y1="259" x2="378" y2="306" stroke="#7BB661" stroke-width="2"/>
+  <path d="M381.9,267.1 L378,259 L374.1,267.1" stroke="#7BB661" stroke-width="2"/>
+  <path d="M374.1,297.9 L378,306 L381.9,297.9" stroke="#7BB661" stroke-width="2"/>
+  <line x1="378" y1="314" x2="378" y2="361" stroke="#7BB661" stroke-width="2"/>
+  <path d="M381.9,322.1 L378,314 L374.1,322.1" stroke="#7BB661" stroke-width="2"/>
+  <path d="M374.1,352.9 L378,361 L381.9,352.9" stroke="#7BB661" stroke-width="2"/>
+  <text x="398" y="240" font-size="19" fill="#7BB661" stroke="none" text-anchor="start">同じ</text>
+  <text x="398" y="266" font-size="19" fill="#7BB661" stroke="none" text-anchor="start">間隔</text>
+  <line x1="501.3" y1="223.1" x2="656.9" y2="378.7"/>
+  <line x1="526.8" y1="197.7" x2="682.3" y2="353.2"/>
+  <line x1="552.2" y1="172.2" x2="707.8" y2="327.8"/>
+  <line x1="577.7" y1="146.8" x2="733.2" y2="302.3"/>
+  <line x1="603.1" y1="121.3" x2="758.7" y2="276.9"/>
+  <text x="630" y="420" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">45°（右下がり）でも同じ間隔</text>
+  <text x="400" y="470" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">1本目を基準に、隣との間を見ながら引く</text>
 </svg>

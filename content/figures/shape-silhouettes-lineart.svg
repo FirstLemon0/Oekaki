@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M70,250 L230,250 L230,380 L70,380 Z"/>
+  <path d="M55,250 L150,160 L245,250 Z"/>
+  <path d="M130,310 L170,310 L170,380 L130,380 Z"/>
+  <circle cx="400" cy="200" r="70"/>
+  <circle cx="350" cy="245" r="45"/>
+  <circle cx="450" cy="245" r="45"/>
+  <path d="M385,280 L415,280 L415,380 L385,380 Z"/>
+  <path d="M560,280 L760,280 L760,345 L560,345 Z"/>
+  <path d="M600,280 L625,225 L710,225 L735,280 Z"/>
+  <circle cx="610" cy="350" r="28"/>
+  <circle cx="710" cy="350" r="28"/>
+</svg>

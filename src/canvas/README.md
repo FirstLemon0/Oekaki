@@ -16,7 +16,7 @@
 | `color.ts` | `var(--x, fb)` を実色に解決 | 純関数 |
 | `crop.ts` | 書き出しの切り詰め範囲と倍率（`inkBounds` / `cropRect` / `exportScale`） | 純関数 |
 | `pen.ts` | `PEN_PRESETS`・`PALETTE_COLORS`・線幅／濃淡／入り抜き／ざらつきの計算 | 純関数 |
-| `erase.ts` | 消しゴムの点列側の処理: `flattenHistory`（履歴 → ペンだけの点列）・`eraseSegments`（軌跡でストロークを切り分ける） | 純関数 |
+| `erase.ts` | 消しゴムの点列側の処理: `flattenHistory`（履歴 → ペンだけの点列。補助線は読み飛ばす）・`eraseSegments`（軌跡でストロークを切り分ける） | 純関数 |
 | `grid.ts` | `GridSpec` の正規化（旧 `'thirds'`/`'quarters'` 変換）と線の位置 `gridLines` | 純関数 |
 | `index.ts` | 公開 API の再エクスポート | - |
 
@@ -103,6 +103,30 @@ engine.loadStrokes(strokes, styles);          // 従来の読み込み。styles 
   - 判定は線の中心線と消しゴムの距離（線幅は含めない）。見た目とは無関係の近似。
 - `toWebp` の切り詰め範囲は `getStrokes()`（消えた区間を除いた線）から出す。
 
+### 補助線（tool `'guide'`）
+
+当たり・目安を引くための薄い線。採点・本数・累計には数えない。
+
+```ts
+engine.setTool('guide');                       // 次の線から補助線（ペン設定は使わない）
+engine.getHistory().styles;                    // 補助線は { preset: 'guide', size: 1.5, opacity: 0.35 }
+isGuideStyle(style);                           // 補助線のスタイルか
+isNonInkStyle(style);                          // 消しゴム or 補助線（getStrokes() に出ない線）か
+```
+
+- 見た目: 幅 1.5px 一定（筆圧・入り抜き・ざらつきなし）、色は `--color-ink-2`（未定義なら `#5f5b54`。テーマ切替で `setOptions({ inkColor })` を渡し直すと再解決）、不透明度 0.35（1 本ずつ作業レイヤーに描いてから合成するので、折り返しても濃くならない）。破線にはしない。
+- **採点・本数・累計から除外**: `getStrokes()`／`getStyles()` には出さない（`flattenHistory` が読み飛ばす。消しゴムと同じ扱い）。`strokeend` も出さない（`change` は出る）。ドリル（採点対象）でも使える。
+- `getHistory()`／`loadHistory()`・Undo/Redo・全消しは普通の線と同じ（1 本で 1 手）。消しゴムで見た目は消える。
+- 再生（`replay`）と `toWebp`（保存画像）には薄く含める。`toWebp` の切り詰め範囲はペンの線だけから出す（補助線だけの絵は紙全体）。シルエット表示では出さない。
+- 保存: UI の `saveStrokes` は、履歴に消しゴムか補助線があれば `meta.history` に残し、画像も履歴から描く。`sanitizeStyle` は `preset: 'guide'` を固定値（1.5 / 0.35、色なし）に戻す。
+
+### 短い線（点）の扱い
+
+- エンジンは点（1 点だけのストローク）も線として残す（`pointercancel` で 1 点しか無いものだけ捨てる）。trace / copy / construct / free / mosha / gesture では点も残る。
+- 0.3px 未満の移動は点を足さない（同じ所の点を重ねない）。
+- **ドリル（1 本ごとに採点するもの）だけ**、点が 2 個未満、または長さ **12px 未満**（`DRILL_MIN_STROKE_PX`、`src/ui/lesson/drillSetup.ts` の `isTooShortForDrill`）の線を `strokeend` で Undo して取り消す（採点しない）。ハッチング（セットで採点）は取り消さない。
+- 消しゴムで切れて残った区間は、点が 2 個未満または長さ 0.5px 未満（`MIN_PIECE_LENGTH`）なら採点用の点列から捨てる。
+
 ### グリッドと左右反転
 
 - `grid`: `'none'`、`{ kind: 'divide', n: 2|3|4|6|8 }`（画面を n 等分）、`{ kind: 'pitch', px: 25|50|100 }`（左上原点の等間隔、CSS px）。旧 `'thirds'`/`'quarters'` も受け付ける。線はデバイス px の整数 + 0.5 に置いた 1px 線、色 `rgba(43,42,40,.12)`。中身が同じ GridSpec を渡し直しても描き直さない。
@@ -115,7 +139,8 @@ engine.loadStrokes(strokes, styles);          // 従来の読み込み。styles 
 - `DEFAULT_OPTIONS` を export。
 - `loadStrokes()` は履歴をリセットする（読み込み前へは Undo できない）。
 - `penOnly` の既定は `false`（契約に既定値の記載がないため。設定から渡す想定）。
-- `getHistory()` / `loadHistory(h)`（消しゴムを含む生の履歴）、`StrokeHistory`、`StrokeStyle.preset` の `'eraser'`、`historyOf(styles)`、`flattenHistory`、`isEraserStyle` を追加。`EraserStyle` は `{ size }`（`mode` は省略可・無視。型 `EraserMode` は後方互換のため残す）。
+- `getHistory()` / `loadHistory(h)`（消しゴムを含む生の履歴）、`StrokeHistory`、`StrokeStyle.preset` の `'eraser'`、`historyOf(styles)`、`flattenHistory`、`isEraserStyle` を追加。
+- `Tool` に `'guide'`（補助線）、`StrokeStyle.preset` に `'guide'`、`isGuideStyle` / `isNonInkStyle` / `guideStrokeStyle` / `GUIDE_WIDTH` / `GUIDE_OPACITY` を追加。`EraserStyle` は `{ size }`（`mode` は省略可・無視。型 `EraserMode` は後方互換のため残す）。
 - `toWebp(maxEdge, quality?, opts?)` の第 3 引数 `ToWebpOptions { crop?: boolean }`（既定 `true`）。紙全体が欲しいときは `{ crop: false }`。
 - `cropRect` / `inkBounds` / `exportScale` と余白定数を export（UI で切り詰め範囲を知りたい場合用）。`cropRect(d, baseWidth, styles?)` / `inkBounds(d, baseWidth, styles?)` は styles を渡すとペンごとの幅で計算する。
 - `PenPresetSpec.grain`（ざらつきの量）、`PALETTE_COLORS` / `PaletteColor`、`DEFAULT_PEN` / `DEFAULT_ERASER`、各範囲定数、`sanitizeStyle` / `normalizeHexColor`、`eraseSegments`、`normalizeGrid` / `gridLines` / `GRID_COLOR` を export。

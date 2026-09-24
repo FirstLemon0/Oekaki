@@ -34,8 +34,17 @@ export function loadFigure(id: string): Promise<string | null> {
  */
 export function svgForOverlay(svg: string, color: string): string {
   let s = svg.replace(/currentColor/g, color);
-  if (!/\swidth=/.test(s.slice(0, s.indexOf('>')))) {
-    s = s.replace('<svg', '<svg width="800" height="500"');
+  const head = s.slice(0, s.indexOf('>'));
+  // stroke-width= などに当たらないよう、空白の直後の width= だけを見る
+  if (!/\swidth=/.test(head)) {
+    // 縦横比は viewBox に合わせる（横に並べる図解＝inline SVG と同じ縮尺で重なるように）
+    const vb = /viewBox\s*=\s*"\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)\s*"/.exec(head);
+    const w = vb ? Number(vb[1]) : 800;
+    const h = vb ? Number(vb[2]) : 500;
+    const k = w > 0 && h > 0 ? 1600 / Math.max(w, h) : 1;
+    const W = w > 0 && h > 0 ? Math.round(w * k) : 800;
+    const H = w > 0 && h > 0 ? Math.round(h * k) : 500;
+    s = s.replace('<svg', `<svg width="${W}" height="${H}"`);
   }
   return s;
 }

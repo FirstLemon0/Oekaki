@@ -20,13 +20,11 @@
   <path d="M250,210 Q222,215 226,275 Q230,330 256,335"/>
   <path d="M550,210 Q578,215 574,275 Q570,330 544,335"/>
   <line x1="200" y1="190" x2="200" y2="340" stroke-width="1.5"/>
-  <path d="M196.5,332.8 L200,340 L203.5,332.8" stroke-width="1.5"/>
-  <line x1="200" y1="340" x2="200" y2="190" stroke-width="1.5"/>
   <path d="M203.5,197.2 L200,190 L196.5,197.2" stroke-width="1.5"/>
+  <path d="M196.5,332.8 L200,340 L203.5,332.8" stroke-width="1.5"/>
   <text x="190" y="270" font-size="20" fill="currentColor" stroke="none" text-anchor="end">耳</text>
   <line x1="372" y1="290" x2="428" y2="290" stroke="#7BB661" stroke-width="1.5"/>
-  <path d="M421.7,293 L428,290 L421.7,287" stroke="#7BB661" stroke-width="1.5"/>
-  <line x1="428" y1="290" x2="372" y2="290" stroke="#7BB661" stroke-width="1.5"/>
   <path d="M378.3,287 L372,290 L378.3,293" stroke="#7BB661" stroke-width="1.5"/>
-  <text x="400" y="315" font-size="14" fill="#7BB661" stroke="none" text-anchor="middle">目1つ分</text>
+  <path d="M421.7,293 L428,290 L421.7,287" stroke="#7BB661" stroke-width="1.5"/>
+  <text x="430" y="312" font-size="14" fill="#7BB661" stroke="none" text-anchor="start">目1つ分</text>
 </svg>

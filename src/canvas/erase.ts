@@ -5,7 +5,7 @@
 import type { Drawing, Stroke, StrokePoint, Vec2 } from '@/scoring/types';
 import type { StrokeStyle } from './types';
 import { distPointToSegment } from './hit';
-import { isEraserStyle } from './pen';
+import { isEraserStyle, isGuideStyle } from './pen';
 
 /** 消した後に残る区間がこれより短ければ捨てる（px） */
 export const MIN_PIECE_LENGTH = 0.5;
@@ -225,6 +225,7 @@ export function eraseSegments(
  * 消しゴムを含む生の履歴 → ペンのストロークだけの点列（getStrokes() / getStyles() の中身）。
  * 消しゴムストロークに出会うたびに、それまでのペンの線から軌跡（半径 = style.size）に入る部分を取り除く
  * （eraseSegments。残った連続区間は別のストロークに分ける）。消しゴムより後に描いた線は消えない。
+ * 補助線（preset 'guide'）は採点・保存用の点列に含めない（読み飛ばす）。
  */
 export function flattenHistory(
   strokes: Drawing,
@@ -234,6 +235,7 @@ export function flattenHistory(
   let outT: (StrokeStyle | undefined)[] = [];
   strokes.forEach((s, i) => {
     const st = styles[i];
+    if (isGuideStyle(st)) return;
     if (isEraserStyle(st)) {
       if (outS.length === 0 || s.length === 0) return;
       const r = eraseSegments(outS, outT, s, st.size);

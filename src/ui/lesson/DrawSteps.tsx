@@ -14,14 +14,15 @@ import type { Drawing, ScoreResult } from '@/scoring';
 import { Button, Segment } from '../components';
 import { CanvasScreen } from '../screens/CanvasScreen';
 import { CritiqueScreen, findRubric } from '../screens/CritiqueScreen';
-import { Figure, ReferencePicker, useBlobUrl, useBusy, useEngine } from './common';
-import { fitTemplate, type Size } from './drillSetup';
+import { Figure, ReferencePicker, useBlobUrl, useBusy, useEngine, ZoomableFigure } from './common';
+import { carryHistory, fitTemplate, type Size } from './drillSetup';
 import { loadFigure, svgForOverlay } from './figures';
 import { ScoreSheet } from './ScoreSheet';
 import {
   bumpForStep,
   freeDrawingKind,
   markBeforeAfter,
+  rememberCanvas,
   saveDrawingMeta,
   saveImported,
   saveStrokes,
@@ -29,6 +30,7 @@ import {
   type LessonSession,
 } from './stateBridge';
 import { ImportView, StepFrame } from './StepViews';
+import { LsIcon } from './LsIcon';
 
 export interface StepCtx {
   node: PathNode;
@@ -58,6 +60,19 @@ function RefView({ source }: { source: RefSource }) {
   const url = useBlobUrl(source.kind === 'user' ? source.ref.image : null);
   if (source.kind === 'builtin') return <Figure id={source.id} class="ls-refview__fig" label="お手本" />;
   return url ? <img class="ls-refview__img" src={url} alt="お手本" /> : null;
+}
+
+/**
+ * 横（縦向きなら上）に出すお手本。CanvasScreen の sideMatch と一緒に使い、紙と同じ大きさの枠に
+ * 収まる最大で出す（重ね表示と同じ大きさになる）。
+ */
+function RefSide({ source }: { source: RefSource }) {
+  return (
+    <div class="ls-refview" data-testid="ref-side">
+      <span class="ls-label ls-refview__label">お手本</span>
+      <RefView source={source} />
+    </div>
+  );
 }
 
 /** 重ね表示用の OverlaySpec を作る */
@@ -147,6 +162,7 @@ export function TraceRunner({ step, lessonId, session, onFinish, onExit }: Trace
       setBest((b) => (b === null ? scored.result.score : Math.max(b, scored.result.score)));
       rec.current = { saved: false, bumped: false, scored: false };
       if (last) {
+        rememberCanvas(session, engine);
         onFinish();
         return;
       }
@@ -227,7 +243,10 @@ export function CopyView({ step, ctx }: { step: CopyStep; ctx: StepCtx }) {
     const ok = await run(async () => {
       await saveStrokes(engine.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session, engine.getStyles());
     });
-    if (ok) ctx.onDone();
+    if (ok) {
+      rememberCanvas(ctx.session, engine);
+      ctx.onDone();
+    }
   };
 
   return (
@@ -235,12 +254,8 @@ export function CopyView({ step, ctx }: { step: CopyStep; ctx: StepCtx }) {
       engine={engine}
       error={error}
       task={comparing ? 'お手本を重ねました。形・大きさ・位置の違いを見てみましょう。' : step.instruction}
-      side={
-        <div class="ls-refview">
-          <span class="ls-label">お手本</span>
-          <RefView source={source} />
-        </div>
-      }
+      side={<RefSide source={source} />}
+      sideMatch
       overlay={overlay}
       onExit={ctx.onBack}
       onDone={comparing ? () => void finish() : () => setComparing(true)}
@@ -264,23 +279,54 @@ export function CopyView({ step, ctx }: { step: CopyStep; ctx: StepCtx }) {
 export function ConstructView({ step, ctx }: { step: ConstructStep; ctx: StepCtx }) {
   const engine = useEngine();
   const [k, setK] = useState(0);
+  const [cardOpen, setCardOpen] = useState(true);
   const { busy, error, run } = useBusy();
   const rec = useRef<{ saved: boolean | null; bumped: boolean }>({ saved: null, bumped: false });
+  // お手本（copy と同じ配置）。'user' は取込画像を選んでから始める
+  const [source, setSource] = useState<RefSource | null>(
+    step.reference === 'builtin' && step.refId ? { kind: 'builtin', id: step.refId } : null,
+  );
+  const needPick = step.reference === 'user' && !source;
+  /** keepPrevious: 直前の描くステップの線（開いた時点のもの）。紙の大きさが決まったら一度だけ読み込む */
+  const [carry] = useState(() => (step.keepPrevious ? ctx.session.lastCanvas : null));
+  const carried = useRef<{ done: boolean; historyLen: number }>({ done: false, historyLen: 0 });
   const stage = step.stages[k]!;
   const last = k + 1 >= step.stages.length;
+
+  const onSize = (size: Size) => {
+    if (!carry || carried.current.done || size.width <= 0 || size.height <= 0) return;
+    carried.current.done = true;
+    const h = carryHistory(carry.history, carry.size, size);
+    if (h.strokes.length === 0) return;
+    engine.loadHistory(h);
+    carried.current.historyLen = h.strokes.length;
+  };
 
   const finish = async () => {
     const ok = await run(async () => {
       const r = rec.current;
       if (r.saved === null) r.saved = (await saveStrokes(engine.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session, engine.getStyles())) !== null;
-      // 累計（counter があれば count ぶん）。何も描かずに進んだときは足さない
-      if (r.saved && !r.bumped) {
+      // 累計（counter があれば count ぶん）。何も描かずに進んだとき（引き継いだ線だけのときも）は足さない
+      const drewHere = engine.getHistory().strokes.length > carried.current.historyLen;
+      if (r.saved && drewHere && !r.bumped) {
         await bumpForStep(step, ctx.session);
         r.bumped = true;
       }
     });
-    if (ok) ctx.onDone();
+    if (ok) {
+      rememberCanvas(ctx.session, engine);
+      ctx.onDone();
+    }
   };
+
+  if (needPick) {
+    return (
+      <StepFrame class="ls-pick">
+        <p class="ls-prose">{step.instruction}</p>
+        <ReferencePicker onPick={(r) => setSource({ kind: 'user', ref: r })} />
+      </StepFrame>
+    );
+  }
 
   return (
     <CanvasScreen
@@ -289,27 +335,51 @@ export function ConstructView({ step, ctx }: { step: ConstructStep; ctx: StepCtx
       task={step.instruction}
       counter={`${k + 1}/${step.stages.length}`}
       onExit={ctx.onBack}
+      onSize={onSize}
+      side={source ? <RefSide source={source} /> : undefined}
+      sideMatch
       topLeft={
-        <div class="ls-construct">
-          {stage.figure && <Figure id={stage.figure} class="ls-construct__fig" label={stage.title} />}
-          <span class="ls-label ls-label--accent">
-            手順 <span class="num">{k + 1}</span>
-          </span>
-          <h3 class="ls-construct__title">{stage.title}</h3>
-          <p class="ls-construct__text">{stage.instruction}</p>
-          <div class="ls-construct__nav">
-            {k > 0 && (
-              <Button variant="ghost" size="sm" onClick={() => setK(k - 1)}>
-                前の手順
-              </Button>
-            )}
-            {!last && (
-              <Button variant="secondary" size="sm" onClick={() => setK(k + 1)}>
-                次の手順
-              </Button>
-            )}
+        <section class={cardOpen ? 'ls-construct' : 'ls-construct is-folded'} aria-label="手順" data-testid="construct-card">
+          {cardOpen && stage.figure && (
+            <div class="ls-construct__figwrap">
+              <ZoomableFigure id={stage.figure} class="ls-construct__fig" label={stage.title} />
+            </div>
+          )}
+          <div class="ls-construct__body">
+            <div class="ls-construct__head">
+              <span class="ls-label ls-label--accent">
+                手順 <span class="num">{k + 1}</span>
+                <span class="ls-construct__of">
+                  {' / '}
+                  <span class="num">{step.stages.length}</span>
+                </span>
+              </span>
+              <button
+                type="button"
+                class="ls-construct__fold"
+                aria-label={cardOpen ? '手順カードを畳む' : '手順カードを開く'}
+                aria-expanded={cardOpen}
+                onClick={() => setCardOpen(!cardOpen)}
+              >
+                <LsIcon name={cardOpen ? 'collapse' : 'expand'} size={20} />
+              </button>
+            </div>
+            <h3 class="ls-construct__title">{stage.title}</h3>
+            {cardOpen && <p class="ls-construct__text">{stage.instruction}</p>}
+            <div class="ls-construct__nav">
+              {k > 0 && (
+                <Button variant="ghost" size="sm" onClick={() => setK(k - 1)}>
+                  前の手順
+                </Button>
+              )}
+              {!last && (
+                <Button variant="secondary" size="sm" onClick={() => setK(k + 1)}>
+                  次の手順
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
+        </section>
       }
       onDone={() => void finish()}
       doneDisabled={!last || busy}
@@ -402,9 +472,9 @@ function MarkView({
 export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
   const engine = useEngine();
   const engine2 = useEngine();
-  // 内蔵のお手本（refId）があれば取込なしでそれを使う
-  const [source, setSource] = useState<RefSource | null>(step.refId ? { kind: 'builtin', id: step.refId } : null);
-  const [phase, setPhase] = useState<'pick' | 'draw' | 'mark' | 'modify'>(step.refId ? 'draw' : 'pick');
+  // 始めに「内蔵のお手本／自分の画像を取り込む」を選ぶ（refId があれば内蔵を既定＝先頭の大きなボタンにする）
+  const [source, setSource] = useState<RefSource | null>(null);
+  const [phase, setPhase] = useState<'pick' | 'draw' | 'mark' | 'modify'>('pick');
   const [first, setFirst] = useState<StoredDrawing | null>(null);
   const [n, setN] = useState(0);
   const [n2, setN2] = useState(0);
@@ -414,17 +484,38 @@ export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
   useEffect(() => engine.on('change', () => setN(engine.getStrokes().length)), [engine]);
   useEffect(() => engine2.on('change', () => setN2(engine2.getStrokes().length)), [engine2]);
 
-  const builtins = ctx.node.lesson.steps.flatMap((s) => (s.type === 'copy' && s.reference === 'builtin' && s.refId ? [s.refId] : []));
-  const uniqueBuiltins = [...new Set(builtins)];
+  const builtins = ctx.node.lesson.steps.flatMap((s) =>
+    (s.type === 'copy' || s.type === 'construct') && s.reference === 'builtin' && s.refId ? [s.refId] : [],
+  );
+  const uniqueBuiltins = [...new Set(builtins)].filter((id) => id !== step.refId);
 
   if (phase === 'pick' || !source) {
     return (
       <StepFrame class="ls-pick">
         <span class="ls-label ls-label--accent">模写チェックポイント</span>
         <p class="ls-prose">{step.instruction}</p>
+        {step.refId && (
+          <div class="ls-refpick ls-refpick--default" data-testid="mosha-builtin">
+            <h3 class="ls-refpick__title">内蔵のお手本（おすすめ）</h3>
+            <div class="ls-refpick__main">
+              <div class="ls-refpick__preview">
+                <Figure id={step.refId} label="内蔵のお手本" />
+              </div>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setSource({ kind: 'builtin', id: step.refId! });
+                  setPhase('draw');
+                }}
+              >
+                内蔵のお手本で描く
+              </Button>
+            </div>
+          </div>
+        )}
         {uniqueBuiltins.length > 0 && (
           <div class="ls-refpick">
-            <h3 class="ls-refpick__title">このレッスンのお手本</h3>
+            <h3 class="ls-refpick__title">{step.refId ? 'このレッスンのほかのお手本' : 'このレッスンのお手本'}</h3>
             <ul class="ls-refpick__grid">
               {uniqueBuiltins.map((id) => (
                 <li key={id}>
@@ -444,7 +535,7 @@ export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
           </div>
         )}
         <ReferencePicker
-          title="取り込んだ画像から選ぶ"
+          title={step.refId ? '自分の画像を取り込む（または取り込んだ画像から選ぶ）' : '取り込んだ画像から選ぶ'}
           onPick={(r) => {
             setSource({ kind: 'user', ref: r });
             setPhase('draw');
@@ -454,12 +545,7 @@ export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
     );
   }
 
-  const side = (
-    <div class="ls-refview">
-      <span class="ls-label">お手本</span>
-      <RefView source={source} />
-    </div>
-  );
+  const side = <RefSide source={source} />;
 
   if (phase === 'draw') {
     return (
@@ -468,7 +554,8 @@ export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
         engine={engine}
         task="お手本を横に見ながら模写しましょう。描き終えたら「完了」。"
         side={side}
-        onExit={step.refId ? ctx.onBack : () => setPhase('pick')}
+        sideMatch
+        onExit={() => setPhase('pick')}
         error={error}
         onDone={() => {
           if (first) {
@@ -506,6 +593,7 @@ export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
       engine={engine2}
       task="1か所だけ自由に変えて、もう1枚描きましょう。形・向き・大きさ、どれでもOKです。"
       side={side}
+      sideMatch
       onExit={() => setPhase('mark')}
       error={error}
       onDone={() => {
@@ -541,7 +629,9 @@ export function FreeStepView({ step, ctx }: { step: FreeStep; ctx: StepCtx }) {
       if (!saved.current) saved.current = await make();
       if (saved.current && step.save) await markBeforeAfter(saved.current.id, step.save);
     }).then((ok) => {
-      if (ok) ctx.onDone();
+      if (!ok) return;
+      if (step.source !== 'import') rememberCanvas(ctx.session, engine);
+      ctx.onDone();
     });
   };
 
@@ -570,6 +660,7 @@ export function FreeStepView({ step, ctx }: { step: FreeStep; ctx: StepCtx }) {
         const strokes = engine.getStrokes();
         const styles = engine.getStyles();
         if (n === 0 && !saved.current) {
+          rememberCanvas(ctx.session, engine);
           ctx.onDone();
           return;
         }

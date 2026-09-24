@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <ellipse cx="230" cy="110" rx="80" ry="16" stroke-width="3"/>
+  <line x1="150" y1="110" x2="80" y2="350"/>
+  <line x1="310" y1="110" x2="380" y2="350"/>
+  <line x1="153.9" y1="114.9" x2="87.3" y2="342.5" stroke-width="1.5" opacity="0.7"/>
+  <path d="M153.9,114.9 L165.3,119.4 L108.6,370 L87.3,342.5 Z" fill="currentColor" fill-opacity="0.12" stroke="none"/>
+  <line x1="165.3" y1="119.4" x2="108.6" y2="370" stroke-width="2.5"/>
+  <line x1="183" y1="122.9" x2="141.8" y2="359.5" stroke-width="1.5" opacity="0.7"/>
+  <path d="M183,122.9 L205.3,125.2 L183.6,382.3 L141.8,359.5 Z" fill="currentColor" fill-opacity="0.12" stroke="none"/>
+  <line x1="205.3" y1="125.2" x2="183.6" y2="382.3" stroke-width="2.5"/>
+  <line x1="230" y1="126" x2="230" y2="366" stroke-width="1.5" opacity="0.7"/>
+  <path d="M230,126 L254.7,125.2 L276.4,382.3 L230,366 Z" fill="currentColor" fill-opacity="0.12" stroke="none"/>
+  <line x1="254.7" y1="125.2" x2="276.4" y2="382.3" stroke-width="2.5"/>
+  <line x1="277" y1="122.9" x2="318.2" y2="359.5" stroke-width="1.5" opacity="0.7"/>
+  <path d="M277,122.9 L294.7,119.4 L351.4,370 L318.2,359.5 Z" fill="currentColor" fill-opacity="0.12" stroke="none"/>
+  <line x1="294.7" y1="119.4" x2="351.4" y2="370" stroke-width="2.5"/>
+  <line x1="306.1" y1="114.9" x2="372.7" y2="342.5" stroke-width="1.5" opacity="0.7"/>
+  <path d="M306.1,114.9 L310,110 L380,350 L372.7,342.5 Z" fill="currentColor" fill-opacity="0.12" stroke="none"/>
+  <path d="M80,350 L87.3,342.5 L108.6,370 L141.8,359.5 L183.6,382.3 L230,366 L276.4,382.3 L318.2,359.5 L351.4,370 L372.7,342.5 L380,350" stroke="#7BB661" stroke-width="3.5"/>
+  <circle cx="46" cy="110" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="46" y="116.5" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">1</text>
+  <text x="46" y="146" font-size="15" fill="currentColor" stroke="none" text-anchor="middle">ウエスト</text>
+  <circle cx="46" cy="230" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="46" y="236.5" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">2</text>
+  <text x="46" y="266" font-size="15" fill="currentColor" stroke="none" text-anchor="middle">山と谷</text>
+  <circle cx="46" cy="370" r="15" stroke="#7BB661" stroke-width="2"/>
+  <text x="46" y="376.5" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">3</text>
+  <text x="46" y="406" font-size="15" fill="#7BB661" stroke="none" text-anchor="middle">裾</text>
+  <text x="230" y="440" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">ウエストから放射状に折り線</text>
+  <text x="632" y="110" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">裾を真上から見ると</text>
+  <text x="632" y="136" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">ジグザグ（山・谷・山…）</text>
+  <path d="M500,300 L522,260 L544,300 L566,260 L588,300 L610,260 L632,300 L654,260 L676,300 L698,260 L720,300 L742,260 L764,300" stroke="#7BB661" stroke-width="3.5"/>
+  <circle cx="500" cy="300" r="4" fill="currentColor" stroke="none"/>
+  <circle cx="544" cy="300" r="4" fill="currentColor" stroke="none"/>
+  <circle cx="588" cy="300" r="4" fill="currentColor" stroke="none"/>
+  <circle cx="632" cy="300" r="4" fill="currentColor" stroke="none"/>
+  <circle cx="676" cy="300" r="4" fill="currentColor" stroke="none"/>
+  <circle cx="720" cy="300" r="4" fill="currentColor" stroke="none"/>
+  <circle cx="764" cy="300" r="4" fill="currentColor" stroke="none"/>
+  <text x="500" y="330" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">山</text>
+  <text x="522" y="246" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">谷</text>
+  <line x1="632" y1="360" x2="632" y2="318" stroke-width="2"/>
+  <path d="M638.1,330.6 L632,318 L625.9,330.6" stroke-width="2"/>
+  <text x="632" y="384" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">見る人の側</text>
+  <text x="632" y="420" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">山は手前に出て、裾が下がる</text>
+  <text x="632" y="444" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">谷は奥に入り、裾が上がる</text>
+  <text x="400" y="484" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">① ウエストの楕円 → ② 山・谷の折り線を交互に → ③ 裾をジグザグにつなぐ</text>
+</svg>

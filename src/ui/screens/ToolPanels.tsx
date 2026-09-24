@@ -3,6 +3,8 @@
  *
  * 選択中のツールをもう一度タップ（またはロングプレス 400ms）で開く。glass 地、当たり判定 48px。
  * 紙に触れた（pointerdown）ら閉じる（CanvasScreen 側）。値の保存も CanvasScreen 側。
+ * 補助線（ツールバーの「補助線」、点線の斜め線のアイコン）は設定が固定（1.5px・ink-2・不透明度 0.35）なので小パネルは無い。
+ * 補助線は採点・本数・累計に数えない。
  */
 import { PALETTE_COLORS, PEN_PRESETS, type PenPreset, type PenStyle } from '@/canvas';
 import { Slider } from '../components';

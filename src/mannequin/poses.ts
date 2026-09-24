@@ -324,6 +324,22 @@ export const POSES: readonly PoseDef[] = [
 
 export const POSE_IDS: readonly PoseId[] = POSES.map((p) => p.id);
 
+/** 出題グループ（教材の gesture.poseGroup）。all は全種 */
+export type PoseGroup = 'all' | 'standing' | 'sitting' | 'action';
+
+/** グループごとの母集団（pickPoseSequence の ids に渡す） */
+export const POSE_GROUPS: Readonly<Record<PoseGroup, readonly PoseId[]>> = {
+  all: POSE_IDS,
+  standing: ['stand', 'contrapposto', 'raise-hand', 'stretch', 'one-leg', 'turn'],
+  sitting: ['sit', 'crouch', 'lie', 'bend'],
+  action: ['walk', 'run', 'jump', 'throw', 'kick', 'look-back-walk'],
+};
+
+/** グループ名 → 母集団。未指定・知らない値は全種 */
+export function poseIdsOf(group: string | undefined | null): readonly PoseId[] {
+  return group && Object.prototype.hasOwnProperty.call(POSE_GROUPS, group) ? POSE_GROUPS[group as PoseGroup] : POSE_IDS;
+}
+
 const BY_ID = new Map<PoseId, PoseDef>(POSES.map((p) => [p.id, p]));
 
 export function getPose(id: PoseId): PoseDef {
@@ -374,4 +390,11 @@ export function pickPoseSequence(count: number, seed: number, ids: readonly Pose
     }
   }
   return out;
+}
+
+/** URL の ?seed=<0 以上の整数>（location.search。ハッシュの前）。無ければ null */
+export function seedFromSearch(search: string = typeof location !== 'undefined' ? location.search : ''): number | null {
+  const v = new URLSearchParams(search).get('seed');
+  if (v === null || !/^\d{1,10}$/.test(v)) return null;
+  return Number(v) >>> 0;
 }

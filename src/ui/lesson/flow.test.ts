@@ -26,6 +26,20 @@ const cur = loadCurriculum();
 const path = flattenPath(cur);
 const node = (id: string) => path.find((n) => n.lesson.id === id)!;
 
+/** なぞり 2 回（箱）＋構築 5 個（箱）の形のレッスン（実教材の組み替えに左右されない固定の形） */
+const boxLesson: Lesson = {
+  id: 's2-u2-l3',
+  title: '箱のテスト',
+  minutes: 10,
+  kind: 'lesson',
+  summary: 'x',
+  steps: [
+    { type: 'read', title: 't', body: 'b' },
+    { type: 'trace', template: 'cube-2pt', instruction: 'x', count: 2, counter: 'boxes' },
+    { type: 'construct', instruction: 'x', stages: [{ title: 'a', instruction: 'b' }], counter: 'boxes', count: 5 },
+  ],
+};
+
 async function clearAllStores(): Promise<void> {
   const db = await openDb();
   const names = Array.from(db.objectStoreNames);
@@ -62,8 +76,9 @@ describe('累計への加算量', () => {
     expect(stepCounterBump({ type: 'drill', drill: 'line', count: 3, instruction: 'x', counter: 'lines' })).toBeNull();
   });
 
-  it('実教材: s2-u2-l3 は なぞり 2 回＋構築 5 個', () => {
-    const steps = node('s2-u2-l3').lesson.steps;
+  // 実教材（s2-u2-l3 等）は教材担当が並行して組み替えるので、同じ形のステップで確かめる
+  it('なぞり 2 回＋構築 5 個（箱）の形のレッスン', () => {
+    const steps = boxLesson.steps;
     expect(stepCounterBump(steps[1]!)).toEqual({ kind: 'box', n: 1 });
     expect((steps[1] as TraceStep).count).toBe(2);
     expect(stepCounterBump(steps[2]!)).toEqual({ kind: 'box', n: 5 });
@@ -182,7 +197,7 @@ describe('途中再開（記録）', () => {
 
 describe('累計（記録）', () => {
   it('construct の count ぶん・trace は 1 回ぶん box が増え、セッションにも載る', async () => {
-    const lesson = node('s2-u2-l3').lesson;
+    const lesson = boxLesson;
     const session = getLessonSession(lesson, [], 0);
     await bumpForStep(lesson.steps[1]!, session); // なぞり 1 回目
     await bumpForStep(lesson.steps[1]!, session); // なぞり 2 回目

@@ -2,7 +2,7 @@
  * ドリルの「採点済みの線」の扱い（純ロジック。DrillRunner から使う）。
  */
 import type { Drawing, ScoreResult, Stroke, StrokePoint } from '@/scoring';
-import { isEraserStyle, type StrokeHistory } from '@/canvas';
+import { isNonInkStyle, type StrokeHistory } from '@/canvas';
 import { average } from './steps';
 
 /** 採点した 1 本（ハッチングは 1 セット） */
@@ -23,11 +23,11 @@ export function strokeKey(s: Stroke): string {
 }
 
 /**
- * 生の履歴（engine.getHistory()）からペンの線だけを、消しゴムで削る前の形で取り出す。
+ * 生の履歴（engine.getHistory()）からペンの線だけを（消しゴム・補助線を除き）、消しゴムで削る前の形で取り出す。
  * 採点済みの線との対応づけ（syncEntries）に使う。消しゴムで削っても線は履歴に残るので、点数は変わらない。
  */
 export function penStrokesOf(h: StrokeHistory): Drawing {
-  return h.strokes.filter((_, i) => !isEraserStyle(h.styles[i]));
+  return h.strokes.filter((_, i) => !isNonInkStyle(h.styles[i]));
 }
 
 /**

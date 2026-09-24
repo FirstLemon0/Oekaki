@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 /**
+ * 【適用済み・記録用】2026-09-24 の 1 回目の教材パッチ。すでに全部適用済みで、
+ * その後の修正（tools/patch-content-fix-a.mjs / -b.mjs）で前提の構造が変わっているため、
+ * そのまま実行すると失敗する。履歴として残しているだけで、再実行しないこと（--force で強行可）。
+ *
  * 教材 JSON（content/stages/*.json）を機械的に直すスクリプト。
  *
  *   node tools/patch-content.mjs          … 変更を書き込む
@@ -15,6 +19,10 @@
  *      （描き終えたときにまとめて加算）に合わせた文言へ直す
  *   3. drill: "pressure" の params.profile の別名（increasing 等）を正式な値へ
  */
+if (!process.argv.includes('--force')) {
+  console.log('tools/patch-content.mjs は適用済みの記録用スクリプトです。再実行は不要です（--force で強行）。');
+  process.exit(0);
+}
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';

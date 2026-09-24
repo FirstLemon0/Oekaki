@@ -58,18 +58,7 @@ function save(id, strokes) {
   console.log(id, strokes.length, 'strokes');
 }
 
-// ---- cube-1pt: 1点透視の立方体（正面の四角 → 奥行き4本 → 奥の辺）
-{
-  const vp = [0.8, 0.12];
-  const F = [[0.2, 0.38], [0.52, 0.38], [0.52, 0.88], [0.2, 0.88]];
-  const B = F.map((p) => lerp(p, vp, 0.3));
-  const s = [toStroke([...F, F[0]], 120)];
-  // 奥行きの辺（見える3本）
-  for (const i of [0, 1, 2]) s.push(toStroke([F[i], B[i]], 40));
-  // 奥の面の見える辺（上と右）
-  s.push(toStroke([B[0], B[1], B[2]], 80));
-  save('cube-1pt', s);
-}
+// cube-1pt → fix-2026-09.mjs で生成（2026-09 絵の先生レビューで作り直し。正面を正方形に。ここで再生成すると古い版に戻るので外した）
 
 // ---- cube-2pt: 2点透視の立方体（手前の縦線 → 左右の縦線 → 上下の辺 → 奥の角）
 {

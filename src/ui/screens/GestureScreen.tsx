@@ -1,7 +1,9 @@
 /**
  * ジェスチャー（DESIGN_SYSTEM §3 ジェスチャー）。
  * 左 560px のパネルにポーズ人形（three.js・遅延読み込み）／取込画像、右にキャンバス、上中央 mono 96 のタイマー。
- * ポーズ順は pickPoseSequence(count, seed)、角度と光源は roundView(seed, n) で 1 体ごとに変える。
+ * ポーズ順は pickPoseSequence(count, seed, poseIdsOf(poseGroup))、角度と光源は roundView(seed, n) で 1 体ごとに変える。
+ * poseGroup（教材の gesture.poseGroup: standing / sitting / action / all）で出題の母集団を絞る（既定 all）。
+ * URL の ?seed=<数> で seed を固定できる（E2E・不具合の再現用。例: /?seed=42#/lesson/…）。
  * 描いている間は人形を動かさない（ユーザーがドラッグしたときだけ回る）。
  * WebGL が使えない／読み込めないときは、同じ関節角から作った 2D 棒人形にフォールバックする。
  * 時間切れ（または「先に終える」）で見比べ画面（並べる／重ねる）→「次のポーズ」で count まで。
@@ -14,7 +16,7 @@ import type { Drawing } from '@/scoring';
 import type { ReferenceImage } from '@/data/types';
 import { listReferences } from '@/data/repo';
 import { MannequinView } from '@/mannequin/MannequinView';
-import { pickPoseSequence, type PoseId } from '@/mannequin/poses';
+import { pickPoseSequence, poseIdsOf, seedFromSearch, type PoseId } from '@/mannequin/poses';
 import { roundView } from '@/mannequin/camera';
 import type { CompareSnapshot, MannequinViewApi, ViewState } from '@/mannequin/view';
 import { Button, Segment } from '../components';
@@ -101,6 +103,7 @@ export interface GestureScreenProps {
 
 type GlState = 'loading' | 'ready' | 'unsupported';
 
+
 /** 描いている最中のポインター（時間切れで確定させるため） */
 interface LivePointer {
   target: EventTarget;
@@ -147,8 +150,9 @@ export function GestureScreen({ step, session, lessonId, onFinish, onExit }: Ges
   const livePointer = useRef<LivePointer | null>(null);
 
   // ポーズ人形: 出題順は 1 回のレッスンの中で固定
-  const [seed] = useState(() => (Math.random() * 2 ** 32) >>> 0);
-  const sequence = useMemo(() => pickPoseSequence(step.count, seed), [step.count, seed]);
+  const [seed] = useState(() => seedFromSearch() ?? (Math.random() * 2 ** 32) >>> 0);
+  const poseGroup = step.poseGroup ?? 'all';
+  const sequence = useMemo(() => pickPoseSequence(step.count, seed, poseIdsOf(poseGroup)), [step.count, seed, poseGroup]);
   const [gl, setGl] = useState<GlState>('loading');
   /** いま表示中の人形が ready になった回（`${i}-${round}`） */
   const [readyKey, setReadyKey] = useState<string | null>(null);
@@ -356,7 +360,7 @@ export function GestureScreen({ step, session, lessonId, onFinish, onExit }: Ges
       <span class="ls-muted">取り込んだ画像</span>
     </div>
   ) : (
-    <div class="ls-pose mq-side" data-gl={gl}>
+    <div class="ls-pose mq-side" data-gl={gl} data-pose={poseId} data-pose-group={poseGroup} data-testid="pose-side">
       <div class="ls-pose__frame">
         {(!mannequinLive || readyKey !== roundKey) && <PoseSvg pose={stick} class="ls-pose__svg" />}
         {mannequinLive && (

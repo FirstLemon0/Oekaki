@@ -19,6 +19,7 @@ import type {
   Vec2,
 } from '@/scoring';
 import { pressureProfileOf, type DrillType } from './steps';
+import type { StrokeStyle } from '@/canvas';
 
 export interface Size {
   width: number;
@@ -418,6 +419,34 @@ export function fitTemplate(template: Drawing, size: Size, fill = 0.82): Drawing
 export function rescaleMap(from: Size, to: Size): (q: StrokePoint) => StrokePoint {
   const k = Math.min(to.width, to.height) / Math.max(1, Math.min(from.width, from.height));
   return (q) => ({ ...q, x: to.width / 2 + (q.x - from.width / 2) * k, y: to.height / 2 + (q.y - from.height / 2) * k });
+}
+
+/**
+ * 前のステップの線（消しゴム・補助線を含む生の履歴）を、今の紙の大きさへ写す（rescaleMap と同じ規則）。
+ * 大きさが同じならそのままのコピー。styles は並びごと引き継ぐ。
+ */
+export function carryHistory(
+  h: { strokes: Drawing; styles: readonly (StrokeStyle | undefined)[] },
+  from: Size,
+  to: Size,
+): { strokes: Drawing; styles: (StrokeStyle | undefined)[] } {
+  const same = from.width === to.width && from.height === to.height;
+  const map = same ? (q: StrokePoint) => ({ ...q }) : rescaleMap(from, to);
+  return { strokes: h.strokes.map((s) => s.map(map)), styles: [...h.styles] };
+}
+
+/**
+ * ドリルで自動的に取り消す「点」の閾値: 点が 2 個未満、または線の長さ（折れ線の長さ）が 12px 未満。
+ * 取り消すのはドリル（1 本ごとに採点するもの）だけ。ハッチング（セットで採点）と、
+ * trace / copy / construct / free / mosha / gesture ではエンジンがそのまま残す。
+ */
+export const DRILL_MIN_STROKE_PX = 12;
+
+export function isTooShortForDrill(s: Stroke): boolean {
+  if (s.length < 2) return true;
+  let L = 0;
+  for (let i = 1; i < s.length; i++) L += Math.hypot(s[i]!.x - s[i - 1]!.x, s[i]!.y - s[i - 1]!.y);
+  return L < DRILL_MIN_STROKE_PX;
 }
 
 /** ヒートマップの色段階 */

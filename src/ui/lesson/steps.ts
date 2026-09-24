@@ -318,6 +318,29 @@ export function shuffledOrder(n: number, rnd: () => number = Math.random): numbe
   return order;
 }
 
+/**
+ * クイズの選択肢ラベル。表示の位置 i（0 始まり）→ ①②③…（⑳ まで。それより先は「21.」のような数字）。
+ * 並べ替えた後の表示の順に振る（元の番号ではない）。
+ */
+export function choiceMark(i: number): string {
+  if (i >= 0 && i < 20) return String.fromCharCode(0x2460 + i);
+  return `${i + 1}.`;
+}
+
+/** 選択肢の本文の先頭に残った「A: 」「B：」「(C) 」などの記号を外す（並べ替えると意味が無くなるため） */
+export function stripChoicePrefix(text: string): string {
+  const t = text.replace(/^\s*(?:[（(]\s*[A-DＡ-Ｄa-dａ-ｄ]\s*[)）]|[A-DＡ-Ｄa-dａ-ｄ]\s*[:：.．)）])\s*/, '');
+  return t.length > 0 ? t : text;
+}
+
+/**
+ * 表示用の選択肢: order（shuffledOrder の結果）の順に、①②③… を振った一覧。
+ * orig は元の番号（正解判定は orig === step.answer）。
+ */
+export function labeledChoices(texts: readonly string[], order: readonly number[]): { orig: number; mark: string; text: string }[] {
+  return order.map((orig, i) => ({ orig, mark: choiceMark(i), text: stripChoicePrefix(texts[orig] ?? '') }));
+}
+
 // ---------------------------------------------------------------------------
 // 箱の追加ドリル（250 箱チャレンジの加算経路）
 // ---------------------------------------------------------------------------

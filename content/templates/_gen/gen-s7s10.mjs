@@ -520,17 +520,7 @@ svg('s8-thumbnails', [
   }),
   title('切手サイズで10個。1個1分、上手さより「配置の違い」を出す'),
 ]);
-svg('s8-sky-ground', [
-  frame(80, 50, 640, 380),
-  line(80, 300, 720, 300, { stroke: G, 'stroke-width': 3 }),
-  text(700, 290, '地平線', { size: 17, anchor: 'end', color: G }),
-  path('M150,130 q20,-30 50,-10 q25,-25 55,0 q30,-5 30,20 q-10,20 -40,15 q-30,15 -60,0 q-35,5 -35,-25 Z', { opacity: 0.8 }),
-  path('M500,170 q15,-20 40,-8 q20,-15 40,5 q15,10 -5,20 l-70,0 q-15,-5 -5,-17 Z', { opacity: 0.6 }),
-  bust(400, 250, 1),
-  [0, 1, 2, 3].map((k) => line(120 + k * 160, 345 + k * 14, 180 + k * 160, 345 + k * 14, { opacity: 0.5 })),
-  text(100, 80, '空：上ほど濃く、地平線近くは薄く', { size: 16, anchor: 'start' }),
-  text(400, 470, '地平線の高さ＝見ている人の目の高さ', { size: 19 }),
-]);
+// s8-sky-ground → content/figures/_gen/fix-2026-09.mjs で生成（2026-09 絵の先生レビューで作り直し。ここで再生成すると古い版に戻るので外した）
 // s8-room-corner → tools/gen-review-figures.mjs で生成（2026-09 教材レビューで作り直し。ここで再生成すると古い版に戻るので外した）
 {
   const speed = [];
@@ -665,23 +655,9 @@ svg('s10-light-source', [
   text(560, 270, '③ 床に落ち影', { size: 20, anchor: 'start' }),
   title('光源の位置は、最初にキャンバスの隅へメモしておく'),
 ]);
-svg('s10-two-shadows', [
-  [
-    ['ベタ', null, null, '基本色'],
-    ['1影', '#E4AE95', null, '大きな影（形の影）'],
-    ['2影', '#E4AE95', '#C98670', '奥まった所だけ濃く'],
-  ].map(([n, s1, s2, d], i) => {
-    const cx = 150 + i * 250;
-    return [
-      shadedBall(cx, 220, 95, ['#F6D7C3', s1, s2], { idPrefix: 's10-two-shadows' }),
-      circle(cx, 220, 95),
-      text(cx, 360, n, { size: 22, weight: 700 }),
-      text(cx, 390, d, { size: 16 }),
-    ];
-  }),
-  sun(55, 60),
-  title('1影は広く、2影は狭く。2影は「くぼみ・重なり」にだけ'),
-]);
+// s10-two-shadows → content/figures/_gen/fix-2026-09.mjs で生成（2026-09 絵の先生レビューで作り直し。ここで再生成すると古い版に戻るので外した）
+// （この図が使っていた shadedBall の通し番号 3 つ分を進めて、後の図の clipPath の id を変えない）
+ballSeq += 3;
 svg('s10-highlight-bounce', [
   sun(110, 90),
   shadedBall(400, 240, 140, ['#8FB3D9', '#5E7FA8'], { idPrefix: 's10-highlight-bounce' }),

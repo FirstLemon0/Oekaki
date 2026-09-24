@@ -111,6 +111,52 @@
 .ls-figure svg { width: 100%; height: 100%; max-height: 100%; display: block; }
 .ls-figure.is-empty { min-height: 120px; }
 
+/* タップで拡大できる図解（read・構築の手順カード） */
+.ls-zoomfig {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  cursor: zoom-in;
+}
+.ls-zoomfig:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.ls-zoomfig__badge {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--glass);
+  border: 1px solid var(--glass-line);
+  color: var(--color-ink-2);
+  pointer-events: none;
+}
+/* 拡大シート: 画面幅の 80%（横 1472 なら約 1178px） */
+.ls-figsheet__scrim { z-index: 60; }
+.ls-figsheet {
+  width: 80vw;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5) var(--sp-5);
+  background: var(--color-surface);
+  border-radius: 16px;
+  box-shadow: var(--shadow-3);
+}
+.ls-figsheet__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.ls-figsheet__title { font-size: 18px; font-weight: 700; }
+.ls-figsheet__fig { width: 100%; height: auto; aspect-ratio: 8 / 5; max-height: calc(100dvh - 140px); }
+
 .ls-prose p { font-size: 18px; line-height: 1.9; margin: 0 0 1em; text-wrap: pretty; }
 
 /* read: grid 720 | 1fr */
@@ -157,7 +203,10 @@
 }
 .has-figures .ls-quiz__opt { flex-direction: column; align-items: stretch; }
 .ls-quiz__fig { height: 160px; }
-.ls-quiz__text { flex: 1; }
+.ls-quiz__text { flex: 1; display: flex; align-items: baseline; gap: 10px; }
+/* 並べ替えた後の表示順に振る ①②③④ */
+.ls-quiz__mark { flex: none; font-size: 20px; line-height: 1; color: var(--color-ink-2); font-variant-numeric: tabular-nums; }
+.ls-quiz__opt.is-answer .ls-quiz__mark { color: var(--color-accent-text); }
 .ls-quiz__opt.is-answer { border-color: var(--color-accent); background: var(--color-accent-soft); }
 .ls-quiz__opt.is-answer svg { color: var(--color-accent-text); }
 .ls-quiz__opt.is-chosen { border-color: var(--color-dash); }
@@ -202,6 +251,20 @@
   background: var(--color-canvas);
 }
 .ls-canvas.has-side { grid-template-columns: 560px minmax(0, 1fr); }
+/* お手本（sideMatch）: 紙と同じ大きさの枠。お手本は枠に収まる最大＝重ね表示と同じ大きさ */
+.ls-canvas.has-side.has-side-match { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.has-side-match .ls-refview { position: relative; padding: 0; gap: 0; }
+.has-side-match .ls-refview__label {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 1;
+  padding: 4px 12px;
+  background: var(--glass);
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-glass);
+}
+.has-side-match .ls-refview__fig, .has-side-match .ls-refview__img { width: 100%; height: 100%; }
 .ls-canvas__side { min-height: 0; min-width: 0; overflow: hidden; border-right: 1px solid var(--color-line); background: var(--color-surface); }
 .ls-canvas__stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
 .ls-canvas__paper { position: absolute; inset: 0; }
@@ -310,8 +373,22 @@
 }
 
 .ls-canvas__center { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 4; pointer-events: none; }
-.ls-canvas__topleft { position: absolute; top: 16px; left: 100px; z-index: 4; }
-.is-left .ls-canvas__topleft { left: 80px; }
+/* 左上の列（課題ピル＋構築の手順カード）。位置は CanvasScreen がツールバー＋グリッド欄の右隣に置く */
+.ls-canvas__topleft {
+  position: absolute;
+  top: 16px;
+  left: 244px;
+  z-index: 4;
+  width: clamp(360px, 30vw, 420px);
+  max-height: calc(100% - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+.ls-canvas__topleft .ls-task { position: static; transform: none; max-width: none; width: 100%; flex: none; }
+.ls-canvas__topleft .ls-task.is-folded { width: auto; align-self: flex-start; }
+.ls-canvas__topleft.is-portrait { width: auto; }
 
 /* ツールバー（左中央。左利きでは右端） */
 .ls-toolbar-wrap {
@@ -569,21 +646,46 @@
 .ls-refview__fig { flex: 1; min-height: 0; }
 .ls-refview__img { flex: 1; min-height: 0; width: 100%; object-fit: contain; }
 
-/* 構築の手順パネル */
+/* 構築の手順カード（幅 360〜420。図解は 280px 以上で、タップで拡大） */
 .ls-construct {
-  width: 300px;
+  min-height: 0;
+  overflow: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
   padding: var(--sp-4);
   background: var(--glass);
   border: 1px solid var(--glass-line);
   border-radius: var(--radius-glass);
 }
-.ls-construct__fig { height: 150px; background: var(--color-surface); border-radius: 10px; padding: 6px; }
-.ls-construct__title { font-size: 17px; font-weight: 700; margin: 0; }
-.ls-construct__text { font-size: 14px; line-height: 1.7; margin: 0; color: var(--color-ink-2); }
+.ls-construct__figwrap { flex: none; min-width: 280px; }
+.ls-construct__fig { width: 100%; height: auto; aspect-ratio: 8 / 5; background: var(--color-surface); padding: 6px; }
+.ls-construct__body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ls-construct__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.ls-construct__of { color: var(--color-ink-3); font-weight: 500; }
+.ls-construct__fold {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-ink-2);
+  cursor: pointer;
+}
+.ls-construct__title { font-size: 18px; font-weight: 700; margin: 0; }
+.ls-construct__text { font-size: 15px; line-height: 1.75; margin: 0; color: var(--color-ink); }
 .ls-construct__nav { display: flex; gap: var(--sp-2); justify-content: flex-end; }
+/* 縦向き: 上部に横長（図解が左、文が右） */
+.is-portrait .ls-construct { display: grid; grid-template-columns: minmax(280px, 44%) minmax(0, 1fr); column-gap: var(--sp-4); align-items: start; }
+.is-portrait .ls-construct.is-folded { display: flex; }
+
+/* 模写チェックポイント: 内蔵のお手本（既定） */
+.ls-refpick--default { width: 100%; }
+.ls-refpick__main { display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap; }
+.ls-refpick__preview { width: 280px; aspect-ratio: 8 / 5; padding: 8px; background: var(--color-surface); border: 1.5px solid var(--color-accent); border-radius: 12px; }
 
 /* ------------------------------------------------------------------ */
 /* 採点シート                                                           */
@@ -973,6 +1075,7 @@ a.ls-tomorrow:hover { background: var(--color-accent-soft); }
 
   /* キャンバス: ツールバーは上端横並び、その下 92px に課題ピル */
   .ls-canvas.has-side { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 36%) minmax(0, 1fr); }
+  .ls-canvas.has-side.has-side-match { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
   .ls-canvas__side { border-right: 0; border-bottom: 1px solid var(--color-line); }
   .ls-toolbar-wrap,
   .is-left .ls-toolbar-wrap {
@@ -990,8 +1093,6 @@ a.ls-tomorrow:hover { background: var(--color-accent-soft); }
   .ls-pop, .is-left .ls-pop { top: calc(100% + 12px); left: 0; right: auto; }
   .ls-task { top: 92px; max-width: calc(100% - 32px); }
   .ls-canvas__center { top: 84px; }
-  .ls-canvas__topleft, .is-left .ls-canvas__topleft { top: 160px; left: 16px; }
-  .ls-construct { width: 260px; }
 
   .ls-sheet { height: auto; max-height: 75%; overflow: auto; padding: 10px var(--sp-5) 20px; }
   .ls-sheet__grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-4); }

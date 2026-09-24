@@ -1,39 +1,42 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
-  <text x="400" y="45" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">表情＝眉・目・口の3つの記号の組み合わせ</text>
-  <text x="120" y="137" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">眉</text>
-  <path d="M247,135 Q232.6,129.2 218.2,135" stroke-width="3"/>
-  <path d="M273,135 Q287.4,129.2 301.8,135" stroke-width="3"/>
-  <rect x="338" y="85" width="124" height="90" rx="12" stroke="#7BB661" stroke-width="3"/>
-  <path d="M387,127.8 Q372.6,130.7 358.2,139.3" stroke-width="3" stroke="#7BB661"/>
-  <path d="M413,127.8 Q427.4,130.7 441.8,139.3" stroke-width="3" stroke="#7BB661"/>
-  <path d="M527,143.6 Q512.6,134.3 498.2,130.7" stroke-width="3"/>
-  <path d="M553,143.6 Q567.4,134.3 581.8,130.7" stroke-width="3"/>
-  <path d="M667,127.8 Q652.6,117.7 638.2,127.8" stroke-width="3"/>
-  <path d="M693,127.8 Q707.4,117.7 721.8,127.8" stroke-width="3"/>
-  <line x1="180" y1="187" x2="750" y2="187" stroke-width="1" opacity="0.3"/>
-  <text x="120" y="252" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">目</text>
-  <rect x="198" y="200" width="124" height="90" rx="12" stroke="#7BB661" stroke-width="3"/>
-  <path d="M221.8,240.7 Q232.6,229.9 243.4,240.7" stroke-width="3.5" stroke="#7BB661"/>
-  <ellipse cx="232.6" cy="245" rx="5.9" ry="10.8" stroke="#7BB661"/>
-  <path d="M276.6,240.7 Q287.4,229.9 298.2,240.7" stroke-width="3.5" stroke="#7BB661"/>
-  <ellipse cx="287.4" cy="245" rx="5.9" ry="10.8" stroke="#7BB661"/>
-  <path d="M361.8,249.3 Q372.6,230.6 383.4,249.3" stroke-width="3.5"/>
-  <path d="M416.6,249.3 Q427.4,230.6 438.2,249.3" stroke-width="3.5"/>
-  <ellipse cx="512.6" cy="245" rx="10.3" ry="15.8" stroke-width="2.5"/>
-  <circle cx="512.6" cy="245" r="3" fill="currentColor" stroke="none"/>
-  <ellipse cx="567.4" cy="245" rx="10.3" ry="15.8" stroke-width="2.5"/>
-  <circle cx="567.4" cy="245" r="3" fill="currentColor" stroke="none"/>
-  <path d="M641.8,245 L663.4,245" stroke-width="3.5"/>
-  <path d="M647.2,245 Q652.6,258 658,245" stroke-width="2"/>
-  <path d="M696.6,245 L718.2,245" stroke-width="3.5"/>
-  <path d="M702,245 Q707.4,258 712.8,245" stroke-width="2"/>
-  <line x1="180" y1="302" x2="750" y2="302" stroke-width="1" opacity="0.3"/>
-  <text x="120" y="367" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">口</text>
-  <path d="M245.6,352.8 Q260,363.6 274.4,352.8" stroke-width="3"/>
-  <rect x="338" y="315" width="124" height="90" rx="12" stroke="#7BB661" stroke-width="3"/>
-  <path d="M385.6,359.3 Q400,349.2 414.4,359.3" stroke-width="3" stroke="#7BB661"/>
-  <ellipse cx="540" cy="359.3" rx="6.5" ry="9.4" stroke-width="3"/>
-  <line x1="668.5" y1="355" x2="691.5" y2="355" stroke-width="3"/>
-  <line x1="180" y1="417" x2="750" y2="417" stroke-width="1" opacity="0.3"/>
-  <text x="400" y="460" font-size="19" fill="#7BB661" stroke="none" text-anchor="middle">例: 困り眉＋ふつうの目＋への字の口 → 悲しみ</text>
+  <text x="400" y="38" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">表情＝眉・目・口の3つの記号の組み合わせ</text>
+  <rect x="472" y="64" width="136" height="346" rx="12" stroke="#7BB661" stroke-width="3"/>
+  <text x="260" y="92" font-size="20" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">喜び</text>
+  <text x="400" y="92" font-size="20" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">怒り</text>
+  <text x="540" y="92" font-size="20" fill="#7BB661" stroke="none" text-anchor="middle" font-weight="700">悲しみ</text>
+  <text x="680" y="92" font-size="20" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">驚き</text>
+  <line x1="180" y1="106" x2="750" y2="106" stroke-width="1" opacity="0.3"/>
+  <text x="120" y="145" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">眉</text>
+  <text x="120" y="257" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">目</text>
+  <text x="120" y="364" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">口</text>
+  <line x1="180" y1="195" x2="750" y2="195" stroke-width="1" opacity="0.3"/>
+  <line x1="180" y1="305" x2="750" y2="305" stroke-width="1" opacity="0.3"/>
+  <line x1="180" y1="410" x2="750" y2="410" stroke-width="1" opacity="0.3"/>
+  <path d="M247,142 Q233,128 219,140" stroke-width="3"/>
+  <path d="M273,142 Q287,128 301,140" stroke-width="3"/>
+  <path d="M221,258 Q233,238 245,258" stroke-width="3.5"/>
+  <path d="M275,258 Q287,238 299,258" stroke-width="3.5"/>
+  <path d="M243,348 Q260,370 277,348 Z" stroke-width="3"/>
+  <path d="M388,130 L359,146" stroke-width="3.5"/>
+  <path d="M412,130 L441,146" stroke-width="3.5"/>
+  <path d="M386,240 L361,250" stroke-width="3.5"/>
+  <ellipse cx="373" cy="259" rx="6.5" ry="9"/>
+  <path d="M414,240 L439,250" stroke-width="3.5"/>
+  <ellipse cx="427" cy="259" rx="6.5" ry="9"/>
+  <path d="M383,362 L393,351 L407,351 L417,362" stroke-width="3"/>
+  <path d="M528,146 Q513,142 499,130" stroke-width="3"/>
+  <path d="M552,146 Q567,142 581,130" stroke-width="3"/>
+  <path d="M500,247 Q513,236 526,247" stroke-width="3.5"/>
+  <ellipse cx="513" cy="256" rx="6.5" ry="10"/>
+  <path d="M554,247 Q567,236 580,247" stroke-width="3.5"/>
+  <ellipse cx="567" cy="256" rx="6.5" ry="10"/>
+  <path d="M525,362 Q540,348 555,362" stroke-width="3"/>
+  <path d="M667,138 Q653,116 639,134" stroke-width="3"/>
+  <path d="M693,138 Q707,116 721,134" stroke-width="3"/>
+  <ellipse cx="653" cy="250" rx="10" ry="15"/>
+  <circle cx="653" cy="252" r="3" fill="currentColor" stroke="none"/>
+  <ellipse cx="707" cy="250" rx="10" ry="15"/>
+  <circle cx="707" cy="252" r="3" fill="currentColor" stroke="none"/>
+  <ellipse cx="680" cy="356" rx="8" ry="11" stroke-width="3"/>
+  <text x="400" y="455" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">例: 悲しみ＝困り眉（内側が上がる）＋ふつうの目＋への字の口</text>
 </svg>

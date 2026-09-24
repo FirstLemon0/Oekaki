@@ -18,7 +18,7 @@ import { downscaleToWebp } from '@/data/images';
 import { xpForDrillScore, xpForEvent } from '@/data/xp';
 import type { CounterKind, Drawing, DrawingKind, Progress, StrokeDrawing } from '@/data/types';
 import type { CritiqueResult } from '@/critic';
-import { createCanvasEngine, flattenHistory, historyOf, isEraserStyle, type StrokeHistory, type StrokeStyle } from '@/canvas';
+import { createCanvasEngine, flattenHistory, historyOf, isNonInkStyle, type StrokeHistory, type StrokeStyle } from '@/canvas';
 import type { Lesson } from '@/content/schema';
 import { completedIds, counters, critiques, drillStats, nextNode, path, profile, progress, reloadData, saveProfile, streak, uiPrefs } from '../state';
 import { baselineToRecord, scorersFor } from './limits';
@@ -58,6 +58,24 @@ export interface LessonSession {
   warmupsDone: number;
   /** 完了の記録の進み具合（失敗して押し直したときに二重に記録しないため） */
   finish: { streakBefore: number | null; lessonDone: boolean; streakAfter: number | null; completedBumped: boolean };
+  /**
+   * 直前に終えた描くステップ（trace / construct / copy / free）のキャンバス。
+   * construct の keepPrevious で、その線を残したまま始めるために使う（消しゴム・補助線を含む生の履歴と紙の大きさ）。
+   */
+  lastCanvas: CanvasCarry | null;
+}
+
+/** ステップをまたいで引き継ぐキャンバス */
+export interface CanvasCarry {
+  history: StrokeHistory;
+  size: { width: number; height: number };
+}
+
+/** 描くステップを終えたときに、そのキャンバスを覚えておく（次の construct の keepPrevious 用） */
+export function rememberCanvas(session: LessonSession | undefined, engine: { getHistory(): StrokeHistory; size(): { width: number; height: number } }): void {
+  if (!session) return;
+  const size = engine.size();
+  session.lastCanvas = size.width > 0 && size.height > 0 ? { history: engine.getHistory(), size } : null;
 }
 
 const sessions = new Map<string, LessonSession>();
@@ -73,6 +91,7 @@ function newSession(lesson: Lesson, due: readonly DueReview[], withWarmup: boole
     otherScores: [],
     warmupsDone: 0,
     finish: { streakBefore: null, lessonDone: false, streakAfter: null, completedBumped: false },
+    lastCanvas: null,
   };
 }
 
@@ -184,7 +203,8 @@ export async function saveStrokes(
   const st = styles && styles.some((s) => s !== undefined) ? strokes.map((_, i) => styles[i]) : undefined;
   const h = history ?? historyOf(styles);
   // 消しゴムを含み、strokes と同じ絵の履歴だけを使う（別の絵の履歴を取り違えない）
-  const hist = h && h.styles.some((s) => isEraserStyle(s)) && flattenHistory(h.strokes, h.styles).strokes.length === strokes.length ? h : null;
+  // 補助線も getStrokes() には出ないので、補助線を含む絵も履歴から描く（保存画像に薄く残す）
+  const hist = h && h.styles.some((s) => isNonInkStyle(s)) && flattenHistory(h.strokes, h.styles).strokes.length === strokes.length ? h : null;
   const tmp = createCanvasEngine();
   if (hist) tmp.loadHistory(hist);
   else tmp.loadStrokes(strokes, st);

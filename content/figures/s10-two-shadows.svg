@@ -1,27 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
-  <clipPath id="s10-two-shadows-ball2"><circle cx="150" cy="220" r="95"/></clipPath>
-  <g clip-path="url(#s10-two-shadows-ball2)"><circle cx="150" cy="220" r="95" fill="#F6D7C3" stroke="none"/></g>
-  <circle cx="150" cy="220" r="95"/>
-  <text x="150" y="360" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">ベタ</text>
-  <text x="150" y="390" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">基本色</text>
-  <clipPath id="s10-two-shadows-ball3"><circle cx="400" cy="220" r="95"/></clipPath>
-  <g clip-path="url(#s10-two-shadows-ball3)"><circle cx="400" cy="220" r="95" fill="#E4AE95" stroke="none"/><circle cx="367.7" cy="187.7" r="99.8" fill="#F6D7C3" stroke="none"/></g>
-  <circle cx="400" cy="220" r="95"/>
-  <text x="400" y="360" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">1影</text>
-  <text x="400" y="390" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">大きな影（形の影）</text>
-  <clipPath id="s10-two-shadows-ball4"><circle cx="650" cy="220" r="95"/></clipPath>
-  <g clip-path="url(#s10-two-shadows-ball4)"><circle cx="650" cy="220" r="95" fill="#C98670" stroke="none"/><circle cx="638.6" cy="208.6" r="96.9" fill="#E4AE95" stroke="none"/><circle cx="617.7" cy="187.7" r="99.8" fill="#F6D7C3" stroke="none"/></g>
-  <circle cx="650" cy="220" r="95"/>
-  <text x="650" y="360" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">2影</text>
-  <text x="650" y="390" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">奥まった所だけ濃く</text>
-  <circle cx="55" cy="60" r="22" stroke="#7BB661" stroke-width="3"/>
-  <line x1="85" y1="60" x2="97" y2="60" stroke="#7BB661" stroke-width="3"/>
-  <line x1="76.2" y1="81.2" x2="84.7" y2="89.7" stroke="#7BB661" stroke-width="3"/>
-  <line x1="55" y1="90" x2="55" y2="102" stroke="#7BB661" stroke-width="3"/>
-  <line x1="33.8" y1="81.2" x2="25.3" y2="89.7" stroke="#7BB661" stroke-width="3"/>
-  <line x1="25" y1="60" x2="13" y2="60" stroke="#7BB661" stroke-width="3"/>
-  <line x1="33.8" y1="38.8" x2="25.3" y2="30.3" stroke="#7BB661" stroke-width="3"/>
-  <line x1="55" y1="30" x2="55" y2="18" stroke="#7BB661" stroke-width="3"/>
-  <line x1="76.2" y1="38.8" x2="84.7" y2="30.3" stroke="#7BB661" stroke-width="3"/>
-  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">1影は広く、2影は狭く。2影は「くぼみ・重なり」にだけ</text>
+  <circle cx="55" cy="60" r="18" stroke="#7BB661" stroke-width="3"/>
+  <line x1="81" y1="60" x2="91" y2="60" stroke="#7BB661" stroke-width="3"/>
+  <line x1="73.4" y1="78.4" x2="80.5" y2="85.5" stroke="#7BB661" stroke-width="3"/>
+  <line x1="55" y1="86" x2="55" y2="96" stroke="#7BB661" stroke-width="3"/>
+  <line x1="36.6" y1="78.4" x2="29.5" y2="85.5" stroke="#7BB661" stroke-width="3"/>
+  <line x1="29" y1="60" x2="19" y2="60" stroke="#7BB661" stroke-width="3"/>
+  <line x1="36.6" y1="41.6" x2="29.5" y2="34.5" stroke="#7BB661" stroke-width="3"/>
+  <line x1="55" y1="34" x2="55" y2="24" stroke="#7BB661" stroke-width="3"/>
+  <line x1="73.4" y1="41.6" x2="80.5" y2="34.5" stroke="#7BB661" stroke-width="3"/>
+  <clipPath id="s10-two-shadows-flat"><circle cx="150" cy="215" r="95"/></clipPath>
+  <g clip-path="url(#s10-two-shadows-flat)"><circle cx="150" cy="215" r="95" fill="#F6D7C3" stroke="none"/></g>
+  <circle cx="150" cy="215" r="95"/>
+  <clipPath id="s10-two-shadows-one"><circle cx="400" cy="215" r="95"/></clipPath>
+  <g clip-path="url(#s10-two-shadows-one)"><circle cx="400" cy="215" r="95" fill="#E4AE95" stroke="none"/><circle cx="367.7" cy="182.7" r="99.8" fill="#F6D7C3" stroke="none"/></g>
+  <circle cx="400" cy="215" r="95"/>
+  <clipPath id="s10-two-shadows-two"><circle cx="650" cy="215" r="95"/></clipPath>
+  <g clip-path="url(#s10-two-shadows-two)"><circle cx="650" cy="215" r="95" fill="#E4AE95" stroke="none"/><circle cx="625.3" cy="190.3" r="114" fill="#C98670" stroke="none"/><circle cx="617.7" cy="182.7" r="99.8" fill="#F6D7C3" stroke="none"/></g>
+  <circle cx="650" cy="215" r="95"/>
+  <text x="150" y="355" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">ベタ</text>
+  <text x="150" y="385" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">基本色</text>
+  <text x="400" y="355" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">1影</text>
+  <text x="400" y="385" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">光が当たらない側</text>
+  <text x="650" y="355" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">1影＋2影</text>
+  <text x="650" y="385" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">2影は境界のすぐ先の帯</text>
+  <line x1="572" y1="330" x2="636.4" y2="292.1" stroke-width="1.3" opacity="0.75"/>
+  <text x="566" y="330" font-size="17" fill="currentColor" stroke="none" text-anchor="end">2影</text>
+  <line x1="748" y1="300" x2="729.6" y2="252.1" stroke-width="1.3" opacity="0.75"/>
+  <text x="758" y="318" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">反射光</text>
+  <text x="400" y="450" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">2影は境界のすぐ先に細く。ふちは反射光で明るめに残す</text>
 </svg>

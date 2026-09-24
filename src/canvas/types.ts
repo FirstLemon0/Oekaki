@@ -3,7 +3,8 @@ import type { Drawing, Stroke } from '@/scoring/types';
 
 export type { Drawing, Stroke, StrokePoint } from '@/scoring/types';
 
-export type Tool = 'pen' | 'eraser';
+/** 'guide' は補助線（採点・本数・累計に数えない薄い線。StrokeStyle の preset 'guide'） */
+export type Tool = 'pen' | 'eraser' | 'guide';
 
 /** ペンの種類。見た目のパラメータは PEN_PRESETS（pen.ts）。 */
 export type PenPreset = 'pencil' | 'pen' | 'brush' | 'marker';
@@ -40,11 +41,12 @@ export type GridSpec =
 
 /**
  * ストローク 1 本の見た目（getStrokes() と同じ順で getStyles() が返す）。
- * preset が 'eraser' のものは消しゴムストローク（size は半径、opacity は 1）。getHistory() にだけ現れ、
- * getStyles() には出てこない。
+ * preset が 'eraser' のものは消しゴムストローク（size は半径、opacity は 1）。
+ * preset が 'guide' のものは補助線（幅 1.5px・ink-2 色・不透明度 0.35 に固定）。
+ * どちらも getHistory() にだけ現れ、getStrokes() / getStyles() には出てこない。
  */
 export interface StrokeStyle {
-  preset: PenPreset | 'eraser';
+  preset: PenPreset | 'eraser' | 'guide';
   size: number;
   opacity: number;
   /** `#RRGGBB`。未指定は inkColor（テーマ追従） */
@@ -53,7 +55,7 @@ export interface StrokeStyle {
 
 /**
  * 消しゴムを含む生の描画履歴（描いた順）。strokes と styles は同じ並び・同じ長さ。
- * styles の 'eraser' は消しゴムストローク、undefined は旧データのペン。
+ * styles の 'eraser' は消しゴムストローク、'guide' は補助線、undefined は旧データのペン。
  */
 export interface StrokeHistory {
   strokes: Drawing;
@@ -116,13 +118,13 @@ export interface CanvasEngine {
   canUndo(): boolean;
   canRedo(): boolean;
   /**
-   * 採点・保存用の点列（コピー）。ペンのストロークだけを描いた順に返す。
+   * 採点・保存用の点列（コピー）。ペンのストロークだけを描いた順に返す（補助線・消しゴムは含めない）。
    * 消しゴムで消えた点は取り除き、残った連続区間を別のストロークに分ける（見た目とは無関係の近似: 中心線で判定）。
    */
   getStrokes(): Drawing;
   /** getStrokes() と同じ順・同じ長さのスタイル。undefined は旧データ（baseWidth のペン）。 */
   getStyles(): (StrokeStyle | undefined)[];
-  /** 再生・保存用: 消しゴムストロークを含む生の履歴（コピー）。 */
+  /** 再生・保存用: 消しゴム・補助線を含む生の履歴（コピー）。 */
   getHistory(): StrokeHistory;
   /** getHistory() の結果を読み戻す（loadStrokes(h.strokes, h.styles) と同じ）。履歴はリセット。 */
   loadHistory(h: { strokes: Drawing; styles?: (StrokeStyle | undefined)[] }): void;

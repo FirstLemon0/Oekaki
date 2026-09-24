@@ -16,17 +16,11 @@ import { isEraserStyle, type StrokeHistory } from '@/canvas';
 import { CanvasScreen } from '../screens/CanvasScreen';
 import { drillStats } from '../state';
 import { useEngine } from './common';
-import { drillSetup, heatBand, scoreDrill, type DrillSetup, type Size } from './drillSetup';
+import { drillSetup, heatBand, isTooShortForDrill, scoreDrill, type DrillSetup, type Size } from './drillSetup';
 import { ScoreSheet } from './ScoreSheet';
 import { bump, recordDrillScores, saveStrokes, scorers, type LessonSession } from './stateBridge';
 import { counterKindOf, isSetDrill } from './steps';
 import { penStrokesOf, strokeKey, summarizeEntries, syncEntries, type DrillEntry } from './drillEntries';
-
-function pathLen(s: Stroke): number {
-  let L = 0;
-  for (let i = 1; i < s.length; i++) L += Math.hypot(s[i]!.x - s[i - 1]!.x, s[i]!.y - s[i - 1]!.y);
-  return L;
-}
 
 function targetOf(setup: DrillSetup): Drawing | null {
   if (setup.curve) return [setup.curve];
@@ -196,8 +190,8 @@ export function DrillRunner({ step, session, lessonId, onFinish, onExit }: Drill
   useEffect(() => {
     const offStroke = engine.on('strokeend', (s) => {
       if (setDrill) return;
-      if (s.length < 2 || pathLen(s) < 12) {
-        // 点を打っただけ・ごく短い線は採点しない
+      if (isTooShortForDrill(s)) {
+        // 点を打っただけ・ごく短い線は採点しない（ドリルだけ取り消す。なぞり・見て描く・構築・自由は点も残す）
         engine.undo();
         return;
       }

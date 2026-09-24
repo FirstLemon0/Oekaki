@@ -6,8 +6,8 @@ import { useMemo, useState } from 'preact/hooks';
 import type { DrillStep, QuizStep, ReadStep } from '@/content/schema';
 import { Button, Icon } from '../components';
 import { drillStats } from '../state';
-import { Figure, ImportButton } from './common';
-import { DRILL_LABEL, shuffledOrder } from './steps';
+import { Figure, ImportButton, ZoomableFigure } from './common';
+import { DRILL_LABEL, labeledChoices, shuffledOrder } from './steps';
 
 /** レッスン本文の段落（空行区切り） */
 export function Paragraphs({ text, class: cls }: { text: string; class?: string }) {
@@ -50,7 +50,7 @@ export function ReadView({ step, onNext, warmupNote }: { step: ReadStep; onNext:
     >
       <div class="ls-read__grid">
         <div class="ls-card ls-read__figure">
-          {step.figure ? <Figure id={step.figure} label={step.title} /> : <div class="ls-figure is-empty" aria-hidden="true" />}
+          {step.figure ? <ZoomableFigure id={step.figure} label={step.title} /> : <div class="ls-figure is-empty" aria-hidden="true" />}
         </div>
         <div class="ls-read__text">
           <span class="ls-label ls-label--accent">説明</span>
@@ -220,10 +220,14 @@ export function DrillIntro({
 
 /**
  * 選択式。表示のたびに選択肢を並べ替える（教材は正解が 1 番目に偏っているため）。
+ * 並べ替えた後の表示の順に ①②③④ を振る（本文先頭の「A: 」などは外す）。
  * 正誤は「表示の位置 → 元の番号」の対応で判定する。
  */
 export function QuizView({ step, onNext }: { step: QuizStep; onNext: (correct: boolean) => void }) {
   const order = useMemo(() => shuffledOrder(step.options.length), [step]);
+  const choices = useMemo(() => labeledChoices(step.options.map((o) => o.text), order), [step, order]);
+  const markOf = (orig: number) => choices.find((c) => c.orig === orig)?.mark ?? '';
+  const textOf = (orig: number) => choices.find((c) => c.orig === orig)?.text ?? '';
   /** 選んだ元の選択肢の番号 */
   const [chosen, setChosen] = useState<number | null>(null);
   const answered = chosen !== null;
@@ -242,7 +246,7 @@ export function QuizView({ step, onNext }: { step: QuizStep; onNext: (correct: b
         <span class="ls-label ls-label--accent">クイズ</span>
         <h2 class="ls-h-lesson">{step.question}</h2>
         <ul class={hasFigures ? 'ls-quiz__opts has-figures' : 'ls-quiz__opts'} role="radiogroup" aria-label="選択肢">
-          {order.map((orig) => {
+          {choices.map(({ orig, mark, text }) => {
             const o = step.options[orig]!;
             const state = !answered ? '' : orig === step.answer ? 'is-answer' : orig === chosen ? 'is-chosen' : 'is-dim';
             return (
@@ -255,8 +259,13 @@ export function QuizView({ step, onNext }: { step: QuizStep; onNext: (correct: b
                   disabled={answered}
                   onClick={() => setChosen(orig)}
                 >
-                  {o.figure && <Figure id={o.figure} class="ls-quiz__fig" label={o.text} />}
-                  <span class="ls-quiz__text">{o.text}</span>
+                  {o.figure && <Figure id={o.figure} class="ls-quiz__fig" label={text} />}
+                  <span class="ls-quiz__text">
+                    <span class="ls-quiz__mark">
+                      {mark}
+                    </span>
+                    {text}
+                  </span>
                   {answered && orig === step.answer && <Icon name="check" size={22} />}
                 </button>
               </li>
@@ -265,7 +274,7 @@ export function QuizView({ step, onNext }: { step: QuizStep; onNext: (correct: b
         </ul>
         {answered && (
           <div class={correct ? 'ls-explain is-correct' : 'ls-explain'} role="status">
-            <strong>{correct ? '正解です。' : '答えは「' + (step.options[step.answer]?.text ?? '') + '」です。'}</strong>
+            <strong>{correct ? '正解です。' : `答えは ${markOf(step.answer)}「${textOf(step.answer)}」です。`}</strong>
             <p>{step.explain}</p>
           </div>
         )}

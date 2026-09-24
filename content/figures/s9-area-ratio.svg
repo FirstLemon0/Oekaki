@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <rect x="60" y="60" width="476" height="50" fill="#DDE6EE" stroke="none"/>
+  <rect x="536" y="60" width="170" height="50" fill="#3E5A86" stroke="none"/>
+  <rect x="706" y="60" width="34" height="50" fill="#E0473C" stroke="none"/>
+  <rect x="60" y="60" width="680" height="50" stroke-width="2"/>
+  <text x="298" y="140" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">ベース 70%</text>
+  <text x="621" y="140" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">メイン 25%</text>
+  <text x="723" y="140" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">5%</text>
+  <text x="723" y="162" font-size="14" fill="currentColor" stroke="none" text-anchor="middle">アクセント</text>
+  <g transform="translate(44 123) scale(0.72)" stroke-width="3.2">
+  <path d="M250,300 Q250,250 300,242 L340,236 L372,236 L412,242 Q462,250 462,300 L470,440 L242,440 Z" fill="#DDE6EE"/>
+  <path d="M318,236 L356,290 L394,236" stroke-width="2.6"/>
+  <path d="M338,244 L356,268 L374,244 L382,262 L356,278 L330,262 Z" fill="#E0473C"/>
+  <rect x="340" y="206" width="32" height="34" fill="#F6D7C3"/>
+  <ellipse cx="356" cy="160" rx="52" ry="60" fill="#F6D7C3"/>
+  <path d="M300,170 Q288,90 356,86 Q424,90 412,170 L404,140 L386,158 L370,124 L352,156 L336,126 L318,158 L308,140 Z" fill="#3E5A86"/>
+  <path d="M300,160 Q292,220 304,262 L318,258 Q308,210 312,170 Z" fill="#3E5A86"/>
+  <path d="M412,160 Q420,220 408,262 L394,258 Q404,210 400,170 Z" fill="#3E5A86"/>
+  <circle cx="336" cy="170" r="6" fill="#3E5A86" stroke="none"/>
+  <circle cx="376" cy="170" r="6" fill="#3E5A86" stroke="none"/>
+  <path d="M348,194 Q356,199 364,194" stroke-width="2.6"/>
+  </g>
+  <rect x="540" y="220" width="26" height="26" fill="#DDE6EE" stroke-width="1.5"/>
+  <text x="578" y="240" font-size="17" fill="currentColor" stroke="none" text-anchor="start">服（広い面）＝ベース</text>
+  <rect x="540" y="280" width="26" height="26" fill="#3E5A86" stroke-width="1.5"/>
+  <text x="578" y="300" font-size="17" fill="currentColor" stroke="none" text-anchor="start">髪・目＝メイン</text>
+  <rect x="540" y="340" width="26" height="26" fill="#E0473C" stroke-width="1.5"/>
+  <text x="578" y="360" font-size="17" fill="currentColor" stroke="none" text-anchor="start">リボン＝アクセント</text>
+  <text x="578" y="385" font-size="15" fill="currentColor" stroke="none" text-anchor="start">（小さく1か所）</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">広い面ほど落ち着いた色。目立つ色はほんの少しだけ</text>
+</svg>

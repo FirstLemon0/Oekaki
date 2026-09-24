@@ -129,13 +129,17 @@ describe('教材の全件ロードと参照', () => {
 describe('選択式（U10-2 塗り技法）', () => {
   const s10 = loadCurriculum().stages.find((s) => s.id === 's10')!;
 
-  it('U10-2 の 9 レッスンがすべて optional', () => {
+  it('U10-2 の 10 レッスンがすべて optional で、各技法の最初だけに「飛ばして OK」の案内がある', () => {
     const u2 = s10.units.find((u) => u.id === 's10-u2')!;
-    expect(u2.lessons).toHaveLength(9);
+    expect(u2.lessons).toHaveLength(10);
+    // 技法の先頭レッスン（アニメ塗り l1・厚塗り l5・水彩風 l8）
+    const heads = new Set(['s10-u2-l1', 's10-u2-l5', 's10-u2-l8']);
     for (const l of u2.lessons) {
       expect(l.optional).toBe(true);
       const first = l.steps.find((st) => st.type === 'read');
-      expect(first && first.type === 'read' && first.body.startsWith('この技法をやらない場合は、ヘッダの「この技法は飛ばす」で3課とも飛ばして OK です。')).toBe(true);
+      const startsWithSkip =
+        !!first && first.type === 'read' && first.body.startsWith('この技法をやらない場合は、ヘッダの「この技法は飛ばす」で');
+      expect(startsWithSkip, l.id).toBe(heads.has(l.id));
     }
   });
 
@@ -153,12 +157,13 @@ describe('累計カウンター（trace / construct）', () => {
     ),
   );
 
-  it('U2-2 の箱の構築となぞりに boxes が付いている', () => {
+  it('U2-2 の箱の構築に boxes が付いている（なぞりは数えない）', () => {
     const ids = withCounter.filter((x) => x.id.startsWith('s2-u2-')).map((x) => `${x.id}[${x.i}]`);
-    for (const want of ['s2-u2-l1[1]', 's2-u2-l1[2]', 's2-u2-l2[1]', 's2-u2-l2[2]', 's2-u2-l3[1]', 's2-u2-l3[2]', 's2-u2-l6[1]', 's2-u2-l6[2]']) {
+    for (const want of ['s2-u2-l1[2]', 's2-u2-l2[2]', 's2-u2-l3[1]', 's2-u2-l3[2]', 's2-u2-l6[1]', 's2-u2-l6[2]']) {
       expect(ids).toContain(want);
     }
     for (const x of withCounter) expect(x.step.counter).toBe('boxes');
+    expect(withCounter.filter((x) => x.step.type === 'trace').map((x) => x.id)).toEqual([]);
   });
 
   it('「箱カウンターにN個加わります」の N と construct の count が一致する', () => {

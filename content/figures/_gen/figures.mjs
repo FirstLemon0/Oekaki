@@ -75,20 +75,7 @@ const NUMS = ['①', '②', '③', '④', '⑤', '⑥'];
 
 // ================================================================ ステージ1
 
-// ゴースティング: 空中で3回なぞる → 引く
-svg('ghosting', [
-  dot(90, 300), dot(330, 220),
-  [0, 1, 2].map((i) => path(`M90,${300 - 28 - i * 22} Q210,${230 - 40 - i * 22} 330,${220 - 28 - i * 22}`, { ...DASH })),
-  num(360, 190, 1), num(360, 160, 2), num(360, 130, 3),
-  text(210, 110, '浮かせて3回なぞる'),
-  arrow(410, 250, 470, 250, { width: 3 }),
-  dot(500, 300), dot(740, 220),
-  line(500, 300, 740, 220, { stroke: G, 'stroke-width': 5 }),
-  num(760, 190, 4, G),
-  text(620, 340, '一気に引く', { color: G }),
-  text(90, 330, '始点', { size: 18 }), text(330, 250, '終点', { size: 18 }),
-  text(400, 440, '点を置く → 空中で動きを予行 → 迷わず1本', { size: 20 }),
-]);
+// ghosting → _gen/fix-2026-09.mjs で生成（2026-09 絵の先生レビューで作り直し。ここで再生成すると古い版に戻るので外した）
 
 // 手首・肘・肩の可動範囲
 {
@@ -122,15 +109,7 @@ svg('ghosting', [
   ]);
 }
 
-// 等間隔の平行線
-svg('parallel-spacing', [
-  [0, 1, 2, 3, 4, 5].map((i) => line(80, 90 + i * 55, 420, 90 + i * 55)),
-  [0, 1, 2, 3, 4].map((i) => dim(450, 94 + i * 55, 450, 141 + i * 55, { color: G, head: 9, width: 2 })),
-  text(470, 260, '同じ間隔', { anchor: 'start', color: G }),
-  [0, 1, 2, 3, 4].map((i) => line(560 + i * 30, 380, 640 + i * 30, 120)),
-  text(640, 430, '斜めでも同じ', { size: 20 }),
-  text(250, 450, '1本目を基準に、隣との間を見ながら引く', { size: 20 }),
-]);
+// parallel-spacing → _gen/fix-2026-09.mjs で生成（2026-09 絵の先生レビューで作り直し。ここで再生成すると古い版に戻るので外した）
 
 // Cカーブ・Sカーブ
 svg('c-curve-s-curve', [
@@ -253,40 +232,7 @@ svg('cylinder-mouth', [
   ]);
 }
 
-// ハッチング
-{
-  const hatch = (x0, y0, s, sp, dir) => {
-    const out = [];
-    if (dir > 0) {
-      // 「／」向き: (x-x0)+(y-y0)=c
-      for (let c = sp; c < 2 * s; c += sp) {
-        const xa = Math.max(0, c - s);
-        const xb = Math.min(s, c);
-        out.push(line(x0 + xa, y0 + c - xa, x0 + xb, y0 + c - xb, { 'stroke-width': 2 }));
-      }
-    } else {
-      // 「＼」向き: (x-x0)-(y-y0)=c
-      for (let c = -s + sp; c < s; c += sp) {
-        const xa = Math.max(0, c);
-        const xb = Math.min(s, s + c);
-        out.push(line(x0 + xa, y0 + xa - c, x0 + xb, y0 + xb - c, { 'stroke-width': 2 }));
-      }
-    }
-    return out;
-  };
-  svg('hatching', [
-    path('M100,100 h240 v240 h-240 Z', { ...DASH }),
-    hatch(100, 100, 240, 24, 1),
-    text(220, 400, 'ハッチング：同じ角度・同じ間隔'),
-    arcArrow(100, 340, 60, -45, 0, { color: G, head: false }),
-    text(175, 330, '45°', { color: G, size: 18 }),
-    path('M460,100 h240 v240 h-240 Z', { ...DASH }),
-    hatch(460, 100, 240, 24, 1),
-    hatch(460, 100, 240, 24, -1).map((l) => l.replace('/>', ` stroke="${G}"/>`)),
-    text(580, 400, 'クロス：向きを変えて重ねる'),
-    text(400, 460, '線の間隔が詰まるほど暗く見える', { size: 20 }),
-  ]);
-}
+// hatching → _gen/fix-2026-09.mjs で生成（2026-09 絵の先生レビューで作り直し。ここで再生成すると古い版に戻るので外した）
 
 // カップの線画（模写用お手本）
 svg('cup-lineart', [
@@ -315,15 +261,7 @@ const faceD = () =>
   `M${FACE.cx - FACE.hw},${FACE.cy} A${FACE.hw},${FACE.cy - FACE.top} 0 0 1 ${FACE.cx + FACE.hw},${FACE.cy} ` +
   `Q${FACE.cx + FACE.hw * 0.95},390 ${FACE.cx},${FACE.chin} Q${FACE.cx - FACE.hw * 0.95},390 ${FACE.cx - FACE.hw},${FACE.cy} Z`;
 
-svg('face-cross', [
-  path(faceD()),
-  line(FACE.cx, 30, FACE.cx, 470, { stroke: G, 'stroke-width': 3, 'stroke-dasharray': '10 8' }),
-  path(`M${FACE.cx - FACE.hw},${FACE.eye} Q${FACE.cx},${FACE.eye + 18} ${FACE.cx + FACE.hw},${FACE.eye}`, { stroke: G, 'stroke-width': 3 }),
-  num(170, 150, 1), text(140, 120, '輪郭', { size: 20 }),
-  num(430, 40, 2, G), text(530, 47, '縦の中心線', { color: G, size: 20 }),
-  num(600, 262, 3, G), text(660, 300, '目の高さ', { color: G, size: 20 }),
-  text(700, 440, '左右が同じ幅か確認', { size: 18, anchor: 'end' }),
-]);
+// face-cross → _gen/fix-2026-09.mjs で生成（2026-09 絵の先生レビューで作り直し。ここで再生成すると古い版に戻るので外した）
 
 // アニメの目の構造
 svg('anime-eye-structure', [
@@ -348,38 +286,7 @@ svg('anime-eye-structure', [
   num(575, 460, 6), text(598, 467, 'まつ毛（目じり）', { anchor: 'start', size: 18 }), line(560, 455, 520, 150, { 'stroke-width': 1.5 }),
 ]);
 
-// 鼻・口・眉・耳の位置
-{
-  const lvl = [
-    [190, '眉'],
-    [FACE.eye, '目'],
-    [340, '鼻'],
-    [390, '口'],
-  ];
-  svg('face-nose-mouth-placement', [
-    path(faceD()),
-    line(FACE.cx, 40, FACE.cx, 465, { ...DASH }),
-    lvl.map(([y, l]) => [
-      line(220, y, 580, y, { stroke: G, 'stroke-width': 1.5, 'stroke-dasharray': '6 6' }),
-      text(600, y + 7, l, { anchor: 'start', color: G, size: 20 }),
-    ]),
-    // 眉
-    path('M300,195 Q335,175 370,188'), path('M500,195 Q465,175 430,188'),
-    // 目（簡略）
-    path('M300,255 Q335,235 372,250', { 'stroke-width': 4 }), path('M500,255 Q465,235 428,250', { 'stroke-width': 4 }),
-    ell(336, 272, 18, 24), ell(464, 272, 18, 24),
-    // 鼻・口
-    path('M404,325 L396,340 L406,343'),
-    path('M375,388 Q400,398 425,388'),
-    // 耳（眉〜鼻の高さ）
-    path('M250,210 Q222,215 226,275 Q230,330 256,335'),
-    path('M550,210 Q578,215 574,275 Q570,330 544,335'),
-    dim(200, 190, 200, 340, { head: 8, width: 1.5 }),
-    text(190, 270, '耳', { anchor: 'end', size: 20 }),
-    dim(372, 290, 428, 290, { head: 7, width: 1.5, color: G }),
-    text(400, 315, '目1つ分', { size: 14, color: G }),
-  ]);
-}
+// face-nose-mouth-placement → _gen/fix-2026-09.mjs で生成（2026-09 絵の先生レビューで作り直し。ここで再生成すると古い版に戻るので外した）
 
 // 髪の塊
 svg('hair-mass', [

@@ -123,6 +123,26 @@ export function isEraserStyle(s: StrokeStyle | undefined | null): s is StrokeSty
   return !!s && s.preset === 'eraser';
 }
 
+/** 補助線の線幅（px、筆圧で変えない） */
+export const GUIDE_WIDTH = 1.5;
+/** 補助線の不透明度 */
+export const GUIDE_OPACITY = 0.35;
+
+/** 補助線のスタイルか（採点・本数・累計から除く線）。 */
+export function isGuideStyle(s: StrokeStyle | undefined | null): s is StrokeStyle & { preset: 'guide' } {
+  return !!s && s.preset === 'guide';
+}
+
+/** 補助線のスタイル（幅・不透明度は固定。色は描画時に ink-2 を解決する）。 */
+export function guideStrokeStyle(): StrokeStyle {
+  return { preset: 'guide', size: GUIDE_WIDTH, opacity: GUIDE_OPACITY };
+}
+
+/** getStrokes() に出さない線（消しゴム・補助線）か。 */
+export function isNonInkStyle(s: StrokeStyle | undefined | null): boolean {
+  return isEraserStyle(s) || isGuideStyle(s);
+}
+
 /** 消しゴムストロークのスタイル（size は半径）。 */
 export function eraserStrokeStyle(radius: number): StrokeStyle {
   return { preset: 'eraser', size: clampEraserSize(radius, DEFAULT_ERASER.size), opacity: 1 };
@@ -133,6 +153,7 @@ export function sanitizeStyle(s: unknown): StrokeStyle | undefined {
   if (!s || typeof s !== 'object') return undefined;
   const o = s as Partial<StrokeStyle>;
   if (o.preset === 'eraser') return eraserStrokeStyle(Number(o.size));
+  if (o.preset === 'guide') return guideStrokeStyle();
   if (!isPenPreset(o.preset)) return undefined;
   const spec = PEN_PRESETS[o.preset];
   const out: StrokeStyle = {
@@ -160,6 +181,18 @@ export interface ResolvedPen {
  * スタイル → 解決済みの見た目。undefined（旧データ）は baseWidth の pen（0.5x..1.6x、不透明）。
  */
 export function resolvePen(style: StrokeStyle | undefined, baseWidth: number): ResolvedPen {
+  if (isGuideStyle(style)) {
+    // 補助線: 筆圧・入り抜き・ざらつきなしの一定の細線
+    return {
+      size: GUIDE_WIDTH,
+      opacity: GUIDE_OPACITY,
+      pressureWidth: [1, 1],
+      pressureOpacity: [1, 1],
+      taper: false,
+      blend: 'source-over',
+      grain: 0,
+    };
+  }
   const preset = style && isPenPreset(style.preset) ? style.preset : 'pen';
   const spec = PEN_PRESETS[preset];
   return {

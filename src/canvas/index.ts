@@ -24,6 +24,11 @@ export {
   sanitizeStyle,
   normalizeHexColor,
   isEraserStyle,
+  isGuideStyle,
+  isNonInkStyle,
+  guideStrokeStyle,
+  GUIDE_WIDTH,
+  GUIDE_OPACITY,
   type PenPresetSpec,
   type PaletteColor,
 } from './pen';

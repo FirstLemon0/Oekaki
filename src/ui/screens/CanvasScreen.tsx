@@ -5,9 +5,19 @@
  * 左下「ペンのみ」、右下 主「完了」。左利きではツールバーが右端、完了が左下。
  * 描いている間は何も動かさない（トースト・アニメなし）。採点シートは sheet に渡す。
  *
- * ツールバー（DESIGN_SYSTEM §2）: ペン・消しゴム・元に戻す・やり直す・全消し・お手本・グリッド・左右反転・
+ * ツールバー（DESIGN_SYSTEM §2）: ペン・消しゴム・補助線・元に戻す・やり直す・全消し・お手本・グリッド・左右反転・
  * シルエット・再生・課題（?）。右横に取っ手 36×48、その下に「グリッド」ミニセグメント
  * （なし／2／3／4／6／8 分割 と 25／50／100 px の 2 段）。
+ *
+ * 補助線（アイコンは点線の斜め線）: 当たりや目安を引く細い線（1.5px・ink-2 色・不透明度 0.35）。
+ * 採点・本数・累計には数えない（engine.getStrokes() に出ない）。再生と保存画像には薄く残る。
+ * 採点するドリル（lockPen）でも使える。ジェスチャーのミニツールバーには出さない。
+ *
+ * お手本（side）: sideMatch のときは紙と同じ大きさの枠に出す（横向きは左右半分ずつ、縦向きは上下半分ずつ）。
+ * 重ね表示（overlay）も紙に収まる最大で描くので、横に見るお手本と重ねたお手本が同じ大きさになる。
+ *
+ * 左上のパネル（topLeft: 構築の手順カード）は、ツールバーとグリッド欄の右隣（左利きは戻るボタンの右）に置き、
+ * 課題ピルはカードの上に同じ幅で並べる（ツールバー・グリッド欄・課題ピルと重ならない）。縦向きはツールバーの下。
  *
  * ペン・消しゴムは、選択中にもう一度タップ（またはロングプレス 400ms）で小パネル（ペンは ToolPanels、消しゴムは太さだけ）。
  * 消しゴムは普通のラスター消しゴム（通った所だけ消える）。選択中はカーソル位置に輪（半径 = 太さ）が出る。
@@ -18,8 +28,8 @@
  * お手本（fitTemplate）やドリルの手がかりも同じ規則で作り直されるので、線と目標がずれない。
  */
 import type { ComponentChildren } from 'preact';
-import { useEffect, useRef, useState } from 'preact/hooks';
-import { CanvasView, PEN_PRESETS, type CanvasEngine, type EraserStyle, type OverlaySpec, type PenStyle } from '@/canvas';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { CanvasView, PEN_PRESETS, type CanvasEngine, type EraserStyle, type OverlaySpec, type PenStyle, type Tool } from '@/canvas';
 import type { StrokePoint } from '@/scoring';
 import { Icon, Slider } from '../components';
 import { uiPrefs } from '../state';
@@ -48,6 +58,9 @@ function lockedPen(): PenStyle {
 }
 
 const LONG_PRESS_MS = 400;
+
+/** lesson.css の縦向きレイアウトと同じ条件 */
+const PORTRAIT_QUERY = '(orientation: portrait), (max-width: 900px)';
 
 /** 消しゴムの小パネル: 太さ（半径 4〜40）だけ */
 function EraserSizePanel({ style, onChange }: { style: EraserStyle; onChange: (next: EraserStyle) => void }) {
@@ -88,6 +101,11 @@ export interface CanvasScreenProps {
   onSize?: (size: Size) => void;
   /** 横に並べるパネル（見て描く・模写のお手本）。縦向きでは上 */
   side?: ComponentChildren;
+  /**
+   * side を紙と同じ大きさの枠にする（お手本用）。お手本を枠に収まる最大で出せば、
+   * 重ね表示（キャンバスに収まる最大）と同じ大きさになる。
+   */
+  sideMatch?: boolean;
   /** 左上のパネル（構築の手順など） */
   topLeft?: ComponentChildren;
   /** 下から出る採点シート。出ている間は描けない */
@@ -176,7 +194,7 @@ export function CanvasScreen(props: CanvasScreenProps) {
   const { engine, overlay } = props;
   const prefs = uiPrefs.value;
   const lockPen = props.lockPen === true;
-  const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
+  const [tool, setTool] = useState<Tool>('pen');
   const [penStyle, setPenStyle] = useState<PenStyle>(() => loadPenStyle() ?? engine.getPen());
   const [eraserStyle, setEraserStyle] = useState<EraserStyle>(() => loadEraserStyle());
   const [recentColors, setRecentColors] = useState<string[]>(() => loadRecentColors());
@@ -234,10 +252,10 @@ export function CanvasScreen(props: CanvasScreenProps) {
     saveRecentColors(list);
   };
 
-  /** ツールボタン: 未選択なら選ぶ。選択中にもう一度押したら小パネルを開け閉め */
-  const pickTool = (t: 'pen' | 'eraser') => {
+  /** ツールボタン: 未選択なら選ぶ。選択中にもう一度押したら小パネルを開け閉め（補助線は小パネルなし） */
+  const pickTool = (t: Tool) => {
     if (tool === t) {
-      setPanel(panel === t ? null : t);
+      if (t !== 'guide') setPanel(panel === t ? null : t);
       return;
     }
     engine.setTool(t); // 描画直後の最初のホバーから消しゴムの輪を出すため、effect を待たずに渡す
@@ -296,6 +314,38 @@ export function CanvasScreen(props: CanvasScreenProps) {
     return () => ro.disconnect();
   }, []);
 
+  // 左上のパネル（構築の手順カード）の位置: ツールバー＋グリッド欄の右隣（縦向きはその下）
+  const stageRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [topLeftPos, setTopLeftPos] = useState<{ left: number; top: number; portrait: boolean } | null>(null);
+  const hasTopLeft = Boolean(props.topLeft);
+  useLayoutEffect(() => {
+    if (!hasTopLeft) return;
+    const stage = stageRef.current;
+    const bar = toolbarRef.current;
+    if (!stage || !bar) return;
+    const mq = typeof window.matchMedia === 'function' ? window.matchMedia(PORTRAIT_QUERY) : null;
+    const place = () => {
+      const s = stage.getBoundingClientRect();
+      const b = bar.getBoundingClientRect();
+      const portrait = mq?.matches ?? s.height > s.width;
+      let next: { left: number; top: number; portrait: boolean };
+      if (portrait) next = { left: 16, top: Math.round(b.bottom - s.top + 12), portrait };
+      else if (prefs.leftHanded) next = { left: 80, top: 16, portrait };
+      else next = { left: Math.round(b.right - s.left + 12), top: 16, portrait };
+      setTopLeftPos((prev) => (prev && prev.left === next.left && prev.top === next.top && prev.portrait === next.portrait ? prev : next));
+    };
+    place();
+    const ro = new ResizeObserver(place);
+    ro.observe(stage);
+    ro.observe(bar);
+    mq?.addEventListener('change', place);
+    return () => {
+      ro.disconnect();
+      mq?.removeEventListener('change', place);
+    };
+  }, [hasTopLeft, prefs.leftHanded, collapsed]);
+
   const onSizeRef = useRef(props.onSize);
   onSizeRef.current = props.onSize;
   const onRescaleRef = useRef(props.onRescale);
@@ -331,6 +381,21 @@ export function CanvasScreen(props: CanvasScreenProps) {
     }
   };
 
+  const taskPill = (
+    <div class={taskOpen ? 'ls-task' : 'ls-task is-folded'}>
+      {taskOpen && <span class="ls-task__text">{props.task}</span>}
+      <button
+        type="button"
+        class="ls-task__fold"
+        aria-label={taskOpen ? '課題を畳む' : '課題を開く'}
+        aria-expanded={taskOpen}
+        onClick={() => setTaskOpen(!taskOpen)}
+      >
+        {taskOpen ? <LsIcon name="collapse" size={20} /> : <Icon name="help" size={20} />}
+      </button>
+    </div>
+  );
+
   const renderGridItem = (k: GridKey, label: string) => (
     <button
       key={k}
@@ -353,6 +418,8 @@ export function CanvasScreen(props: CanvasScreenProps) {
     'ls-canvas',
     prefs.leftHanded ? 'is-left' : '',
     props.side ? 'has-side' : '',
+    props.side && props.sideMatch ? 'has-side-match' : '',
+    props.topLeft ? 'has-topleft' : '',
     collapsed ? 'is-collapsed' : '',
   ]
     .filter(Boolean)
@@ -361,7 +428,7 @@ export function CanvasScreen(props: CanvasScreenProps) {
   return (
     <div class={rootClass}>
       {props.side && <aside class="ls-canvas__side">{props.side}</aside>}
-      <div class="ls-canvas__stage">
+      <div class="ls-canvas__stage" ref={stageRef}>
         <div class="ls-canvas__paper" ref={paperRef}>
           <CanvasView engine={engine} />
           {props.guide && size.width > 0 && (
@@ -385,22 +452,7 @@ export function CanvasScreen(props: CanvasScreenProps) {
           </button>
         )}
 
-        {props.topCenter ? (
-          <div class="ls-canvas__center">{props.topCenter}</div>
-        ) : (
-          <div class={taskOpen ? 'ls-task' : 'ls-task is-folded'}>
-            {taskOpen && <span class="ls-task__text">{props.task}</span>}
-            <button
-              type="button"
-              class="ls-task__fold"
-              aria-label={taskOpen ? '課題を畳む' : '課題を開く'}
-              aria-expanded={taskOpen}
-              onClick={() => setTaskOpen(!taskOpen)}
-            >
-              {taskOpen ? <LsIcon name="collapse" size={20} /> : <Icon name="help" size={20} />}
-            </button>
-          </div>
-        )}
+        {props.topCenter ? <div class="ls-canvas__center">{props.topCenter}</div> : !props.topLeft && taskPill}
 
         {(props.counter || props.counterExtra) && (
           <div class="ls-counterbox">
@@ -409,9 +461,24 @@ export function CanvasScreen(props: CanvasScreenProps) {
           </div>
         )}
 
-        {props.topLeft && <div class="ls-canvas__topleft">{props.topLeft}</div>}
+        {props.topLeft && (
+          <div
+            class={topLeftPos?.portrait ? 'ls-canvas__topleft is-portrait' : 'ls-canvas__topleft'}
+            data-testid="canvas-topleft"
+            style={
+              topLeftPos
+                ? topLeftPos.portrait
+                  ? { top: `${topLeftPos.top}px`, left: '16px', right: '16px' }
+                  : { top: `${topLeftPos.top}px`, left: `${topLeftPos.left}px` }
+                : { visibility: 'hidden' }
+            }
+          >
+            {!props.topCenter && taskPill}
+            {props.topLeft}
+          </div>
+        )}
 
-        <div class="ls-toolbar-wrap">
+        <div class="ls-toolbar-wrap" ref={toolbarRef}>
           {!collapsed && (
             <div class="ls-toolbar" role="toolbar" aria-label="描画ツール">
               <div class="ls-toolbar__pop-host is-static">
@@ -443,6 +510,11 @@ export function CanvasScreen(props: CanvasScreenProps) {
                   />
                   {panel === 'eraser' && <EraserSizePanel style={eraserStyle} onChange={changeEraser} />}
                 </div>
+              )}
+              {!props.mini && (
+                <ToolButton label="補助線（採点に数えない薄い線）" selected={tool === 'guide'} onClick={() => pickTool('guide')}>
+                  <LsIcon name="guide" size={24} />
+                </ToolButton>
               )}
               <ToolButton icon="undo" label="元に戻す" disabled={!engine.canUndo()} onClick={() => engine.undo()} />
               {!props.mini && <ToolButton icon="redo" label="やり直す" disabled={!engine.canRedo()} onClick={() => engine.redo()} />}

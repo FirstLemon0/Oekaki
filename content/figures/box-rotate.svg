@@ -1,51 +1,51 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
-  <line x1="20" y1="170" x2="780" y2="170" stroke-width="1.5" opacity="0.45"/>
-  <text x="770" y="160" font-size="16" fill="currentColor" stroke="none" text-anchor="end">目の高さ</text>
-  <line x1="150" y1="250" x2="150" y2="360" stroke-width="3.5"/>
-  <line x1="70" y1="219.5" x2="70" y2="287.6" stroke-width="3.5"/>
-  <line x1="250" y1="243.6" x2="250" y2="344.8" stroke-width="3.5"/>
-  <line x1="150" y1="250" x2="70" y2="219.5" stroke-width="3.5"/>
-  <line x1="150" y1="250" x2="250" y2="243.6" stroke-width="3.5"/>
-  <line x1="150" y1="360" x2="70" y2="287.6" stroke-width="3.5"/>
-  <line x1="150" y1="360" x2="250" y2="344.8" stroke-width="3.5"/>
-  <line x1="70" y1="219.5" x2="137.9" y2="217" stroke-width="3.5"/>
-  <line x1="250" y1="243.6" x2="137.9" y2="217" stroke-width="3.5"/>
-  <line x1="137.9" y1="217" x2="137.9" y2="281.6" stroke-dasharray="8 8" opacity="0.6"/>
-  <line x1="70" y1="287.6" x2="137.9" y2="281.6" stroke-dasharray="8 8" opacity="0.6"/>
-  <line x1="250" y1="344.8" x2="137.9" y2="281.6" stroke-dasharray="8 8" opacity="0.6"/>
-  <circle cx="150" cy="410" r="15" stroke="currentColor" stroke-width="2"/>
-  <text x="150" y="417" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">1</text>
-  <line x1="400" y1="250" x2="400" y2="360" stroke-width="3.5"/>
-  <line x1="290" y1="239" x2="290" y2="333.9" stroke-width="3.5"/>
-  <line x1="520" y1="236.3" x2="520" y2="327.4" stroke-width="3.5"/>
-  <line x1="400" y1="250" x2="290" y2="239" stroke-width="3.5"/>
-  <line x1="400" y1="250" x2="520" y2="236.3" stroke-width="3.5"/>
-  <line x1="400" y1="360" x2="290" y2="333.9" stroke-width="3.5"/>
-  <line x1="400" y1="360" x2="520" y2="327.4" stroke-width="3.5"/>
-  <line x1="290" y1="239" x2="412.7" y2="228.6" stroke-width="3.5"/>
-  <line x1="520" y1="236.3" x2="412.7" y2="228.6" stroke-width="3.5"/>
-  <line x1="412.7" y1="228.6" x2="412.7" y2="309.1" stroke-dasharray="8 8" opacity="0.6"/>
-  <line x1="290" y1="333.9" x2="412.7" y2="309.1" stroke-dasharray="8 8" opacity="0.6"/>
-  <line x1="520" y1="327.4" x2="412.7" y2="309.1" stroke-dasharray="8 8" opacity="0.6"/>
-  <circle cx="400" cy="410" r="15" stroke="currentColor" stroke-width="2"/>
-  <text x="400" y="417" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">2</text>
-  <line x1="650" y1="250" x2="650" y2="360" stroke-width="3.5"/>
-  <line x1="540" y1="245" x2="540" y2="348.1" stroke-width="3.5"/>
-  <line x1="730" y1="231.7" x2="730" y2="316.6" stroke-width="3.5"/>
-  <line x1="650" y1="250" x2="540" y2="245" stroke-width="3.5"/>
-  <line x1="650" y1="250" x2="730" y2="231.7" stroke-width="3.5"/>
-  <line x1="650" y1="360" x2="540" y2="348.1" stroke-width="3.5"/>
-  <line x1="650" y1="360" x2="730" y2="316.6" stroke-width="3.5"/>
-  <line x1="540" y1="245" x2="640" y2="228.7" stroke-width="3.5"/>
-  <line x1="730" y1="231.7" x2="640" y2="228.7" stroke-width="3.5"/>
-  <line x1="640" y1="228.7" x2="640" y2="309.4" stroke-dasharray="8 8" opacity="0.6"/>
-  <line x1="540" y1="348.1" x2="640" y2="309.4" stroke-dasharray="8 8" opacity="0.6"/>
-  <line x1="730" y1="316.6" x2="640" y2="309.4" stroke-dasharray="8 8" opacity="0.6"/>
-  <circle cx="650" cy="410" r="15" stroke="currentColor" stroke-width="2"/>
-  <text x="650" y="417" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">3</text>
-  <line x1="230" y1="440" x2="320" y2="440" stroke="#7BB661"/>
-  <path d="M307.4,446.1 L320,440 L307.4,433.9" stroke="#7BB661"/>
-  <line x1="480" y1="440" x2="570" y2="440" stroke="#7BB661"/>
-  <path d="M557.4,446.1 L570,440 L557.4,433.9" stroke="#7BB661"/>
-  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">同じ箱を少しずつ回す：見える側面の幅が入れかわる</text>
+  <line x1="20" y1="110" x2="780" y2="110" stroke-width="1.5" opacity="0.45"/>
+  <text x="770" y="100" font-size="16" fill="currentColor" stroke="none" text-anchor="end">目の高さ</text>
+  <line x1="75" y1="241.4" x2="240.8" y2="223" stroke-width="3"/>
+  <line x1="240.8" y1="223" x2="187.1" y2="205.3" stroke-width="3"/>
+  <line x1="187.1" y1="205.3" x2="43.6" y2="218.1" stroke-width="3"/>
+  <line x1="43.6" y1="218.1" x2="75" y2="241.4" stroke-width="3"/>
+  <line x1="75" y1="342" x2="240.8" y2="309.4" stroke-width="3"/>
+  <line x1="240.8" y1="309.4" x2="187.1" y2="278.2" stroke-dasharray="8 8" opacity="0.6" stroke-width="2"/>
+  <line x1="187.1" y1="278.2" x2="43.6" y2="300.8" stroke-dasharray="8 8" opacity="0.6" stroke-width="2"/>
+  <line x1="43.6" y1="300.8" x2="75" y2="342" stroke-width="3"/>
+  <line x1="187.1" y1="278.2" x2="187.1" y2="205.3" stroke-dasharray="8 8" opacity="0.6" stroke-width="2"/>
+  <line x1="240.8" y1="223" x2="240.8" y2="309.4" stroke-width="3"/>
+  <line x1="43.6" y1="300.8" x2="43.6" y2="218.1" stroke-width="3"/>
+  <line x1="75" y1="241.4" x2="75" y2="342" stroke-width="3"/>
+  <line x1="371.8" y1="245.7" x2="492.4" y2="215.8" stroke-width="3"/>
+  <line x1="492.4" y1="215.8" x2="419.4" y2="203.2" stroke-width="3"/>
+  <line x1="419.4" y1="203.2" x2="299" y2="225.6" stroke-width="3"/>
+  <line x1="299" y1="225.6" x2="371.8" y2="245.7" stroke-width="3"/>
+  <line x1="371.8" y1="349.4" x2="492.4" y2="296.7" stroke-width="3"/>
+  <line x1="492.4" y1="296.7" x2="419.4" y2="274.5" stroke-dasharray="8 8" opacity="0.6" stroke-width="2"/>
+  <line x1="419.4" y1="274.5" x2="299" y2="314" stroke-dasharray="8 8" opacity="0.6" stroke-width="2"/>
+  <line x1="299" y1="314" x2="371.8" y2="349.4" stroke-width="3"/>
+  <line x1="419.4" y1="274.5" x2="419.4" y2="203.2" stroke-dasharray="8 8" opacity="0.6" stroke-width="2"/>
+  <line x1="492.4" y1="215.8" x2="492.4" y2="296.7" stroke-width="3"/>
+  <line x1="299" y1="314" x2="299" y2="225.6" stroke-width="3"/>
+  <line x1="371.8" y1="245.7" x2="371.8" y2="349.4" stroke-width="3"/>
+  <line x1="674.1" y1="246.3" x2="735" y2="210" stroke-width="3"/>
+  <line x1="735" y1="210" x2="650.4" y2="202.9" stroke-width="3"/>
+  <line x1="650.4" y1="202.9" x2="567.4" y2="233.5" stroke-width="3"/>
+  <line x1="567.4" y1="233.5" x2="674.1" y2="246.3" stroke-width="3"/>
+  <line x1="674.1" y1="350.6" x2="735" y2="286.5" stroke-width="3"/>
+  <line x1="735" y1="286.5" x2="650.4" y2="273.9" stroke-dasharray="8 8" opacity="0.6" stroke-width="2"/>
+  <line x1="650.4" y1="273.9" x2="567.4" y2="327.9" stroke-dasharray="8 8" opacity="0.6" stroke-width="2"/>
+  <line x1="567.4" y1="327.9" x2="674.1" y2="350.6" stroke-width="3"/>
+  <line x1="650.4" y1="273.9" x2="650.4" y2="202.9" stroke-dasharray="8 8" opacity="0.6" stroke-width="2"/>
+  <line x1="735" y1="210" x2="735" y2="286.5" stroke-width="3"/>
+  <line x1="567.4" y1="327.9" x2="567.4" y2="233.5" stroke-width="3"/>
+  <line x1="674.1" y1="246.3" x2="674.1" y2="350.6" stroke-width="3"/>
+  <circle cx="140" cy="380" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="140" y="386.5" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">1</text>
+  <circle cx="400" cy="380" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="400" y="386.5" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">2</text>
+  <circle cx="660" cy="380" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="660" y="386.5" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">3</text>
+  <line x1="200" y1="380" x2="330" y2="380" stroke="#7BB661" stroke-width="3"/>
+  <path d="M317.4,386.1 L330,380 L317.4,373.9" stroke="#7BB661" stroke-width="3"/>
+  <line x1="460" y1="380" x2="590" y2="380" stroke="#7BB661" stroke-width="3"/>
+  <path d="M577.4,386.1 L590,380 L577.4,373.9" stroke="#7BB661" stroke-width="3"/>
+  <text x="400" y="450" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">同じ箱を少しずつ回す：見える側面の幅が入れかわる</text>
 </svg>

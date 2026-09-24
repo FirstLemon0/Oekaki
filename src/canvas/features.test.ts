@@ -669,3 +669,80 @@ describe('エンジン: 表示（反転・グリッド）と書き出し', () =>
     expect(r.x).toBeLessThan(cropRect([s], 3)!.x);
   });
 });
+
+describe('エンジン: 補助線（preset guide）', () => {
+  const guide: StrokeStyle = { preset: 'guide', size: 1.5, opacity: 0.35 };
+
+  it('補助線は getStrokes()/getStyles() に出ず、getHistory() にだけ残る。strokeend も出さない', () => {
+    const e = createCanvasEngine();
+    e.attach(host());
+    const main = canvases[0]!;
+    const ends: number[] = [];
+    e.on('strokeend', (s) => ends.push(s.length));
+    e.setTool('guide');
+    drag(main, [[50, 50], [150, 60], [250, 70]]);
+    expect(ends).toHaveLength(0);
+    expect(e.getStrokes()).toHaveLength(0);
+    expect(e.getStyles()).toHaveLength(0);
+    expect(e.getHistory().styles).toEqual([guide]);
+    expect(e.canUndo()).toBe(true);
+    e.setTool('pen');
+    drag(main, [[50, 150], [150, 160], [250, 170]]);
+    expect(ends).toHaveLength(1);
+    expect(e.getStrokes()).toHaveLength(1);
+    expect(e.getStyles().map((s) => s?.preset)).toEqual(['pen']);
+    expect(e.getHistory().styles.map((s) => s?.preset)).toEqual(['guide', 'pen']);
+    // Undo は補助線も 1 手
+    e.undo();
+    e.undo();
+    expect(e.getHistory().strokes).toHaveLength(0);
+  });
+
+  it('補助線は幅 1.5px・不透明度 0.35 の一定の線（筆圧で変わらない）。sanitizeStyle は値を固定に戻す', () => {
+    const rp = resolvePen(guide, 3);
+    expect(penWidth(rp, 0)).toBe(1.5);
+    expect(penWidth(rp, 1)).toBe(1.5);
+    expect(rp.opacity).toBe(0.35);
+    expect(rp.taper).toBe(false);
+    expect(sanitizeStyle({ preset: 'guide', size: 99, opacity: 1, color: '#ff0000' })).toEqual(guide);
+  });
+
+  it('補助線は描画（cache）と書き出しに薄く含める。シルエットでは出さない', async () => {
+    const e = createCanvasEngine();
+    e.attach(host());
+    const cache = canvases[1]!;
+    const scratch = canvases[3]!;
+    cache.calls.length = 0;
+    scratch.calls.length = 0;
+    e.loadHistory({ strokes: [hline(5, 50)], styles: [guide] });
+    const img = cache.calls.find((c) => c.name === 'drawImage')!;
+    expect(img.state.globalAlpha).toBe(0.35);
+    const seg = scratch.calls.find((c) => c.name === 'stroke')!;
+    expect(seg.state.lineWidth).toBe(1.5);
+    // シルエット: cache に何も描かない
+    cache.calls.length = 0;
+    e.setOptions({ silhouette: true });
+    expect(cache.calls.some((c) => c.name === 'drawImage' || c.name === 'stroke')).toBe(false);
+    e.setOptions({ silhouette: false });
+    // 書き出し: 補助線だけでも描く
+    const before = canvases.length;
+    await e.toWebp(512);
+    const made = canvases.slice(before);
+    expect(made.some((c) => c.calls.some((x) => x.name === 'stroke' || x.name === 'drawImage'))).toBe(true);
+  });
+
+  it('flattenHistory は補助線を読み飛ばす（消しゴムの対象にもならない）', () => {
+    const r = flattenHistory([hline(5, 50), hline(5, 80)], [guide, undefined]);
+    expect(r.strokes).toHaveLength(1);
+    expect(r.styles).toEqual([undefined]);
+  });
+
+  it('ペンの点（1 点だけのストローク）はエンジンでは取り消さずに残す（取り消すのはドリルだけ）', () => {
+    const e = createCanvasEngine();
+    e.attach(host());
+    const main = canvases[0]!;
+    drag(main, [[120, 120]]);
+    expect(e.getStrokes()).toHaveLength(1);
+    expect(e.getStrokes()[0]).toHaveLength(1);
+  });
+});

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M200,70 C220.7,70 246.7,75 262,90 C277.3,105 287.3,136.7 292,160 C296.7,183.3 293.3,206.7 290,230 C286.7,253.3 281.7,279.7 272,300 C262.3,320.3 244,341.3 232,352 C220,362.7 212,364.3 200,364 C188,363.7 173.7,360.7 160,350 C146.3,339.3 127.3,320 118,300 C108.7,280 105.7,253.3 104,230 C102.3,206.7 102.3,183.3 108,160 C113.7,136.7 122.7,105 138,90 C153.3,75 179.3,70 200,70 Z"/>
+  <path d="M142,200 Q162,186 182,198" stroke-width="3"/>
+  <path d="M218,208 Q238,194 258,206" stroke-width="3"/>
+  <line x1="200" y1="60" x2="200" y2="380" stroke-dasharray="8 8" opacity="0.6" stroke-width="1.5"/>
+  <path d="M202,250 L196,268 L204,270" stroke-width="2"/>
+  <path d="M184,306 Q200,314 216,306" stroke-width="2"/>
+  <text x="200" y="410" font-size="20" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">反転前</text>
+  <text x="200" y="436" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">ズレに目が慣れて気づきにくい</text>
+  <path d="M330,210 Q400,170 470,210" stroke-width="2.5"/>
+  <path d="M457,209.3 L470,210 L462.5,199.4" stroke-width="2.5"/>
+  <text x="400" y="170" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">左右反転</text>
+  <path d="M600,70 C620.7,70 646.7,75 662,90 C677.3,105 687.3,136.7 692,160 C696.7,183.3 693.3,206.7 690,230 C686.7,253.3 681.7,279.7 672,300 C662.3,320.3 644,341.3 632,352 C620,362.7 612,364.3 600,364 C588,363.7 573.7,360.7 560,350 C546.3,339.3 527.3,320 518,300 C508.7,280 505.7,253.3 504,230 C502.3,206.7 502.3,183.3 508,160 C513.7,136.7 522.7,105 538,90 C553.3,75 579.3,70 600,70 Z" stroke-dasharray="8 8" opacity="0.6" stroke-width="1.8"/>
+  <path d="M600,70 C579.3,70 553.3,75 538,90 C522.7,105 512.7,136.7 508,160 C503.3,183.3 506.7,206.7 510,230 C513.3,253.3 518.3,279.7 528,300 C537.7,320.3 556,341.3 568,352 C580,362.7 588,364.3 600,364 C612,363.7 626.3,360.7 640,350 C653.7,339.3 672.7,320 682,300 C691.3,280 694.3,253.3 696,230 C697.7,206.7 697.7,183.3 692,160 C686.3,136.7 677.3,105 662,90 C646.7,75 620.7,70 600,70 Z"/>
+  <path d="M658,200 Q638,186 618,198" stroke-width="3"/>
+  <path d="M582,208 Q562,194 542,206" stroke-width="3"/>
+  <line x1="600" y1="60" x2="600" y2="380" stroke-dasharray="8 8" opacity="0.6" stroke-width="1.5"/>
+  <path d="M598,250 L604,268 L596,270" stroke-width="2"/>
+  <path d="M616,306 Q600,314 584,306" stroke-width="2"/>
+  <ellipse cx="700" cy="300" rx="44" ry="60" transform="rotate(-20 700 300)" stroke="#7BB661" stroke-width="2.5"/>
+  <text x="752" y="380" font-size="16" fill="#7BB661" stroke="none" text-anchor="middle">ふくらみ</text>
+  <text x="600" y="410" font-size="20" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">反転後</text>
+  <text x="600" y="436" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">ゆがみが目立つ（点線＝反転前）</text>
+  <text x="400" y="480" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">描いたら左右反転して見る。目の高さ・あごのふくらみのズレが見つかる</text>
+</svg>

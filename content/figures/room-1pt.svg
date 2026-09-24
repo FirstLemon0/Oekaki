@@ -8,9 +8,11 @@
   <circle cx="400" cy="230" r="7" fill="#7BB661" stroke="none"/>
   <path d="M350,175 L450,175 L450,240 L350,240 Z"/>
   <path d="M640,392.4 L640,173.5 L580,187.6 L580,351.8 Z" stroke="#7BB661" stroke-width="3"/>
+  <line x1="580" y1="187.6" x2="400" y2="230" stroke="#7BB661" stroke-width="1.8" stroke-dasharray="6 6"/>
+  <line x1="529.2" y1="317.4" x2="400" y2="230" stroke="#7BB661" stroke-width="1.8" stroke-dasharray="6 6"/>
   <line x1="332" y1="460" x2="374.2" y2="317.4" stroke-dasharray="8 8" opacity="0.6"/>
   <line x1="468" y1="460" x2="425.8" y2="317.4" stroke-dasharray="8 8" opacity="0.6"/>
   <text x="400" y="290" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">奥の壁</text>
-  <text x="650" y="110" font-size="16" fill="#7BB661" stroke="none" text-anchor="middle">ドアの上下の線も消失点へ</text>
-  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">1点透視の部屋：部屋の角からの線が、すべて消失点へ</text>
+  <text x="400" y="104" font-size="17" fill="#7BB661" stroke="none" text-anchor="middle">ドア（緑）の上下の線も、のばすと消失点へ</text>
+  <text x="400" y="482" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">1点透視の部屋：部屋の角からの線が、すべて消失点へ</text>
 </svg>

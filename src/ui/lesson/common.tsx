@@ -2,6 +2,7 @@
  * レッスン系で共有する小さな部品とフック。
  */
 import type { ComponentChildren } from 'preact';
+import { createPortal } from 'preact/compat';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { createCanvasEngine, type CanvasEngine } from '@/canvas';
 import { listReferences, saveReference } from '@/data/repo';
@@ -95,6 +96,76 @@ export function Figure({ id, class: cls, label }: { id: string | undefined; clas
       // 教材リポジトリ内の SVG（外部入力ではない）
       dangerouslySetInnerHTML={{ __html: svg }}
     />
+  );
+}
+
+/**
+ * 図解の拡大シート。画面の幅の 80%（横 1472 なら約 1178px）で図解を出す。
+ * キャンバスの重ね順（ツールバー等）に隠れないよう document.body へ出す。Esc・幕・「閉じる」で閉じる。
+ */
+export function FigureSheet({ id, label, onClose }: { id: string; label?: string; onClose: () => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    const prev = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCloseRef.current();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      prev?.focus?.();
+    };
+  }, []);
+  if (typeof document === 'undefined') return null;
+  return createPortal(
+    <div class="scrim ls-figsheet__scrim" onClick={onClose}>
+      <div
+        class="ls-figsheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${label ?? '図解'}（拡大）`}
+        data-testid="figure-sheet"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header class="ls-figsheet__head">
+          <span class="ls-figsheet__title">{label ?? '図解'}</span>
+          <button ref={closeRef} type="button" class="ls-glass-btn ls-figsheet__close" aria-label="拡大を閉じる" onClick={onClose}>
+            <LsIcon name="close" size={22} />
+          </button>
+        </header>
+        <Figure id={id} class="ls-figsheet__fig" label={label} />
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/**
+ * タップで拡大できる図解（read ステップ・構築の手順カード）。右下に拡大の印を出す。
+ * id が無ければ普通の空の図解枠。
+ */
+export function ZoomableFigure({ id, class: cls, label }: { id: string | undefined; class?: string; label?: string }) {
+  const [open, setOpen] = useState(false);
+  if (!id) return <Figure id={id} class={cls} label={label} />;
+  return (
+    <>
+      <button
+        type="button"
+        class={['ls-zoomfig', cls].filter(Boolean).join(' ')}
+        aria-label={`${label ?? '図解'}を拡大して見る`}
+        data-testid="zoom-figure"
+        onClick={() => setOpen(true)}
+      >
+        <Figure id={id} label={label} />
+        <span class="ls-zoomfig__badge" aria-hidden="true">
+          <LsIcon name="zoom" size={18} />
+        </span>
+      </button>
+      {open && <FigureSheet id={id} label={label} onClose={() => setOpen(false)} />}
+    </>
   );
 }
 

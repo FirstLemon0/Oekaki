@@ -8,6 +8,9 @@
  * （区間の継ぎ目が濃くならないように）。
  * 消しゴムは普通のラスター消しゴム: 消しゴムストロークを cache に destination-out の丸い線（半径 size）で描く。
  * 紙は cache に含めないので、消した所は紙が見える。
+ * 補助線（tool 'guide'、StrokeStyle.preset 'guide'）は ink-2 色・幅 1.5px・不透明度 0.35 の細線。
+ * 見た目・再生・書き出しには含めるが、getStrokes()/getStyles() には出さず（採点・本数から除く）、strokeend も出さない。
+ * シルエット表示では出さない。
  */
 import type { Drawing, Stroke, StrokePoint, Vec2 } from '@/scoring/types';
 import type {
@@ -37,7 +40,9 @@ import {
   clampPenSize,
   cumulativeLength,
   eraserStrokeStyle,
+  guideStrokeStyle,
   isEraserStyle,
+  isGuideStyle,
   isPenPreset,
   jitterPoints,
   maxPenWidth,
@@ -69,6 +74,9 @@ export const DEFAULT_OPTIONS: CanvasOptions = {
 /** CSS 変数が未定義のときの色（DESIGN_BRIEF_UI: 薄いウォームグレーの紙、墨色） */
 const FALLBACK_PAPER = '#f3f0ea';
 const FALLBACK_INK = '#2b2926';
+/** 補助線の色（--color-ink-2）が未定義のとき */
+const FALLBACK_GUIDE = '#5f5b54';
+const GUIDE_COLOR_VAR = 'var(--color-ink-2)';
 const SILHOUETTE_PAPER = '#ffffff';
 const SILHOUETTE_INK = '#000000';
 /** 読み込んだ絵の続きを描くときにあける時間（ms） */
@@ -398,6 +406,7 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
   let dpr = 1;
   let paper = FALLBACK_PAPER;
   let ink = FALLBACK_INK;
+  let guideInk = FALLBACK_GUIDE;
 
   let live: LiveInput | null = null;
   /** 消しゴム選択中にペン／マウスが紙の上にある位置（輪を出す） */
@@ -420,15 +429,17 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
   function resolveColors(): void {
     paper = resolveColor(opts.paperColor, lookupVar, FALLBACK_PAPER);
     ink = resolveColor(opts.inkColor, lookupVar, FALLBACK_INK);
+    guideInk = resolveColor(GUIDE_COLOR_VAR, lookupVar, FALLBACK_GUIDE);
   }
   /** 書き出し・重ね用（シルエットを無視） */
   function normalPaint(style: StrokeStyle | undefined): Paint {
+    if (isGuideStyle(style)) return { color: guideInk, pen: resolvePen(style, opts.baseWidth) };
     return { color: style?.color ?? ink, pen: resolvePen(style, opts.baseWidth) };
   }
   /** 画面表示用（シルエット中は太い黒） */
   function viewPaint(style: StrokeStyle | undefined): Paint {
     const p = normalPaint(style);
-    if (!opts.silhouette) return p;
+    if (!opts.silhouette || isGuideStyle(style)) return p;
     return { color: SILHOUETTE_INK, pen: silhouettePen(p.pen) };
   }
 
@@ -473,6 +484,8 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
       paintEraser(cache.ctx, s, st.size, { k: dpr, ox: 0, oy: 0 });
       return;
     }
+    // 補助線はシルエット（形だけを見る表示）には出さない
+    if (isGuideStyle(st) && opts.silhouette) return;
     paintStroke(cache.ctx, s, viewPaint(st), { k: dpr, ox: 0, oy: 0 }, scratch, devSize());
   }
 
@@ -621,7 +634,7 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
 
   /** 進行中のペン入力の新しい区間を live レイヤーに描き足す。描いたら true。 */
   function drawLiveIncrement(): boolean {
-    if (!live || live.tool !== 'pen' || !liveLayer || !livePaint) return false;
+    if (!live || live.tool === 'eraser' || !liveLayer || !livePaint) return false;
     const rp = livePaint.pen;
     const n = live.points.length;
     const ready = n - 2;
@@ -690,7 +703,7 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
       l.canvas.width = pw;
       l.canvas.height = ph;
     }
-    if (live && live.tool === 'pen') {
+    if (live && live.tool !== 'eraser') {
       // 大きさが変わると live レイヤーは消えるので描き直す
       live.drawnCtrl = 0;
       live.dotDrawn = false;
@@ -845,10 +858,10 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     } catch {
       /* 一部環境では失敗するが描画は続けられる */
     }
-    const style = tool === 'eraser' ? eraserStrokeStyle(eraser.size) : styleFromPen(pen);
+    const style = tool === 'eraser' ? eraserStrokeStyle(eraser.size) : tool === 'guide' ? guideStrokeStyle() : styleFromPen(pen);
     live = { pointerId: e.pointerId, tool, points: [], drawnCtrl: 0, dotDrawn: false, lastEraserPt: null, erasedPts: 0, style };
     clearLayer(liveLayer);
-    livePaint = tool === 'pen' ? viewPaint(style) : null;
+    livePaint = tool === 'eraser' ? null : viewPaint(style);
     addSample(e);
     schedule();
   }
@@ -918,7 +931,8 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
       paintCacheStroke(next.strokes.length - 1, next);
       compose();
     }
-    for (const cb of [...strokeEndCbs]) cb(stroke);
+    // 補助線は採点しないので strokeend を出さない（change だけ）
+    if (l.tool !== 'guide') for (const cb of [...strokeEndCbs]) cb(stroke);
     emitChange();
   }
 
@@ -946,6 +960,10 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
         paintEraser(cache.ctx, s, style.size, { k: dpr, ox: 0, oy: 0 }, st.partialCtrl, n);
         st.partialCtrl = n;
       }
+      return;
+    }
+    if (isGuideStyle(style) && opts.silhouette) {
+      livePaint = null;
       return;
     }
     const paint = viewPaint(style);

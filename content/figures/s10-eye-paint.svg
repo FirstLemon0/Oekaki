@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <defs><linearGradient id="s10-eye-paint-iris" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4A3C7A"/><stop offset="0.5" stop-color="#7D69BC"/><stop offset="1" stop-color="#CBBDF2"/></linearGradient><clipPath id="s10-eye-paint-open"><path d="M130,250 Q210,120 380,150 Q430,160 450,205 Q440,300 380,352 Q280,382 200,350 Q150,320 130,250 Z"/></clipPath></defs>
+  <g clip-path="url(#s10-eye-paint-open)"><path d="M130,250 Q210,120 380,150 Q430,160 450,205 Q440,300 380,352 Q280,382 200,350 Q150,320 130,250 Z" fill="#FFFFFF" stroke="none"/><ellipse cx="290" cy="262" rx="82" ry="112" fill="url(#s10-eye-paint-iris)" stroke="none"/><ellipse cx="290" cy="276" rx="32" ry="48" fill="#241B3E" stroke="none"/><path d="M120,250 Q210,112 380,142 Q440,152 460,205 L460,236 Q432,200 380,196 Q220,176 140,286 Z" fill="#1E1830" fill-opacity="0.5" stroke="none"/><circle cx="256" cy="232" r="20" fill="#FFFFFF" stroke="none"/><circle cx="320" cy="318" r="8" fill="#FFFFFF" stroke="none"/><ellipse cx="290" cy="262" rx="82" ry="112" stroke-width="2"/></g>
+  <path d="M118,258 Q210,112 382,142 Q436,152 458,208" stroke-width="9"/>
+  <path d="M160,318 Q200,352 280,368 Q350,370 400,336" stroke-width="2.5"/>
+  <circle cx="150" cy="360" r="15" stroke="#7BB661" stroke-width="2"/>
+  <text x="150" y="366.5" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">1</text>
+  <line x1="164" y1="354" x2="222" y2="330" stroke-width="1.3" opacity="0.75" stroke="#7BB661"/>
+  <circle cx="470" cy="150" r="15" stroke="#7BB661" stroke-width="2"/>
+  <text x="470" y="156.5" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">2</text>
+  <line x1="456" y1="158" x2="420" y2="192" stroke-width="1.3" opacity="0.75" stroke="#7BB661"/>
+  <circle cx="200" cy="100" r="15" stroke="#7BB661" stroke-width="2"/>
+  <text x="200" y="106.5" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">3</text>
+  <line x1="209" y1="112" x2="247" y2="216" stroke-width="1.3" opacity="0.75" stroke="#7BB661"/>
+  <circle cx="540" cy="170" r="15" stroke="#7BB661" stroke-width="2"/>
+  <text x="540" y="176.5" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">1</text>
+  <text x="564" y="177" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">虹彩のグラデーション</text>
+  <text x="564" y="196" font-size="16" fill="currentColor" stroke="none" text-anchor="start">（上が暗く、下が明るい）</text>
+  <circle cx="540" cy="250" r="15" stroke="#7BB661" stroke-width="2"/>
+  <text x="540" y="256.5" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">2</text>
+  <text x="564" y="257" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">上まぶたの落ち影</text>
+  <text x="564" y="276" font-size="16" fill="currentColor" stroke="none" text-anchor="start">（まぶたの形に沿った帯）</text>
+  <circle cx="540" cy="330" r="15" stroke="#7BB661" stroke-width="2"/>
+  <text x="540" y="336.5" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">3</text>
+  <text x="564" y="337" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">ハイライト</text>
+  <text x="564" y="356" font-size="16" fill="currentColor" stroke="none" text-anchor="start">（光源側に大、反対に小）</text>
+  <text x="400" y="460" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">目は「上が暗い」が基本。まぶたの影で奥行き、ハイライトで光を入れる</text>
+</svg>

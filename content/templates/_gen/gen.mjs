@@ -59,12 +59,7 @@ function save(id, strokes) {
   console.log(id, strokes.length, 'strokes');
 }
 
-// ---- simple-shapes: 正方形・三角・円
-save('simple-shapes', [
-  toStroke(poly([0.08, 0.35], [0.3, 0.35], [0.3, 0.65], [0.08, 0.65], [0.08, 0.35]), 96),
-  toStroke(poly([0.5, 0.33], [0.62, 0.66], [0.38, 0.66], [0.5, 0.33]), 90),
-  toStroke(ellipse(0.81, 0.5, 0.12, 0.16), 100),
-]);
+// simple-shapes → fix-2026-09.mjs で生成（2026-09 絵の先生レビューで作り直し。ここで再生成すると古い版に戻るので外した）
 
 // ---- leaf-silhouette: 葉の輪郭（左右の弧）＋葉脈＋葉柄
 save('leaf-silhouette', [
@@ -110,12 +105,7 @@ function faceOutline() {
   return [...upper, ...rightJaw, ...leftJaw];
 }
 
-// ---- face-outline-cross: 輪郭＋十字線（縦の中心線・目の高さの横線）
-save('face-outline-cross', [
-  toStroke(faceOutline(), 120),
-  toStroke(poly([F.cx, F.top - 0.02], [F.cx, F.chin + 0.03]), 60),
-  toStroke(quad([F.cx - F.hw, F.eyeY], [F.cx, F.eyeY + 0.03], [F.cx + F.hw, F.eyeY]), 60),
-]);
+// face-outline-cross → fix-2026-09.mjs で生成（2026-09 絵の先生レビューで作り直し。頭頂から左右 2 本の C カーブで描く順に変更）
 
 // ---- anime-eye-pair: 左右の目（上まぶた・下まぶた・虹彩・瞳孔・ハイライト）
 {
