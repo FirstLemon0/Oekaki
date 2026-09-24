@@ -3,20 +3,20 @@
   <text x="120" y="137" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">眉</text>
   <path d="M247,135 Q232.6,129.2 218.2,135" stroke-width="3"/>
   <path d="M273,135 Q287.4,129.2 301.8,135" stroke-width="3"/>
-  <rect x="338" y="85" width="124" height="90" rx="12" stroke="#45702A" stroke-width="3"/>
-  <path d="M387,127.8 Q372.6,130.7 358.2,139.3" stroke-width="3" stroke="#45702A"/>
-  <path d="M413,127.8 Q427.4,130.7 441.8,139.3" stroke-width="3" stroke="#45702A"/>
+  <rect x="338" y="85" width="124" height="90" rx="12" stroke="#7BB661" stroke-width="3"/>
+  <path d="M387,127.8 Q372.6,130.7 358.2,139.3" stroke-width="3" stroke="#7BB661"/>
+  <path d="M413,127.8 Q427.4,130.7 441.8,139.3" stroke-width="3" stroke="#7BB661"/>
   <path d="M527,143.6 Q512.6,134.3 498.2,130.7" stroke-width="3"/>
   <path d="M553,143.6 Q567.4,134.3 581.8,130.7" stroke-width="3"/>
   <path d="M667,127.8 Q652.6,117.7 638.2,127.8" stroke-width="3"/>
   <path d="M693,127.8 Q707.4,117.7 721.8,127.8" stroke-width="3"/>
   <line x1="180" y1="187" x2="750" y2="187" stroke-width="1" opacity="0.3"/>
   <text x="120" y="252" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">目</text>
-  <rect x="198" y="200" width="124" height="90" rx="12" stroke="#45702A" stroke-width="3"/>
-  <path d="M221.8,240.7 Q232.6,229.9 243.4,240.7" stroke-width="3.5" stroke="#45702A"/>
-  <ellipse cx="232.6" cy="245" rx="5.9" ry="10.8" stroke="#45702A"/>
-  <path d="M276.6,240.7 Q287.4,229.9 298.2,240.7" stroke-width="3.5" stroke="#45702A"/>
-  <ellipse cx="287.4" cy="245" rx="5.9" ry="10.8" stroke="#45702A"/>
+  <rect x="198" y="200" width="124" height="90" rx="12" stroke="#7BB661" stroke-width="3"/>
+  <path d="M221.8,240.7 Q232.6,229.9 243.4,240.7" stroke-width="3.5" stroke="#7BB661"/>
+  <ellipse cx="232.6" cy="245" rx="5.9" ry="10.8" stroke="#7BB661"/>
+  <path d="M276.6,240.7 Q287.4,229.9 298.2,240.7" stroke-width="3.5" stroke="#7BB661"/>
+  <ellipse cx="287.4" cy="245" rx="5.9" ry="10.8" stroke="#7BB661"/>
   <path d="M361.8,249.3 Q372.6,230.6 383.4,249.3" stroke-width="3.5"/>
   <path d="M416.6,249.3 Q427.4,230.6 438.2,249.3" stroke-width="3.5"/>
   <ellipse cx="512.6" cy="245" rx="10.3" ry="15.8" stroke-width="2.5"/>
@@ -30,10 +30,10 @@
   <line x1="180" y1="302" x2="750" y2="302" stroke-width="1" opacity="0.3"/>
   <text x="120" y="367" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">口</text>
   <path d="M245.6,352.8 Q260,363.6 274.4,352.8" stroke-width="3"/>
-  <rect x="338" y="315" width="124" height="90" rx="12" stroke="#45702A" stroke-width="3"/>
-  <path d="M385.6,359.3 Q400,349.2 414.4,359.3" stroke-width="3" stroke="#45702A"/>
+  <rect x="338" y="315" width="124" height="90" rx="12" stroke="#7BB661" stroke-width="3"/>
+  <path d="M385.6,359.3 Q400,349.2 414.4,359.3" stroke-width="3" stroke="#7BB661"/>
   <ellipse cx="540" cy="359.3" rx="6.5" ry="9.4" stroke-width="3"/>
   <line x1="668.5" y1="355" x2="691.5" y2="355" stroke-width="3"/>
   <line x1="180" y1="417" x2="750" y2="417" stroke-width="1" opacity="0.3"/>
-  <text x="400" y="460" font-size="19" fill="#45702A" stroke="none" text-anchor="middle">例: 困り眉＋ふつうの目＋への字の口 → 悲しみ</text>
+  <text x="400" y="460" font-size="19" fill="#7BB661" stroke="none" text-anchor="middle">例: 困り眉＋ふつうの目＋への字の口 → 悲しみ</text>
 </svg>

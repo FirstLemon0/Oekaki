@@ -12,7 +12,7 @@
   <path d="M460,262 Q600,226 740,262" stroke-dasharray="6 6" opacity="0.5"/>
   <path d="M516,262 Q514,166 600,164 Q686,166 684,262"/>
   <path d="M516,246 Q600,232 684,246" stroke-width="2"/>
-  <path d="M460,262 Q600,300 740,262" stroke="#45702A" stroke-width="4"/>
-  <path d="M460,262 Q470,252 520,244 M740,262 Q730,252 680,244" stroke="#45702A" stroke-width="4"/>
+  <path d="M460,262 Q600,300 740,262" stroke="#7BB661" stroke-width="4"/>
+  <path d="M460,262 Q470,252 520,244 M740,262 Q730,252 680,244" stroke="#7BB661" stroke-width="4"/>
   <text x="600" y="470" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">帽子：頭の球＋ひと回り大きなつば</text>
 </svg>

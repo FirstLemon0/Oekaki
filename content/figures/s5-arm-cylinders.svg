@@ -11,12 +11,12 @@
   <ellipse cx="640" cy="270" rx="7.7" ry="22" transform="rotate(2.4 640 270)"/>
   <circle cx="660" cy="271" r="17"/>
   <ellipse cx="718" cy="273" rx="40" ry="24" transform="rotate(2 718 273)" stroke-dasharray="8 8" opacity="0.6"/>
-  <ellipse cx="286" cy="255" rx="12" ry="34" transform="rotate(2.5 286 255)" stroke="#45702A" stroke-width="4"/>
+  <ellipse cx="286" cy="255" rx="12" ry="34" transform="rotate(2.5 286 255)" stroke="#7BB661" stroke-width="4"/>
   <text x="130" y="180" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">肩（球）</text>
   <text x="286" y="190" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">上腕（円柱）</text>
   <text x="425" y="212" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">肘</text>
   <text x="546" y="218" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">前腕（円柱）</text>
   <text x="660" y="232" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">手首</text>
-  <text x="286" y="330" font-size="22" fill="#45702A" stroke="none" text-anchor="middle">断面は楕円</text>
+  <text x="286" y="330" font-size="22" fill="#7BB661" stroke="none" text-anchor="middle">断面は楕円</text>
   <text x="400" y="440" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">円柱を球でつなぐだけでOK</text>
 </svg>

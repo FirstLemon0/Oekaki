@@ -4,7 +4,7 @@
   <path d="M492,165 L530,150" stroke-width="4"/>
   <ellipse cx="330" cy="250" rx="80" ry="115"/>
   <ellipse cx="330" cy="270" rx="32" ry="50" fill="currentColor" opacity="0.35"/>
-  <circle cx="300" cy="205" r="20" stroke="#45702A" stroke-width="3"/>
+  <circle cx="300" cy="205" r="20" stroke="#7BB661" stroke-width="3"/>
   <path d="M270,375 Q340,390 420,355" stroke-width="3"/>
   <circle cx="575" cy="70" r="15" stroke="currentColor" stroke-width="2"/>
   <text x="575" y="77" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">1</text>
@@ -18,10 +18,10 @@
   <text x="575" y="237" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">3</text>
   <text x="598" y="237" font-size="18" fill="currentColor" stroke="none" text-anchor="start">瞳孔</text>
   <line x1="560" y1="235" x2="362" y2="270" stroke-width="1.5"/>
-  <circle cx="575" cy="310" r="15" stroke="#45702A" stroke-width="2"/>
-  <text x="575" y="317" font-size="18" fill="#45702A" stroke="none" text-anchor="middle">4</text>
-  <text x="598" y="317" font-size="18" fill="#45702A" stroke="none" text-anchor="start">ハイライト</text>
-  <line x1="560" y1="310" x2="320" y2="205" stroke="#45702A" stroke-width="1.5"/>
+  <circle cx="575" cy="310" r="15" stroke="#7BB661" stroke-width="2"/>
+  <text x="575" y="317" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">4</text>
+  <text x="598" y="317" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">ハイライト</text>
+  <line x1="560" y1="310" x2="320" y2="205" stroke="#7BB661" stroke-width="1.5"/>
   <circle cx="575" cy="390" r="15" stroke="currentColor" stroke-width="2"/>
   <text x="575" y="397" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">5</text>
   <text x="598" y="397" font-size="18" fill="currentColor" stroke="none" text-anchor="start">下まぶた（短く）</text>

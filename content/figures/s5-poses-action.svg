@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
-  <path d="M285,62 C250,170 230,265 128,385" stroke="#45702A" stroke-width="6" opacity="0.85"/>
+  <path d="M285,62 C250,170 230,265 128,385" stroke="#7BB661" stroke-width="6" opacity="0.85"/>
   <line x1="213.6" y1="250.1" x2="192.5" y2="327" opacity="0.4"/>
   <line x1="238.4" y1="257.9" x2="211.5" y2="333" opacity="0.4"/>
   <line x1="197.2" y1="321.8" x2="144.4" y2="356" opacity="0.4"/>
@@ -37,7 +37,7 @@
   <ellipse cx="316" cy="110" rx="12.8" ry="7" transform="rotate(-68.2 316 110)"/>
   <line x1="60" y1="395" x2="360" y2="395" opacity="0.5"/>
   <text x="230" y="470" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">走る</text>
-  <path d="M640,30 Q530,220 560,420" stroke="#45702A" stroke-width="6" opacity="0.85"/>
+  <path d="M640,30 Q530,220 560,420" stroke="#7BB661" stroke-width="6" opacity="0.85"/>
   <line x1="563.3" y1="262" x2="584.3" y2="337.3" opacity="0.4"/>
   <line x1="588.7" y1="256" x2="603.7" y2="332.7" opacity="0.4"/>
   <line x1="586.9" y1="328.7" x2="538.8" y2="386.3" opacity="0.4"/>
@@ -75,7 +75,7 @@
   <ellipse cx="642" cy="53" rx="12.8" ry="7" transform="rotate(-68.2 642 53)"/>
   <ellipse cx="580" cy="440" rx="55" ry="8" stroke-dasharray="8 8" opacity="0.6"/>
   <text x="580" y="478" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">跳ぶ</text>
-  <text x="690" y="140" font-size="22" fill="#45702A" stroke="none" text-anchor="start">動きの線</text>
+  <text x="690" y="140" font-size="22" fill="#7BB661" stroke="none" text-anchor="start">動きの線</text>
   <text x="690" y="168" font-size="18" fill="currentColor" stroke="none" text-anchor="start">全身を1本の</text>
   <text x="690" y="192" font-size="18" fill="currentColor" stroke="none" text-anchor="start">カーブで</text>
 </svg>

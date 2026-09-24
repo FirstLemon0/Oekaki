@@ -21,18 +21,18 @@
   <circle cx="455.5" cy="256" r="3.4" stroke-width="2"/>
   <text x="280" y="318" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">1</text>
   <text x="340" y="318" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">2</text>
-  <text x="400" y="318" font-size="18" fill="#45702A" stroke="none" text-anchor="middle">3</text>
+  <text x="400" y="318" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">3</text>
   <text x="460" y="318" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">4</text>
   <text x="520" y="318" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">5</text>
-  <line x1="372" y1="332" x2="428" y2="332" stroke="#45702A" stroke-width="2.5"/>
-  <path d="M419.9,335.9 L428,332 L419.9,328.1" stroke="#45702A" stroke-width="2.5"/>
-  <path d="M380.1,328.1 L372,332 L380.1,335.9" stroke="#45702A" stroke-width="2.5"/>
-  <text x="400" y="362" font-size="20" fill="#45702A" stroke="none" text-anchor="middle">目1つ分</text>
+  <line x1="372" y1="332" x2="428" y2="332" stroke="#7BB661" stroke-width="2.5"/>
+  <path d="M419.9,335.9 L428,332 L419.9,328.1" stroke="#7BB661" stroke-width="2.5"/>
+  <path d="M380.1,328.1 L372,332 L380.1,335.9" stroke="#7BB661" stroke-width="2.5"/>
+  <text x="400" y="362" font-size="20" fill="#7BB661" stroke="none" text-anchor="middle">目1つ分</text>
   <path d="M392,385 L408,385" stroke-width="2"/>
   <path d="M378,412 Q400,420 422,412"/>
   <text x="400" y="32" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">目の高さで、顔の幅を目5つ分に分ける</text>
   <text x="130" y="250" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">顔の幅</text>
   <text x="130" y="278" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">＝目5つ分</text>
-  <text x="670" y="250" font-size="20" fill="#45702A" stroke="none" text-anchor="middle">目と目の間は</text>
-  <text x="670" y="278" font-size="20" fill="#45702A" stroke="none" text-anchor="middle">目1つ分</text>
+  <text x="670" y="250" font-size="20" fill="#7BB661" stroke="none" text-anchor="middle">目と目の間は</text>
+  <text x="670" y="278" font-size="20" fill="#7BB661" stroke="none" text-anchor="middle">目1つ分</text>
 </svg>

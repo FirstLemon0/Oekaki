@@ -37,10 +37,10 @@
   <circle cx="228" cy="230" r="6.5"/>
   <circle cx="278" cy="270" r="5"/>
   <ellipse cx="288" cy="274" rx="12.8" ry="7" transform="rotate(21.8 288 274)"/>
-  <circle cx="200" cy="316" r="7" fill="#45702A" stroke="none"/>
-  <line x1="170" y1="305" x2="320" y2="305" stroke="#45702A" stroke-dasharray="6 6" opacity="0.8"/>
-  <text x="80" y="250" font-size="18" fill="#45702A" stroke="none" text-anchor="middle">骨盤が</text>
-  <text x="80" y="274" font-size="18" fill="#45702A" stroke="none" text-anchor="middle">座面に乗る</text>
+  <circle cx="200" cy="316" r="7" fill="#7BB661" stroke="none"/>
+  <line x1="170" y1="305" x2="320" y2="305" stroke="#7BB661" stroke-dasharray="6 6" opacity="0.8"/>
+  <text x="80" y="250" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">骨盤が</text>
+  <text x="80" y="274" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">座面に乗る</text>
   <text x="390" y="290" font-size="18" fill="currentColor" stroke="none" text-anchor="start">膝は腰と</text>
   <text x="390" y="314" font-size="18" fill="currentColor" stroke="none" text-anchor="start">ほぼ同じ高さ</text>
   <text x="200" y="470" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">座る</text>
@@ -79,8 +79,8 @@
   <circle cx="640" cy="260" r="6.5"/>
   <circle cx="645" cy="308" r="5"/>
   <ellipse cx="648.5" cy="320" rx="14.5" ry="7" transform="rotate(73.7 648.5 320)"/>
-  <circle cx="614" cy="288" r="7" fill="#45702A" stroke="none"/>
-  <text x="680" y="250" font-size="18" fill="#45702A" stroke="none" text-anchor="start">膝が前へ</text>
-  <text x="680" y="274" font-size="18" fill="#45702A" stroke="none" text-anchor="start">高く出る</text>
+  <circle cx="614" cy="288" r="7" fill="#7BB661" stroke="none"/>
+  <text x="680" y="250" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">膝が前へ</text>
+  <text x="680" y="274" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">高く出る</text>
   <text x="560" y="470" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">しゃがむ</text>
 </svg>

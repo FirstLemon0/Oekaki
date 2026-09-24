@@ -9,12 +9,12 @@
   <ellipse cx="486.2" cy="287.8" rx="36" ry="57.2"/>
   <ellipse cx="486.2" cy="295.6" rx="16.5" ry="28.6" fill="currentColor" opacity="0.35" stroke="none"/>
   <circle cx="474.2" cy="264.4" r="9" stroke-width="2"/>
-  <circle cx="254.3" cy="287.8" r="4" fill="#45702A" stroke="none"/>
-  <line x1="254.3" y1="287.8" x2="700" y2="110" stroke="#45702A" stroke-width="2" stroke-dasharray="6 6"/>
-  <circle cx="486.2" cy="287.8" r="4" fill="#45702A" stroke="none"/>
-  <line x1="486.2" y1="287.8" x2="700" y2="110" stroke="#45702A" stroke-width="2" stroke-dasharray="6 6"/>
-  <circle cx="700" cy="110" r="9" fill="#45702A" stroke="none"/>
-  <text x="700" y="85" font-size="20" fill="#45702A" stroke="none" text-anchor="middle">見ているもの</text>
+  <circle cx="254.3" cy="287.8" r="4" fill="#7BB661" stroke="none"/>
+  <line x1="254.3" y1="287.8" x2="700" y2="110" stroke="#7BB661" stroke-width="2" stroke-dasharray="6 6"/>
+  <circle cx="486.2" cy="287.8" r="4" fill="#7BB661" stroke="none"/>
+  <line x1="486.2" y1="287.8" x2="700" y2="110" stroke="#7BB661" stroke-width="2" stroke-dasharray="6 6"/>
+  <circle cx="700" cy="110" r="9" fill="#7BB661" stroke="none"/>
+  <text x="700" y="85" font-size="20" fill="#7BB661" stroke="none" text-anchor="middle">見ているもの</text>
   <text x="350" y="440" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">左右の虹彩を同じ向きに、同じくらい寄せる</text>
   <text x="350" y="470" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">ハイライトの位置も左右でそろえる</text>
 </svg>

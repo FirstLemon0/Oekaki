@@ -2,7 +2,7 @@
   <line x1="172" y1="110.9" x2="180" y2="262.8"/>
   <line x1="228" y1="109.1" x2="230" y2="261.2"/>
   <path d="M178,262 Q122,300 118,368 Q118,392 150,392 L430,392 Q452,390 446,370 L340,318 Q262,280 232,262"/>
-  <path d="M135,392 L212,262 L446,392 Z" stroke="#45702A" stroke-width="3" stroke-dasharray="10 6"/>
+  <path d="M135,392 L212,262 L446,392 Z" stroke="#7BB661" stroke-width="3" stroke-dasharray="10 6"/>
   <text x="120" y="430" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">かかと</text>
   <text x="330" y="285" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">甲</text>
   <text x="440" y="430" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">つま先</text>
@@ -14,7 +14,7 @@
   <circle cx="642" cy="402" r="8"/>
   <circle cx="662" cy="396" r="7"/>
   <circle cx="678" cy="386" r="6"/>
-  <path d="M578,92 L622,92 L690,360 L568,360 Z" stroke="#45702A" stroke-width="3" stroke-dasharray="10 6"/>
+  <path d="M578,92 L622,92 L690,360 L568,360 Z" stroke="#7BB661" stroke-width="3" stroke-dasharray="10 6"/>
   <text x="730" y="120" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">かかと</text>
   <text x="735" y="390" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">つま先</text>
   <text x="630" y="475" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">上から：内側はまっすぐ</text>

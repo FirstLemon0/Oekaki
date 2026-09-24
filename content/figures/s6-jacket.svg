@@ -5,12 +5,12 @@
   <path d="M360,90 L405,96 L408,111"/>
   <path d="M405,96 L438,288 L408,294 L387,156 L390,327"/>
   <path d="M436.5,273 L408,279" stroke-width="2"/>
-  <path d="M360,90 L375,135 L361.5,142.5 L372,162 L334.5,213" stroke="#45702A" stroke-width="3.5"/>
+  <path d="M360,90 L375,135 L361.5,142.5 L372,162 L334.5,213" stroke="#7BB661" stroke-width="3.5"/>
   <path d="M360,90 L342,150" stroke-width="2" opacity="0.6"/>
   <path d="M300,90 L255,96 L252,111"/>
   <path d="M255,96 L222,288 L252,294 L273,156 L270,327"/>
   <path d="M223.5,273 L252,279" stroke-width="2"/>
-  <path d="M300,90 L285,135 L298.5,142.5 L288,162 L325.5,213" stroke="#45702A" stroke-width="3.5"/>
+  <path d="M300,90 L285,135 L298.5,142.5 L288,162 L325.5,213" stroke="#7BB661" stroke-width="3.5"/>
   <path d="M300,90 L318,150" stroke-width="2" opacity="0.6"/>
   <path d="M300,90 Q330,78 360,90"/>
   <path d="M316.5,94.5 L330,114 L343.5,94.5"/>
@@ -23,6 +23,6 @@
   <text x="510" y="177" font-size="20" fill="currentColor" stroke="none" text-anchor="start">襟の折り返し</text>
   <line x1="346" y1="300" x2="500" y2="300" stroke-dasharray="8 8" opacity="0.6" stroke-width="1.5"/>
   <text x="510" y="307" font-size="20" fill="currentColor" stroke="none" text-anchor="start">前の合わせ（重なる）</text>
-  <text x="510" y="197" font-size="18" fill="#45702A" stroke="none" text-anchor="start">（緑の線）</text>
+  <text x="510" y="197" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">（緑の線）</text>
   <text x="330" y="470" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">制服・ジャケット</text>
 </svg>

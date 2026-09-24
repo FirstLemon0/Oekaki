@@ -9,18 +9,18 @@
   <text x="228" y="212" font-size="20" fill="currentColor" stroke="none" text-anchor="end">眉</text>
   <text x="228" y="305" font-size="20" fill="currentColor" stroke="none" text-anchor="end">鼻先</text>
   <text x="228" y="398" font-size="20" fill="currentColor" stroke="none" text-anchor="end">あご</text>
-  <line x1="590" y1="116" x2="590" y2="201" stroke="#45702A" stroke-width="2.5"/>
-  <path d="M586.1,192.9 L590,201 L593.9,192.9" stroke="#45702A" stroke-width="2.5"/>
-  <path d="M593.9,124.1 L590,116 L586.1,124.1" stroke="#45702A" stroke-width="2.5"/>
-  <text x="612" y="165.5" font-size="20" fill="#45702A" stroke="none" text-anchor="start">1/3</text>
-  <line x1="590" y1="209" x2="590" y2="294" stroke="#45702A" stroke-width="2.5"/>
-  <path d="M586.1,285.9 L590,294 L593.9,285.9" stroke="#45702A" stroke-width="2.5"/>
-  <path d="M593.9,217.1 L590,209 L586.1,217.1" stroke="#45702A" stroke-width="2.5"/>
-  <text x="612" y="258.5" font-size="20" fill="#45702A" stroke="none" text-anchor="start">1/3</text>
-  <line x1="590" y1="302" x2="590" y2="387" stroke="#45702A" stroke-width="2.5"/>
-  <path d="M586.1,378.9 L590,387 L593.9,378.9" stroke="#45702A" stroke-width="2.5"/>
-  <path d="M593.9,310.1 L590,302 L586.1,310.1" stroke="#45702A" stroke-width="2.5"/>
-  <text x="612" y="351.5" font-size="20" fill="#45702A" stroke="none" text-anchor="start">1/3</text>
+  <line x1="590" y1="116" x2="590" y2="201" stroke="#7BB661" stroke-width="2.5"/>
+  <path d="M586.1,192.9 L590,201 L593.9,192.9" stroke="#7BB661" stroke-width="2.5"/>
+  <path d="M593.9,124.1 L590,116 L586.1,124.1" stroke="#7BB661" stroke-width="2.5"/>
+  <text x="612" y="165.5" font-size="20" fill="#7BB661" stroke="none" text-anchor="start">1/3</text>
+  <line x1="590" y1="209" x2="590" y2="294" stroke="#7BB661" stroke-width="2.5"/>
+  <path d="M586.1,285.9 L590,294 L593.9,285.9" stroke="#7BB661" stroke-width="2.5"/>
+  <path d="M593.9,217.1 L590,209 L586.1,217.1" stroke="#7BB661" stroke-width="2.5"/>
+  <text x="612" y="258.5" font-size="20" fill="#7BB661" stroke="none" text-anchor="start">1/3</text>
+  <line x1="590" y1="302" x2="590" y2="387" stroke="#7BB661" stroke-width="2.5"/>
+  <path d="M586.1,378.9 L590,387 L593.9,378.9" stroke="#7BB661" stroke-width="2.5"/>
+  <path d="M593.9,310.1 L590,302 L586.1,310.1" stroke="#7BB661" stroke-width="2.5"/>
+  <text x="612" y="351.5" font-size="20" fill="#7BB661" stroke="none" text-anchor="start">1/3</text>
   <path d="M335,203 Q360,193 385,200"/>
   <path d="M465,203 Q440,193 415,200"/>
   <path d="M328,232 Q350,218 372,232 Q350,242 328,232 Z"/>
@@ -29,8 +29,8 @@
   <circle cx="450" cy="231" r="7"/>
   <path d="M394,265 L388,292 Q400,302 412,292" stroke-width="2"/>
   <path d="M378,328 Q400,334 422,328"/>
-  <path d="M290,215 Q268,208 266,245 Q268,290 292,292" stroke="#45702A" stroke-width="3.5"/>
-  <path d="M510,215 Q532,208 534,245 Q532,290 508,292" stroke="#45702A" stroke-width="3.5"/>
-  <text x="228" y="257" font-size="18" fill="#45702A" stroke="none" text-anchor="end">耳（眉〜鼻）</text>
+  <path d="M290,215 Q268,208 266,245 Q268,290 292,292" stroke="#7BB661" stroke-width="3.5"/>
+  <path d="M510,215 Q532,208 534,245 Q532,290 508,292" stroke="#7BB661" stroke-width="3.5"/>
+  <text x="228" y="257" font-size="18" fill="#7BB661" stroke="none" text-anchor="end">耳（眉〜鼻）</text>
   <text x="400" y="460" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">リアル比率の目安: 3つの間隔がほぼ同じ</text>
 </svg>

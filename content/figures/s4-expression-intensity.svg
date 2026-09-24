@@ -8,7 +8,7 @@
   <ellipse cx="183.4" cy="185.8" rx="7.3" ry="13.2"/>
   <path d="M132.4,227.2 Q150,240.4 167.6,227.2" stroke-width="2.5"/>
   <text x="150" y="355" font-size="24" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">弱</text>
-  <line x1="90" y1="390" x2="130" y2="390" stroke="#45702A" stroke-width="10" stroke-linecap="butt"/>
+  <line x1="90" y1="390" x2="130" y2="390" stroke="#7BB661" stroke-width="10" stroke-linecap="butt"/>
   <path d="M312,165.6 A88,89.8 0 0 1 488,165.6 Q483.6,236 400,262.4 Q316.4,236 312,165.6 Z"/>
   <path d="M384.2,159.4 Q366.6,152.4 349,159.4" stroke-width="3"/>
   <path d="M415.8,159.4 Q433.4,152.4 451,159.4" stroke-width="3"/>
@@ -18,7 +18,7 @@
   <path d="M426.8,185.8 Q433.4,201.7 440,185.8" stroke-width="2"/>
   <path d="M378.9,224.6 Q400,229.8 421.1,224.6 Q417.6,252.7 400,253.6 Q382.4,252.7 378.9,224.6 Z" stroke-width="2.5"/>
   <text x="400" y="355" font-size="24" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">中</text>
-  <line x1="340" y1="390" x2="420" y2="390" stroke="#45702A" stroke-width="10" stroke-linecap="butt"/>
+  <line x1="340" y1="390" x2="420" y2="390" stroke="#7BB661" stroke-width="10" stroke-linecap="butt"/>
   <path d="M562,165.6 A88,89.8 0 0 1 738,165.6 Q733.6,236 650,262.4 Q566.4,236 562,165.6 Z"/>
   <path d="M634.2,150.6 Q616.6,138.3 599,150.6" stroke-width="3"/>
   <path d="M665.8,150.6 Q683.4,138.3 701,150.6" stroke-width="3"/>
@@ -26,8 +26,8 @@
   <path d="M670.2,191.1 Q683.4,168.2 696.6,191.1" stroke-width="3.5"/>
   <path d="M628.9,224.6 Q650,229.8 671.1,224.6 Q667.6,252.7 650,253.6 Q632.4,252.7 628.9,224.6 Z" stroke-width="2.5"/>
   <text x="650" y="355" font-size="24" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">強</text>
-  <line x1="590" y1="390" x2="710" y2="390" stroke="#45702A" stroke-width="10" stroke-linecap="butt"/>
-  <text x="400" y="430" font-size="18" fill="#45702A" stroke="none" text-anchor="middle">変化の量（緑）</text>
+  <line x1="590" y1="390" x2="710" y2="390" stroke="#7BB661" stroke-width="10" stroke-linecap="butt"/>
+  <text x="400" y="430" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">変化の量（緑）</text>
   <text x="400" y="470" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">眉・目・口を同じ向きに、少しずつ大きく動かす</text>
   <line x1="250" y1="170" x2="300" y2="170" stroke-width="2"/>
   <path d="M289.2,175.2 L300,170 L289.2,164.8" stroke-width="2"/>

@@ -53,6 +53,10 @@ export interface Progress {
   attempts: number;
   /** 直近の採点（A/自動採点があるレッスン型のみ）。無ければ null。 */
   lastScore: number | null;
+  /** 選択式レッスン（optional）を「飛ばす」で完了扱いにした場合 true。 */
+  skipped?: boolean;
+  /** 途中で中断したときの次に開くステップ番号（0 始まり）。完了時は null。 */
+  lastStep?: number | null;
   updatedAt: string;
 }
 
@@ -92,6 +96,8 @@ export interface Drawing {
   createdAt: string;
   /** アプリ内キャンバスで描いた場合のみ持つストローク列。取込画像は null。 */
   strokes: StrokeDrawing | null;
+  /** 付随情報（模写チェックポイントの差分マーク位置など）。JSON 化できる値のみ。 */
+  meta?: Record<string, unknown>;
   updatedAt: string;
 }
 

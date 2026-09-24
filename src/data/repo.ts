@@ -78,6 +78,23 @@ export async function listProgress(): Promise<Progress[]> {
 
 export interface CompleteLessonOptions {
   score?: number;
+  /** 選択式レッスンを「飛ばす」で完了扱いにする場合 true。 */
+  skipped?: boolean;
+}
+
+/**
+ * 途中で中断したレッスンの「次に開くステップ番号」を記録する（完了扱いにはしない）。
+ * 完了時は completeLesson が lastStep を null に戻す。
+ */
+export async function setLessonStep(lessonId: string, step: number): Promise<Progress> {
+  const db = await openDb();
+  const existing = await db.get('progress', lessonId);
+  const now = nowIso();
+  const next: Progress = existing
+    ? { ...existing, lastStep: step, updatedAt: now }
+    : { lessonId, completedAt: null, attempts: 0, lastScore: null, lastStep: step, updatedAt: now };
+  await db.put('progress', next);
+  return next;
 }
 
 /** レッスン完了を記録する。既存レコードがあれば試行回数を+1し、最終スコアを更新する。 */
@@ -95,6 +112,8 @@ export async function completeLesson(
         completedAt: existing.completedAt ?? now,
         attempts: existing.attempts + 1,
         lastScore: options.score ?? existing.lastScore,
+        skipped: options.skipped ?? false,
+        lastStep: null,
         updatedAt: now,
       }
     : {
@@ -102,6 +121,8 @@ export async function completeLesson(
         completedAt: now,
         attempts: 1,
         lastScore: options.score ?? null,
+        skipped: options.skipped ?? false,
+        lastStep: null,
         updatedAt: now,
       };
 
@@ -149,6 +170,7 @@ export interface SaveDrawingInput {
   image: Blob;
   createdAt?: string;
   strokes?: StrokeDrawing | null;
+  meta?: Record<string, unknown>;
 }
 
 export async function saveDrawing(input: SaveDrawingInput): Promise<Drawing> {
@@ -161,6 +183,7 @@ export async function saveDrawing(input: SaveDrawingInput): Promise<Drawing> {
     image: input.image,
     createdAt: input.createdAt ?? now,
     strokes: input.strokes ?? null,
+    ...(input.meta ? { meta: input.meta } : {}),
     updatedAt: now,
   };
   await db.put('drawings', drawing);

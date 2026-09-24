@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
   <text x="400" y="40" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">まず「手のひらの箱」がどちらを向くかを決める</text>
-  <path d="M60,230 L140,230 L140,330 L60,330 Z" stroke="#45702A" stroke-width="4"/>
+  <path d="M60,230 L140,230 L140,330 L60,330 Z" stroke="#7BB661" stroke-width="4"/>
   <path d="M140,230 L152,222 L152,322 L140,330" opacity="0.6"/>
   <line x1="78" y1="229.3" x2="70" y2="151.7"/>
   <line x1="62" y1="230.7" x2="56.4" y2="152.9"/>
@@ -24,7 +24,7 @@
   <ellipse cx="60" cy="300" rx="3.6" ry="9" transform="rotate(-145 60 300)"/>
   <ellipse cx="14.9" cy="268.5" rx="3.1" ry="7.7" transform="rotate(-145 14.9 268.5)"/>
   <text x="100" y="400" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">手のひら側</text>
-  <path d="M260,230 L340,230 L340,330 L260,330 Z" stroke="#45702A" stroke-width="4"/>
+  <path d="M260,230 L340,230 L340,330 L260,330 Z" stroke="#7BB661" stroke-width="4"/>
   <path d="M340,230 L352,222 L352,322 L340,330" opacity="0.6"/>
   <line x1="278" y1="229.3" x2="270" y2="151.7"/>
   <line x1="262" y1="230.7" x2="256.4" y2="152.9"/>
@@ -51,7 +51,7 @@
   <ellipse cx="340" cy="300" rx="3.6" ry="9" transform="rotate(-35 340 300)" opacity="0.5"/>
   <ellipse cx="385.1" cy="268.5" rx="3.1" ry="7.7" transform="rotate(-35 385.1 268.5)" opacity="0.5"/>
   <text x="300" y="400" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">手の甲側</text>
-  <path d="M467,230 L493,230 L493,330 L467,330 Z" stroke="#45702A" stroke-width="4"/>
+  <path d="M467,230 L493,230 L493,330 L467,330 Z" stroke="#7BB661" stroke-width="4"/>
   <path d="M493,230 L535,215 L535,315 L493,330" opacity="0.6"/>
   <line x1="533" y1="218.7" x2="538.7" y2="138.9" opacity="0.4"/>
   <line x1="517" y1="217.3" x2="525.2" y2="137.7" opacity="0.4"/>
@@ -62,7 +62,7 @@
   <ellipse cx="480" cy="230" rx="3.6" ry="9" transform="rotate(-90 480 230)"/>
   <ellipse cx="480" cy="164" rx="3.1" ry="7.7" transform="rotate(-90 480 164)"/>
   <text x="500" y="400" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">小指側</text>
-  <path d="M667,230 L693,230 L693,330 L667,330 Z" stroke="#45702A" stroke-width="4"/>
+  <path d="M667,230 L693,230 L693,330 L667,330 Z" stroke="#7BB661" stroke-width="4"/>
   <path d="M693,230 L735,215 L735,315 L693,330" opacity="0.6"/>
   <line x1="733" y1="218.7" x2="738.7" y2="138.9" opacity="0.4"/>
   <line x1="717" y1="217.3" x2="725.2" y2="137.7" opacity="0.4"/>
@@ -77,5 +77,5 @@
   <ellipse cx="670" cy="300" rx="4" ry="10" transform="rotate(-120 670 300)"/>
   <ellipse cx="640" cy="248" rx="3.4" ry="8.5" transform="rotate(-120 640 248)"/>
   <text x="700" y="400" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">親指側</text>
-  <text x="400" y="460" font-size="18" fill="#45702A" stroke="none" text-anchor="middle">緑の面＝こちらに見えている面</text>
+  <text x="400" y="460" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">緑の面＝こちらに見えている面</text>
 </svg>

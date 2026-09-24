@@ -66,14 +66,14 @@
   <circle cx="695.2" cy="348.2" r="7.7"/>
   <circle cx="702.4" cy="418.4" r="5.4"/>
   <path d="M702.4,418.4 L716.8,431 L698.1,431 Z"/>
-  <line x1="709" y1="144.1" x2="731.6" y2="111.2" stroke="#45702A" stroke-width="3.5"/>
-  <line x1="695.8" y1="134.7" x2="720" y2="102.8" stroke="#45702A" stroke-width="3.5"/>
-  <line x1="732.4" y1="108.2" x2="738.3" y2="67.4" stroke="#45702A" stroke-width="3.5"/>
-  <line x1="719.2" y1="105.8" x2="727.7" y2="65.6" stroke="#45702A" stroke-width="3.5"/>
-  <circle cx="702.4" cy="139.4" r="7.2" stroke="#45702A" stroke-width="3.5"/>
-  <circle cx="725.8" cy="107" r="5.9" stroke="#45702A" stroke-width="3.5"/>
-  <circle cx="733" cy="66.5" r="4.5" stroke="#45702A" stroke-width="3.5"/>
-  <ellipse cx="733.9" cy="56.1" rx="12.2" ry="6.3" transform="rotate(-85 733.9 56.1)" stroke="#45702A" stroke-width="3.5"/>
+  <line x1="709" y1="144.1" x2="731.6" y2="111.2" stroke="#7BB661" stroke-width="3.5"/>
+  <line x1="695.8" y1="134.7" x2="720" y2="102.8" stroke="#7BB661" stroke-width="3.5"/>
+  <line x1="732.4" y1="108.2" x2="738.3" y2="67.4" stroke="#7BB661" stroke-width="3.5"/>
+  <line x1="719.2" y1="105.8" x2="727.7" y2="65.6" stroke="#7BB661" stroke-width="3.5"/>
+  <circle cx="702.4" cy="139.4" r="7.2" stroke="#7BB661" stroke-width="3.5"/>
+  <circle cx="725.8" cy="107" r="5.9" stroke="#7BB661" stroke-width="3.5"/>
+  <circle cx="733" cy="66.5" r="4.5" stroke="#7BB661" stroke-width="3.5"/>
+  <ellipse cx="733.9" cy="56.1" rx="12.2" ry="6.3" transform="rotate(-85 733.9 56.1)" stroke="#7BB661" stroke-width="3.5"/>
   <line x1="677.2" y1="139.2" x2="677.9" y2="122.9"/>
   <line x1="662.8" y1="137.8" x2="665.4" y2="121.7"/>
   <ellipse cx="673.6" cy="102.5" rx="19.8" ry="24.3"/>
@@ -96,5 +96,5 @@
   <ellipse cx="624.1" cy="276.2" rx="14.4" ry="6.3" transform="rotate(94.1 624.1 276.2)"/>
   <text x="130" y="470" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">① イラスト</text>
   <text x="400" y="470" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">② マネキンに置き換え</text>
-  <text x="670" y="470" font-size="18" fill="#45702A" stroke="none" text-anchor="middle">③ 1か所変える</text>
+  <text x="670" y="470" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">③ 1か所変える</text>
 </svg>

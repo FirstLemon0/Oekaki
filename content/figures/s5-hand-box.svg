@@ -62,9 +62,9 @@
   <line x1="212.2" y1="290" x2="189.4" y2="269.2"/>
   <ellipse cx="221.3" cy="279.1" rx="5" ry="14.3" transform="rotate(-140 221.3 279.1)"/>
   <ellipse cx="197.7" cy="259.3" rx="4.5" ry="12.9" transform="rotate(-140 197.7 259.3)"/>
-  <path d="M290,250 Q385,215 480,250" stroke="#45702A" stroke-width="5"/>
+  <path d="M290,250 Q385,215 480,250" stroke="#7BB661" stroke-width="5"/>
   <text x="530" y="120" font-size="22" fill="currentColor" stroke="none" text-anchor="start">指＝円柱（3節）</text>
-  <text x="530" y="225" font-size="22" fill="#45702A" stroke="none" text-anchor="start">付け根は弧を描く</text>
+  <text x="530" y="225" font-size="22" fill="#7BB661" stroke="none" text-anchor="start">付け根は弧を描く</text>
   <text x="530" y="340" font-size="22" fill="currentColor" stroke="none" text-anchor="start">手のひら＝箱</text>
   <text x="250" y="450" font-size="18" fill="currentColor" stroke="none" text-anchor="end">親指の付け根のふくらみ</text>
 </svg>

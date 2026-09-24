@@ -76,6 +76,6 @@
   <line x1="618.1" y1="271.1" x2="613.1" y2="215"/>
   <ellipse cx="628" cy="270" rx="4" ry="10" transform="rotate(-96.1 628 270)"/>
   <ellipse cx="622" cy="214" rx="3.6" ry="9" transform="rotate(-96.1 622 214)"/>
-  <circle cx="620" cy="196" r="9" stroke="#45702A" stroke-width="3"/>
+  <circle cx="620" cy="196" r="9" stroke="#7BB661" stroke-width="3"/>
   <text x="700" y="440" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">つまむ</text>
 </svg>

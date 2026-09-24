@@ -27,6 +27,11 @@ export interface CritiqueIssue {
   where: string;
   what: string;
   fix: string;
+  /**
+   * 絵の上での位置（左上原点、0..1 に正規化）。番号マーカーを置くための目安。
+   * モデルが返さないことがあるので任意。
+   */
+  pos?: { x: number; y: number };
 }
 
 export interface CritiqueResult {

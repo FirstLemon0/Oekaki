@@ -17,7 +17,7 @@
   <circle cx="655" cy="175" r="68" stroke-dasharray="6 6" opacity="0.55" stroke-width="1.5"/>
   <path d="M595.16,190 Q600.6,275 655,300 Q709.4,275 714.84,190" stroke-dasharray="6 6" opacity="0.55" stroke-width="1.5"/>
   <path d="M581,205 Q575,99 655,95 Q735,99 729,205" stroke-width="3"/>
-  <path d="M718,135 Q753,115 758,155 Q773,265 738,375 Q733,265 718,155" stroke-width="3" stroke="#45702A"/>
+  <path d="M718,135 Q753,115 758,155 Q773,265 738,375 Q733,265 718,155" stroke-width="3" stroke="#7BB661"/>
   <ellipse cx="735" cy="137" rx="9" ry="12" transform="rotate(20 735 137)" stroke-width="2"/>
   <path d="M595,170 L612,145 L625,180 L640,140 L660,183 L675,140 L695,177 L703,143 L715,170" stroke-width="2.5"/>
   <text x="655" y="460" font-size="20" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">ポニーテール</text>

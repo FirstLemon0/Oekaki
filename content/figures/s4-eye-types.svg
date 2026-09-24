@@ -4,30 +4,30 @@
   <ellipse cx="150" cy="227.2" rx="40.8" ry="52.8"/>
   <ellipse cx="150" cy="234.4" rx="18.7" ry="26.4" fill="currentColor" opacity="0.35" stroke="none"/>
   <circle cx="136.4" cy="205.6" r="10.2" stroke-width="2"/>
-  <line x1="39.5" y1="233.2" x2="269" y2="98" stroke="#45702A" stroke-width="2" stroke-dasharray="6 6"/>
-  <circle cx="65" cy="218.2" r="4" fill="#45702A" stroke="none"/>
-  <circle cx="235" cy="118" r="4" fill="#45702A" stroke="none"/>
+  <line x1="39.5" y1="233.2" x2="269" y2="98" stroke="#7BB661" stroke-width="2" stroke-dasharray="6 6"/>
+  <circle cx="65" cy="218.2" r="4" fill="#7BB661" stroke="none"/>
+  <circle cx="235" cy="118" r="4" fill="#7BB661" stroke="none"/>
   <text x="150" y="390" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">つり目</text>
-  <text x="150" y="422" font-size="18" fill="#45702A" stroke="none" text-anchor="middle">目じりが上がる</text>
+  <text x="150" y="422" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">目じりが上がる</text>
   <path d="M315,178.6 Q391.5,133.6 485,250 L495.2,271.6" stroke-width="5"/>
   <path d="M374.5,280 Q425.5,286 476.5,305.2" stroke-width="1.8"/>
   <ellipse cx="400" cy="227.2" rx="40.8" ry="52.8"/>
   <ellipse cx="400" cy="234.4" rx="18.7" ry="26.4" fill="currentColor" opacity="0.35" stroke="none"/>
   <circle cx="386.4" cy="205.6" r="10.2" stroke-width="2"/>
-  <line x1="289.5" y1="167.9" x2="519" y2="264.3" stroke="#45702A" stroke-width="2" stroke-dasharray="6 6"/>
-  <circle cx="315" cy="178.6" r="4" fill="#45702A" stroke="none"/>
-  <circle cx="485" cy="250" r="4" fill="#45702A" stroke="none"/>
+  <line x1="289.5" y1="167.9" x2="519" y2="264.3" stroke="#7BB661" stroke-width="2" stroke-dasharray="6 6"/>
+  <circle cx="315" cy="178.6" r="4" fill="#7BB661" stroke="none"/>
+  <circle cx="485" cy="250" r="4" fill="#7BB661" stroke="none"/>
   <text x="400" y="390" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">たれ目</text>
-  <text x="400" y="422" font-size="18" fill="#45702A" stroke="none" text-anchor="middle">目じりが下がる</text>
+  <text x="400" y="422" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">目じりが下がる</text>
   <path d="M565,193 Q641.5,112 735,175 L745.2,202" stroke-width="5"/>
   <path d="M624.5,295 Q675.5,302.5 726.5,277" stroke-width="1.8"/>
   <ellipse cx="650" cy="229" rx="40.8" ry="66"/>
   <ellipse cx="650" cy="238" rx="18.7" ry="33" fill="currentColor" opacity="0.35" stroke="none"/>
   <circle cx="636.4" cy="202" r="10.2" stroke-width="2"/>
-  <line x1="539.5" y1="195.7" x2="769" y2="171.4" stroke="#45702A" stroke-width="2" stroke-dasharray="6 6"/>
-  <circle cx="565" cy="193" r="4" fill="#45702A" stroke="none"/>
-  <circle cx="735" cy="175" r="4" fill="#45702A" stroke="none"/>
+  <line x1="539.5" y1="195.7" x2="769" y2="171.4" stroke="#7BB661" stroke-width="2" stroke-dasharray="6 6"/>
+  <circle cx="565" cy="193" r="4" fill="#7BB661" stroke="none"/>
+  <circle cx="735" cy="175" r="4" fill="#7BB661" stroke="none"/>
   <text x="650" y="390" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">丸目</text>
-  <text x="650" y="422" font-size="18" fill="#45702A" stroke="none" text-anchor="middle">上下に丸く</text>
+  <text x="650" y="422" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">上下に丸く</text>
   <text x="400" y="475" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">点線＝目頭と目じりを結ぶ線。この傾きで印象が変わる</text>
 </svg>

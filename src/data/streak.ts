@@ -96,6 +96,24 @@ export function applyActivity(streak: Streak, day: string, updatedAt: string = d
   };
 }
 
+/**
+ * 「今日はフリーズを使って休む」を明示的に選んだときの処理。
+ * フリーズを 1 個消費し、今日を活動日扱いにする（current は増やさない）。
+ * 使えない場合（フリーズ 0、今日すでに活動済み、活動履歴なし）は null を返す。
+ */
+export function useFreezeToday(streak: Streak, today: string, updatedAt: string = today): Streak | null {
+  if (streak.freezes <= 0) return null;
+  if (streak.lastActiveDay === null || streak.current === 0) return null;
+  if (streak.lastActiveDay === today) return null;
+  if (diffDays(streak.lastActiveDay, today) <= 0) return null;
+  return {
+    ...streak,
+    freezes: streak.freezes - 1,
+    lastActiveDay: today,
+    updatedAt,
+  };
+}
+
 export interface FreezeCheckResult {
   /** 今日まだ活動しておらず、このままだとストリークが途切れうる状態か。 */
   atRisk: boolean;

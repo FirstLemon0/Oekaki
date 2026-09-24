@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
-  <line x1="120" y1="150" x2="680" y2="150" stroke="#45702A" stroke-width="4"/>
-  <line x1="560" y1="110" x2="680" y2="110" stroke="#45702A"/>
-  <path d="M667.4,116.1 L680,110 L667.4,103.9" stroke="#45702A"/>
-  <line x1="600" y1="110" x2="720" y2="110" stroke="#45702A"/>
-  <path d="M707.4,116.1 L720,110 L707.4,103.9" stroke="#45702A"/>
-  <text x="120" y="100" font-size="22" fill="#45702A" stroke="none" text-anchor="start">速い線：まっすぐ伸びる</text>
+  <line x1="120" y1="150" x2="680" y2="150" stroke="#7BB661" stroke-width="4"/>
+  <line x1="560" y1="110" x2="680" y2="110" stroke="#7BB661"/>
+  <path d="M667.4,116.1 L680,110 L667.4,103.9" stroke="#7BB661"/>
+  <line x1="600" y1="110" x2="720" y2="110" stroke="#7BB661"/>
+  <path d="M707.4,116.1 L720,110 L707.4,103.9" stroke="#7BB661"/>
+  <text x="120" y="100" font-size="22" fill="#7BB661" stroke="none" text-anchor="start">速い線：まっすぐ伸びる</text>
   <path d="M120,340 L140,341.6 L160,341.5 L180,347.6 L200,343.1 L220,339.2 L240,335.7 L260,332.7 L280,339.9 L300,340 L320,348.8 L340,341.8 L360,343.1 L380,333.3 L400,335.7 L420,335.8 L440,341.7 L460,346.2 L480,343.9 L500,343.7 L520,333.8 L540,337 L560,332.8 L580,343.3 L600,342.6 L620,347.5 L640,341.6 L660,337.7 L680,335"/>
   <line x1="620" y1="390" x2="680" y2="390" stroke-width="2"/>
   <path d="M667.4,396.1 L680,390 L667.4,383.9" stroke-width="2"/>

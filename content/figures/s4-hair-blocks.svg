@@ -4,14 +4,14 @@
   <path d="M125,405 Q110,165 210,85 Q290,55 370,85 Q470,165 455,405" stroke-width="3" stroke-dasharray="14 7"/>
   <path d="M160,195 Q143,295 160,410 L185,375 Q175,285 190,215" stroke-width="3"/>
   <path d="M420,195 Q437,295 420,410 L395,375 Q405,285 390,215" stroke-width="3"/>
-  <path d="M165,165 Q182,210 190,250 Q196,205 212,175 Q222,230 230,270 Q236,225 252,167 Q267,215 275,255 Q281,210 298,165 Q312,235 320,275 Q326,230 342,169 Q357,215 365,255 Q371,210 382,179 Q392,195 400,235 Q406,190 415,185" stroke="#45702A" stroke-width="3.5"/>
-  <path d="M165,165 Q290,70 415,165" stroke="#45702A" stroke-width="2" opacity="0.8"/>
+  <path d="M165,165 Q182,210 190,250 Q196,205 212,175 Q222,230 230,270 Q236,225 252,167 Q267,215 275,255 Q281,210 298,165 Q312,235 320,275 Q326,230 342,169 Q357,215 365,255 Q371,210 382,179 Q392,195 400,235 Q406,190 415,185" stroke="#7BB661" stroke-width="3.5"/>
+  <path d="M165,165 Q290,70 415,165" stroke="#7BB661" stroke-width="2" opacity="0.8"/>
   <line x1="290" y1="93" x2="290" y2="73" stroke-width="1.5"/>
   <path d="M293,79.3 L290,73 L287,79.3" stroke-width="1.5"/>
   <path d="M287,86.7 L290,93 L293,86.7" stroke-width="1.5"/>
   <text x="304" y="60" font-size="18" fill="currentColor" stroke="none" text-anchor="start">ボリューム</text>
-  <line x1="560" y1="150" x2="620" y2="150" stroke="#45702A" stroke-width="4"/>
-  <text x="635" y="157" font-size="20" fill="#45702A" stroke="none" text-anchor="start" font-weight="700">前髪</text>
+  <line x1="560" y1="150" x2="620" y2="150" stroke="#7BB661" stroke-width="4"/>
+  <text x="635" y="157" font-size="20" fill="#7BB661" stroke="none" text-anchor="start" font-weight="700">前髪</text>
   <line x1="560" y1="220" x2="620" y2="220" stroke-width="3"/>
   <text x="635" y="227" font-size="20" fill="currentColor" stroke="none" text-anchor="start" font-weight="700">サイド</text>
   <line x1="560" y1="290" x2="620" y2="290" stroke-width="3" stroke-dasharray="14 7"/>

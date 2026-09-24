@@ -1,15 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
   <path d="M20,30 L260,30 L260,210 L20,210 Z" opacity="0.25" stroke-width="1.5"/>
   <path d="M70,60 L210,70 L220,170 L60,160 Z"/>
-  <circle cx="70" cy="60" r="7" fill="#45702A" stroke="none"/>
-  <circle cx="220" cy="170" r="7" fill="#45702A" stroke="none"/>
+  <circle cx="70" cy="60" r="7" fill="#7BB661" stroke="none"/>
+  <circle cx="220" cy="170" r="7" fill="#7BB661" stroke="none"/>
   <path d="M82,64 Q125,135 208,154" stroke-width="2"/>
   <path d="M82,70 Q145,115 208,160" stroke-width="2"/>
   <path d="M82,76 Q165,95 208,166" stroke-width="2"/>
   <text x="140" y="238" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">引っぱりジワ</text>
   <path d="M280,30 L520,30 L520,210 L280,210 Z" opacity="0.25" stroke-width="1.5"/>
-  <circle cx="320" cy="60" r="7" fill="#45702A" stroke="none"/>
-  <circle cx="480" cy="60" r="7" fill="#45702A" stroke="none"/>
+  <circle cx="320" cy="60" r="7" fill="#7BB661" stroke="none"/>
+  <circle cx="480" cy="60" r="7" fill="#7BB661" stroke="none"/>
   <path d="M320,60 Q400,230 480,60"/>
   <path d="M328.4,64 Q400,112.5 471.6,64" stroke-width="2"/>
   <path d="M334.4,64 Q400,150 465.6,64" stroke-width="2"/>
@@ -24,8 +24,8 @@
   <line x1="646" y1="60" x2="644" y2="196" stroke-width="2"/>
   <line x1="674" y1="60" x2="676" y2="196" stroke-width="2"/>
   <line x1="702" y1="60" x2="708" y2="196" stroke-width="2"/>
-  <circle cx="590" cy="58" r="6" fill="#45702A" stroke="none"/>
-  <circle cx="730" cy="58" r="6" fill="#45702A" stroke="none"/>
+  <circle cx="590" cy="58" r="6" fill="#7BB661" stroke="none"/>
+  <circle cx="730" cy="58" r="6" fill="#7BB661" stroke="none"/>
   <text x="660" y="238" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">筒ジワ</text>
   <path d="M20,260 L260,260 L260,440 L20,440 Z" opacity="0.25" stroke-width="1.5"/>
   <line x1="50" y1="392" x2="230" y2="392"/>
@@ -36,8 +36,8 @@
   <path d="M110,310 Q130,350 150,390" stroke-width="2"/>
   <path d="M150,310 Q170,350 190,390" stroke-width="2"/>
   <path d="M190,310 Q210,350 230,390" stroke-width="2"/>
-  <path d="M83.6,329.5 A60,60 0 0 1 192,320" stroke="#45702A" stroke-width="2.5"/>
-  <path d="M180.1,312.5 L192,320 L190.4,306.1" stroke="#45702A" stroke-width="2.5"/>
+  <path d="M83.6,329.5 A60,60 0 0 1 192,320" stroke="#7BB661" stroke-width="2.5"/>
+  <path d="M180.1,312.5 L192,320 L190.4,306.1" stroke="#7BB661" stroke-width="2.5"/>
   <text x="140" y="468" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">ねじれジワ（螺旋）</text>
   <path d="M280,260 L520,260 L520,440 L280,440 Z" opacity="0.25" stroke-width="1.5"/>
   <path d="M310,310 L325,300 L355,310 L385,300 L415,310 L445,300 L475,310"/>
@@ -48,16 +48,16 @@
   <path d="M410,312 L425,350 L410,388" stroke-width="2"/>
   <path d="M440,312 L455,350 L440,388" stroke-width="2"/>
   <path d="M470,312 L485,350 L470,388" stroke-width="2"/>
-  <line x1="505" y1="350" x2="492" y2="350" stroke="#45702A"/>
-  <path d="M501,345.7 L492,350 L501,354.3" stroke="#45702A"/>
-  <line x1="292" y1="350" x2="305" y2="350" stroke="#45702A"/>
-  <path d="M296,354.3 L305,350 L296,345.7" stroke="#45702A"/>
+  <line x1="505" y1="350" x2="492" y2="350" stroke="#7BB661"/>
+  <path d="M501,345.7 L492,350 L501,354.3" stroke="#7BB661"/>
+  <line x1="292" y1="350" x2="305" y2="350" stroke="#7BB661"/>
+  <path d="M296,354.3 L305,350 L296,345.7" stroke="#7BB661"/>
   <text x="400" y="468" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">蛇腹ジワ（ジグザグ）</text>
   <path d="M540,260 L780,260 L780,440 L540,440 Z" opacity="0.25" stroke-width="1.5"/>
   <path d="M570,300 L660,330 Q690,342 710,370 L745,425"/>
   <path d="M570,360 L640,380 Q655,386 665,400 L690,432"/>
   <path d="M628,375 L650,360 L655,388" stroke-width="2"/>
   <path d="M612,370 L636,352" stroke-width="2"/>
-  <circle cx="652" cy="384" r="6" fill="#45702A" stroke="none"/>
+  <circle cx="652" cy="384" r="6" fill="#7BB661" stroke="none"/>
   <text x="660" y="468" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">折れジワ</text>
 </svg>

@@ -11,11 +11,11 @@
   <path d="M409.9,297.5 L423.6,300.4 L417.4,287.9" stroke-width="2.5"/>
   <text x="340" y="450" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">肘</text>
   <text x="340" y="478" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">中くらいの線</text>
-  <circle cx="610" cy="400" r="7" fill="#45702A" stroke="none"/>
-  <line x1="610" y1="400" x2="610" y2="180" stroke="#45702A"/>
-  <path d="M468.6,231.5 A220,220 0 0 1 751.4,231.5" stroke="#45702A" stroke-width="4"/>
-  <path d="M737.7,228.5 L751.4,231.5 L745.2,218.9" stroke="#45702A" stroke-width="4"/>
-  <text x="610" y="450" font-size="22" fill="#45702A" stroke="none" text-anchor="middle" font-weight="700">肩</text>
-  <text x="610" y="478" font-size="18" fill="#45702A" stroke="none" text-anchor="middle">長い線・大きな円</text>
+  <circle cx="610" cy="400" r="7" fill="#7BB661" stroke="none"/>
+  <line x1="610" y1="400" x2="610" y2="180" stroke="#7BB661"/>
+  <path d="M468.6,231.5 A220,220 0 0 1 751.4,231.5" stroke="#7BB661" stroke-width="4"/>
+  <path d="M737.7,228.5 L751.4,231.5 L745.2,218.9" stroke="#7BB661" stroke-width="4"/>
+  <text x="610" y="450" font-size="22" fill="#7BB661" stroke="none" text-anchor="middle" font-weight="700">肩</text>
+  <text x="610" y="478" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">長い線・大きな円</text>
   <text x="400" y="40" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">支点から先が長いほど、大きくなめらかに動かせる</text>
 </svg>

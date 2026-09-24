@@ -20,27 +20,27 @@
   <ellipse cx="220" cy="132" rx="44.8" ry="11.2"/>
   <path d="M175.2,132 L115,283.2 M264.8,132 L325,283.2"/>
   <path d="M115,283.2 Q150,302.8 185,291.6 Q220,308.4 255,291.6 Q290,302.8 325,283.2"/>
-  <path d="M115,283.2 Q220,260.8 325,283.2" stroke-dasharray="8 8" opacity="0.6" stroke="#45702A" stroke-width="3"/>
+  <path d="M115,283.2 Q220,260.8 325,283.2" stroke-dasharray="8 8" opacity="0.6" stroke="#7BB661" stroke-width="3"/>
   <path d="M199,146 L178,291.6 M236.8,146 L250.8,294.4 M217.2,148.8 L214.4,305.6" stroke-width="2"/>
   <path d="M192,409.2 L172.4,434.4" stroke-dasharray="8 8" opacity="0.6"/>
   <path d="M248,409.2 L267.6,434.4" stroke-dasharray="8 8" opacity="0.6"/>
-  <text x="85" y="322" font-size="18" fill="#45702A" stroke="none" text-anchor="middle">裾は楕円</text>
+  <text x="85" y="322" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">裾は楕円</text>
   <text x="220" y="470" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">スカート：腰から裾へ広がる</text>
   <path d="M624.8,129.2 L630.4,293 L622,395.2 M585.6,300 L580,199.2 M585.6,300 L594,395.2"/>
   <path d="M622,395.2 L627.6,403.6 L616.4,412 L624.8,420.4 L591.2,420.4 L599.6,412 L588.4,403.6 L594,395.2"/>
   <path d="M608,293 Q616.4,305.6 622,316.8 M608,293 Q599.6,305.6 596.8,316.8 M608,293 Q616.4,280.4 622,272" stroke-width="2"/>
-  <circle cx="608" cy="293" r="5" fill="#45702A" stroke="none"/>
+  <circle cx="608" cy="293" r="5" fill="#7BB661" stroke="none"/>
   <path d="M535.2,129.2 L529.6,293 L538,395.2 M574.4,300 L580,199.2 M574.4,300 L566,395.2"/>
   <path d="M538,395.2 L532.4,403.6 L543.6,412 L535.2,420.4 L568.8,420.4 L560.4,412 L571.6,403.6 L566,395.2"/>
   <path d="M552,293 Q543.6,305.6 538,316.8 M552,293 Q560.4,305.6 563.2,316.8 M552,293 Q543.6,280.4 538,272" stroke-width="2"/>
-  <circle cx="552" cy="293" r="5" fill="#45702A" stroke="none"/>
+  <circle cx="552" cy="293" r="5" fill="#7BB661" stroke="none"/>
   <path d="M535.2,129.2 L624.8,129.2"/>
   <path d="M580,199.2 Q568.8,221.6 563.2,246.8 M580,199.2 Q591.2,221.6 596.8,246.8" stroke-width="2"/>
-  <circle cx="580" cy="199.2" r="5" fill="#45702A" stroke="none"/>
+  <circle cx="580" cy="199.2" r="5" fill="#7BB661" stroke="none"/>
   <line x1="592" y1="199" x2="705" y2="199" stroke-dasharray="8 8" opacity="0.6" stroke-width="1.5"/>
   <line x1="620" y1="293" x2="705" y2="293" stroke-dasharray="8 8" opacity="0.6" stroke-width="1.5"/>
-  <text x="720" y="206" font-size="18" fill="#45702A" stroke="none" text-anchor="start">股</text>
-  <text x="720" y="300" font-size="18" fill="#45702A" stroke="none" text-anchor="start">膝</text>
+  <text x="720" y="206" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">股</text>
+  <text x="720" y="300" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">膝</text>
   <text x="720" y="425" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">裾がたまる</text>
   <text x="580" y="470" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">ズボン：股と膝から、裾はくるぶしに</text>
 </svg>

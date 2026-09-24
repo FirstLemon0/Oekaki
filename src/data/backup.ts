@@ -70,6 +70,8 @@ const progressSchema = z.object({
   completedAt: isoString.nullable(),
   attempts: z.number(),
   lastScore: z.number().nullable(),
+  skipped: z.boolean().optional(),
+  lastStep: z.number().nullable().optional(),
   updatedAt: isoString,
 }) satisfies z.ZodType<Progress>;
 
@@ -93,6 +95,7 @@ const drawingMetaSchema = z.object({
   kind: drawingKindSchema,
   createdAt: isoString,
   strokes: strokeDrawingSchema.nullable(),
+  meta: z.record(z.string(), z.unknown()).optional(),
   updatedAt: isoString,
 });
 type DrawingMeta = z.infer<typeof drawingMetaSchema>;

@@ -35,17 +35,17 @@
   <circle cx="199.6" cy="240" r="5.3" stroke-dasharray="5 5" opacity="0.4"/>
   <ellipse cx="198.6" cy="254.7" rx="16.8" ry="7.4" transform="rotate(94.1 198.6 254.7)" stroke-dasharray="5 5" opacity="0.4"/>
   <path d="M264.7,97.2 L285.7,101.4 Q310.9,105.6 310.9,135 Q302.5,143.4 289.9,139.2 L282.6,135 Q278.4,177 277.3,198 L331.9,345"/>
-  <circle cx="282.6" cy="135" r="6" fill="#45702A" stroke="none"/>
-  <circle cx="277.3" cy="198" r="6" fill="#45702A" stroke="none"/>
-  <circle cx="281.5" cy="103.5" r="6" fill="#45702A" stroke="none"/>
+  <circle cx="282.6" cy="135" r="6" fill="#7BB661" stroke="none"/>
+  <circle cx="277.3" cy="198" r="6" fill="#7BB661" stroke="none"/>
+  <circle cx="281.5" cy="103.5" r="6" fill="#7BB661" stroke="none"/>
   <path d="M235.3,97.2 L214.3,101.4 Q189.1,105.6 189.1,135 Q197.5,143.4 210.1,139.2 L217.5,135 Q221.7,177 222.7,198 L168.1,345"/>
-  <circle cx="217.5" cy="135" r="6" fill="#45702A" stroke="none"/>
-  <circle cx="222.7" cy="198" r="6" fill="#45702A" stroke="none"/>
-  <circle cx="218.5" cy="103.5" r="6" fill="#45702A" stroke="none"/>
+  <circle cx="217.5" cy="135" r="6" fill="#7BB661" stroke="none"/>
+  <circle cx="222.7" cy="198" r="6" fill="#7BB661" stroke="none"/>
+  <circle cx="218.5" cy="103.5" r="6" fill="#7BB661" stroke="none"/>
   <path d="M235.3,97.2 Q250,109.8 264.7,97.2"/>
   <path d="M168.1,345 Q208,359.7 250,353.4 Q292,359.7 331.9,345"/>
-  <text x="115" y="205" font-size="20" fill="#45702A" stroke="none" text-anchor="end">触れる所</text>
-  <line x1="122" y1="198" x2="212.7" y2="198" stroke="#45702A" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <text x="115" y="205" font-size="20" fill="#7BB661" stroke="none" text-anchor="end">触れる所</text>
+  <line x1="122" y1="198" x2="212.7" y2="198" stroke="#7BB661" stroke-width="1.5" stroke-dasharray="4 4"/>
   <line x1="191" y1="324" x2="219" y2="324" stroke-width="2"/>
   <path d="M211.8,327.5 L219,324 L211.8,320.5" stroke-width="2"/>
   <line x1="219" y1="324" x2="191" y2="324" stroke-width="2"/>
@@ -56,8 +56,8 @@
   <text x="620" y="90" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">袖の断面</text>
   <circle cx="620" cy="220" r="40" stroke-dasharray="8 8" opacity="0.6"/>
   <circle cx="620" cy="245" r="65"/>
-  <circle cx="620" cy="180" r="7" fill="#45702A" stroke="none"/>
-  <text x="700" y="176" font-size="18" fill="#45702A" stroke="none" text-anchor="start">上で触れる</text>
+  <circle cx="620" cy="180" r="7" fill="#7BB661" stroke="none"/>
+  <text x="700" y="176" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">上で触れる</text>
   <path d="M620,312 L620,286" opacity="0.6"/>
   <text x="620" y="350" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">下は垂れて離れる</text>
 </svg>

@@ -20,10 +20,10 @@
   <line x1="565.8" y1="256.2" x2="574.4" y2="309.5"/>
   <line x1="622.2" y1="235.8" x2="649.6" y2="282.5"/>
   <ellipse cx="594" cy="246" rx="18" ry="30" transform="rotate(70.2 594 246)"/>
-  <ellipse cx="612" cy="296" rx="32" ry="40" transform="rotate(70.2 612 296)" stroke="#45702A" stroke-width="4"/>
+  <ellipse cx="612" cy="296" rx="32" ry="40" transform="rotate(70.2 612 296)" stroke="#7BB661" stroke-width="4"/>
   <circle cx="622" cy="342" r="44"/>
   <text x="545" y="180" font-size="18" fill="currentColor" stroke="none" text-anchor="end">奥</text>
-  <text x="680" y="300" font-size="18" fill="#45702A" stroke="none" text-anchor="start">手前ほど</text>
-  <text x="680" y="324" font-size="18" fill="#45702A" stroke="none" text-anchor="start">大きく丸い</text>
+  <text x="680" y="300" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">手前ほど</text>
+  <text x="680" y="324" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">大きく丸い</text>
   <text x="610" y="440" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">前から：重なって短く見える</text>
 </svg>
