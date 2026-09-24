@@ -1,0 +1,203 @@
+/*
+ * 成長通 デザイントークン（案A 和紙と若葉）
+ * ライトが既定。ダークは [data-theme="dark"] または prefers-color-scheme: dark
+ * （[data-theme="light"] で上書き可）。
+ */
+
+:root {
+  color-scheme: light;
+
+  /* 色 */
+  --color-paper: #F4EFE4;
+  --color-card: #FBF8F1;
+  --color-canvas: #F7F3EA;
+  --color-ink: #2A2722;
+  --color-ink-2: #5E5850;
+  --color-ink-3: #8C846F;
+  --color-line: #D9D1C2;
+  --color-groove: #E6DFD0;
+  --color-accent: #45702A;
+  --color-accent-press: #365A20;
+  --color-accent-soft: #E3ECD8;
+  --color-on-accent: #FBF8F1;
+  --score-good: #3B6FB6;
+  --score-mid: #C98A1B;
+  --score-off: #B5432F;
+  --color-overlay: #B8C9E8;
+  --color-danger: #B5432F;
+  --color-focus: #3B6FB6;
+
+  /* 文字 */
+  --font-display: 'Shippori Mincho B1', 'Hiragino Mincho ProN', serif;
+  --font-body: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+  --text-xs: 0.75rem;    /* 12 */
+  --text-sm: 0.8125rem;  /* 13 */
+  --text-base: 1rem;     /* 16 */
+  --text-md: 1.125rem;   /* 18 */
+  --text-lg: 1.25rem;    /* 20 */
+  --text-xl: 1.5rem;     /* 24 */
+  --text-2xl: 1.875rem;  /* 30 */
+  --text-score: 2.5rem;  /* 40 */
+  --text-timer: 6rem;    /* 96 */
+  --leading-body: 1.7;
+  --leading-head: 1.2;
+
+  /* 余白 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* 角丸 */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-card: 18px;
+  --radius-pill: 999px;
+
+  /* 線 */
+  --border-secondary: 2px;
+  --border-node: 3px;
+
+  /* 影 */
+  --shadow-sheet: 0 -8px 30px rgba(42, 39, 34, 0.14);
+  --shadow-modal: 0 16px 40px rgba(42, 39, 34, 0.22);
+  --color-scrim: rgba(42, 39, 34, 0.45);
+
+  /* 操作目標 */
+  --tap-min: 48px;
+  --btn-primary-h: 56px;
+  --btn-secondary-h: 48px;
+
+  /* モーション */
+  --motion-state: 160ms;
+  --motion-path: 400ms;
+  --motion-sheet: 240ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* レイアウト */
+  --rail-w: 88px;
+  --bottomnav-h: 84px;
+  --panel-w: 372px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-paper: #23221F;
+    --color-card: #2C2B27;
+    --color-canvas: #F2EEE4;
+    --color-ink: #EDE8DC;
+    --color-ink-2: #A9A296;
+    --color-ink-3: #6B675E;
+    --color-line: #3F3D37;
+    --color-groove: #35342F;
+    --color-accent: #8FBF6A;
+    --color-accent-press: #A7D186;
+    --color-accent-soft: #2F3D27;
+    --color-on-accent: #23221F;
+    --score-good: #6FA3E8;
+    --score-mid: #E0B04A;
+    --score-off: #E0705C;
+    --color-overlay: #5A7AB0;
+    --color-danger: #E0705C;
+    --color-focus: #6FA3E8;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-paper: #23221F;
+  --color-card: #2C2B27;
+  --color-canvas: #F2EEE4;
+  --color-ink: #EDE8DC;
+  --color-ink-2: #A9A296;
+  --color-ink-3: #6B675E;
+  --color-line: #3F3D37;
+  --color-groove: #35342F;
+  --color-accent: #8FBF6A;
+  --color-accent-press: #A7D186;
+  --color-accent-soft: #2F3D27;
+  --color-on-accent: #23221F;
+  --score-good: #6FA3E8;
+  --score-mid: #E0B04A;
+  --score-off: #E0705C;
+  --color-overlay: #5A7AB0;
+  --color-danger: #E0705C;
+  --color-focus: #6FA3E8;
+}
+
+/* 文字サイズ「大きめ」 */
+:root[data-font-scale="large"] { font-size: 112.5%; }
+
+/* ------------------------------------------------------------------ */
+/* ベース                                                              */
+/* ------------------------------------------------------------------ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+#app { height: 100%; }
+
+h1, h2, h3, h4 { margin: 0; line-height: var(--leading-head); }
+p { margin: 0; }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.num { font-variant-numeric: tabular-nums; }
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: var(--leading-head);
+}
+
+.label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1.4;
+  color: var(--color-ink-2);
+}
+
+.muted { color: var(--color-ink-2); }
+.faint { color: var(--color-ink-3); }
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <circle cx="90" cy="300" r="5" fill="currentColor" stroke="none"/>
+  <circle cx="330" cy="220" r="5" fill="currentColor" stroke="none"/>
+  <path d="M90,272 Q210,190 330,192" stroke-dasharray="8 8" opacity="0.6"/>
+  <path d="M90,250 Q210,168 330,170" stroke-dasharray="8 8" opacity="0.6"/>
+  <path d="M90,228 Q210,146 330,148" stroke-dasharray="8 8" opacity="0.6"/>
+  <circle cx="360" cy="190" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="360" y="197" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">1</text>
+  <circle cx="360" cy="160" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="360" y="167" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">2</text>
+  <circle cx="360" cy="130" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="360" y="137" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">3</text>
+  <text x="210" y="110" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">浮かせて3回なぞる</text>
+  <line x1="410" y1="250" x2="470" y2="250" stroke-width="3"/>
+  <path d="M457.4,256.1 L470,250 L457.4,243.9" stroke-width="3"/>
+  <circle cx="500" cy="300" r="5" fill="currentColor" stroke="none"/>
+  <circle cx="740" cy="220" r="5" fill="currentColor" stroke="none"/>
+  <line x1="500" y1="300" x2="740" y2="220" stroke="#45702A" stroke-width="5"/>
+  <circle cx="760" cy="190" r="15" stroke="#45702A" stroke-width="2"/>
+  <text x="760" y="197" font-size="18" fill="#45702A" stroke="none" text-anchor="middle">4</text>
+  <text x="620" y="340" font-size="22" fill="#45702A" stroke="none" text-anchor="middle">一気に引く</text>
+  <text x="90" y="330" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">始点</text>
+  <text x="330" y="250" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">終点</text>
+  <text x="400" y="440" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">点を置く → 空中で動きを予行 → 迷わず1本</text>
+</svg>

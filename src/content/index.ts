@@ -6,12 +6,42 @@
  * 追加したら、下の RAW_STAGES / RAW_RUBRICS に追記すること。
  */
 import stageS0 from '@content/stages/s0.json';
+import stageS1 from '@content/stages/s1.json';
+import stageS1_5 from '@content/stages/s1_5.json';
 import rubricS1 from '@content/rubrics/s1.json';
+import rubricS1_5 from '@content/rubrics/s1_5.json';
+import tplSimpleShapes from '@content/templates/simple-shapes.json';
+import tplLeafSilhouette from '@content/templates/leaf-silhouette.json';
+import tplFlowerSilhouette from '@content/templates/flower-silhouette.json';
+import tplFaceOutlineCross from '@content/templates/face-outline-cross.json';
+import tplAnimeEyePair from '@content/templates/anime-eye-pair.json';
+import tplNoseMouthBrow from '@content/templates/nose-mouth-brow.json';
+import tplHairMass from '@content/templates/hair-mass.json';
 
+import type { Drawing } from '@/scoring/types';
 import { CurriculumSchema, type Curriculum, type Lesson, type Stage, type Unit } from './schema';
 
-const RAW_STAGES: unknown[] = [stageS0];
-const RAW_RUBRICS: unknown[] = [rubricS1];
+const RAW_STAGES: unknown[] = [stageS0, stageS1, stageS1_5];
+const RAW_RUBRICS: unknown[] = [rubricS1, rubricS1_5];
+
+/**
+ * なぞりテンプレート（trace step の template id → Drawing）。
+ * content/templates/<id>.json。x,y は 0..1 正規化。生成元: content/templates/_gen/gen.mjs
+ */
+const RAW_TEMPLATES: Record<string, Drawing> = {
+  'simple-shapes': tplSimpleShapes,
+  'leaf-silhouette': tplLeafSilhouette,
+  'flower-silhouette': tplFlowerSilhouette,
+  'face-outline-cross': tplFaceOutlineCross,
+  'anime-eye-pair': tplAnimeEyePair,
+  'nose-mouth-brow': tplNoseMouthBrow,
+  'hair-mass': tplHairMass,
+};
+
+/** なぞりテンプレートを id で取得する。未登録なら undefined。 */
+export function getTemplate(id: string): Drawing | undefined {
+  return Object.prototype.hasOwnProperty.call(RAW_TEMPLATES, id) ? RAW_TEMPLATES[id] : undefined;
+}
 
 /**
  * 起動時に全教材データを zod で検証して返す。

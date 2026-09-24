@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <circle cx="120" cy="400" r="7" fill="currentColor" stroke="none"/>
+  <line x1="120" y1="400" x2="120" y2="340"/>
+  <path d="M81.4,354 A60,60 0 0 1 158.6,354" stroke-width="2.5"/>
+  <path d="M144.9,351.1 L158.6,354 L152.4,341.5" stroke-width="2.5"/>
+  <text x="120" y="450" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">手首</text>
+  <text x="120" y="478" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">短い線・細部</text>
+  <circle cx="340" cy="400" r="7" fill="currentColor" stroke="none"/>
+  <line x1="340" y1="400" x2="340" y2="270"/>
+  <path d="M256.4,300.4 A130,130 0 0 1 423.6,300.4" stroke-width="2.5"/>
+  <path d="M409.9,297.5 L423.6,300.4 L417.4,287.9" stroke-width="2.5"/>
+  <text x="340" y="450" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">肘</text>
+  <text x="340" y="478" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">中くらいの線</text>
+  <circle cx="610" cy="400" r="7" fill="#45702A" stroke="none"/>
+  <line x1="610" y1="400" x2="610" y2="180" stroke="#45702A"/>
+  <path d="M468.6,231.5 A220,220 0 0 1 751.4,231.5" stroke="#45702A" stroke-width="4"/>
+  <path d="M737.7,228.5 L751.4,231.5 L745.2,218.9" stroke="#45702A" stroke-width="4"/>
+  <text x="610" y="450" font-size="22" fill="#45702A" stroke="none" text-anchor="middle" font-weight="700">肩</text>
+  <text x="610" y="478" font-size="18" fill="#45702A" stroke="none" text-anchor="middle">長い線・大きな円</text>
+  <text x="400" y="40" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">支点から先が長いほど、大きくなめらかに動かせる</text>
+</svg>

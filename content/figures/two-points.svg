@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <circle cx="150" cy="360" r="14" stroke="#45702A"/>
+  <circle cx="150" cy="360" r="5" fill="#45702A" stroke="none"/>
+  <circle cx="650" cy="140" r="14" stroke="#45702A"/>
+  <circle cx="650" cy="140" r="5" fill="#45702A" stroke="none"/>
+  <line x1="150" y1="360" x2="650" y2="140" stroke-dasharray="8 8" opacity="0.6"/>
+  <text x="150" y="410" font-size="22" fill="#45702A" stroke="none" text-anchor="middle">始点</text>
+  <text x="650" y="110" font-size="22" fill="#45702A" stroke="none" text-anchor="middle">終点</text>
+  <text x="430" y="300" font-size="22" fill="currentColor" stroke="none" text-anchor="start">目は終点を見る</text>
+  <line x1="420" y1="290" x2="610" y2="170" stroke-width="2"/>
+  <path d="M602.6,181.9 L610,170 L596.1,171.6" stroke-width="2"/>
+  <text x="400" y="470" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">引いている途中はペン先ではなく、ゴールを見る</text>
+</svg>

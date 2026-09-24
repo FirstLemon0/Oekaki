@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M250,230 A150,180 0 0 1 550,230 Q542.5,390 400,450 Q257.5,390 250,230 Z"/>
+  <line x1="400" y1="40" x2="400" y2="465" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="220" y1="190" x2="580" y2="190" stroke="#45702A" stroke-width="1.5" stroke-dasharray="6 6"/>
+  <text x="600" y="197" font-size="20" fill="#45702A" stroke="none" text-anchor="start">眉</text>
+  <line x1="220" y1="260" x2="580" y2="260" stroke="#45702A" stroke-width="1.5" stroke-dasharray="6 6"/>
+  <text x="600" y="267" font-size="20" fill="#45702A" stroke="none" text-anchor="start">目</text>
+  <line x1="220" y1="340" x2="580" y2="340" stroke="#45702A" stroke-width="1.5" stroke-dasharray="6 6"/>
+  <text x="600" y="347" font-size="20" fill="#45702A" stroke="none" text-anchor="start">鼻</text>
+  <line x1="220" y1="390" x2="580" y2="390" stroke="#45702A" stroke-width="1.5" stroke-dasharray="6 6"/>
+  <text x="600" y="397" font-size="20" fill="#45702A" stroke="none" text-anchor="start">口</text>
+  <path d="M300,195 Q335,175 370,188"/>
+  <path d="M500,195 Q465,175 430,188"/>
+  <path d="M300,255 Q335,235 372,250" stroke-width="4"/>
+  <path d="M500,255 Q465,235 428,250" stroke-width="4"/>
+  <ellipse cx="336" cy="272" rx="18" ry="24"/>
+  <ellipse cx="464" cy="272" rx="18" ry="24"/>
+  <path d="M404,325 L396,340 L406,343"/>
+  <path d="M375,388 Q400,398 425,388"/>
+  <path d="M250,210 Q222,215 226,275 Q230,330 256,335"/>
+  <path d="M550,210 Q578,215 574,275 Q570,330 544,335"/>
+  <line x1="200" y1="190" x2="200" y2="340" stroke-width="1.5"/>
+  <path d="M196.5,332.8 L200,340 L203.5,332.8" stroke-width="1.5"/>
+  <line x1="200" y1="340" x2="200" y2="190" stroke-width="1.5"/>
+  <path d="M203.5,197.2 L200,190 L196.5,197.2" stroke-width="1.5"/>
+  <text x="190" y="270" font-size="20" fill="currentColor" stroke="none" text-anchor="end">耳</text>
+  <line x1="372" y1="290" x2="428" y2="290" stroke="#45702A" stroke-width="1.5"/>
+  <path d="M421.7,293 L428,290 L421.7,287" stroke="#45702A" stroke-width="1.5"/>
+  <line x1="428" y1="290" x2="372" y2="290" stroke="#45702A" stroke-width="1.5"/>
+  <path d="M378.3,287 L372,290 L378.3,293" stroke="#45702A" stroke-width="1.5"/>
+  <text x="400" y="315" font-size="14" fill="#45702A" stroke="none" text-anchor="middle">目1つ分</text>
+</svg>

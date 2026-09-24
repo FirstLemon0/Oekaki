@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M100,100 h240 v240 h-240 Z" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="100" y1="124" x2="124" y2="100" stroke-width="2"/>
+  <line x1="100" y1="148" x2="148" y2="100" stroke-width="2"/>
+  <line x1="100" y1="172" x2="172" y2="100" stroke-width="2"/>
+  <line x1="100" y1="196" x2="196" y2="100" stroke-width="2"/>
+  <line x1="100" y1="220" x2="220" y2="100" stroke-width="2"/>
+  <line x1="100" y1="244" x2="244" y2="100" stroke-width="2"/>
+  <line x1="100" y1="268" x2="268" y2="100" stroke-width="2"/>
+  <line x1="100" y1="292" x2="292" y2="100" stroke-width="2"/>
+  <line x1="100" y1="316" x2="316" y2="100" stroke-width="2"/>
+  <line x1="100" y1="340" x2="340" y2="100" stroke-width="2"/>
+  <line x1="124" y1="340" x2="340" y2="124" stroke-width="2"/>
+  <line x1="148" y1="340" x2="340" y2="148" stroke-width="2"/>
+  <line x1="172" y1="340" x2="340" y2="172" stroke-width="2"/>
+  <line x1="196" y1="340" x2="340" y2="196" stroke-width="2"/>
+  <line x1="220" y1="340" x2="340" y2="220" stroke-width="2"/>
+  <line x1="244" y1="340" x2="340" y2="244" stroke-width="2"/>
+  <line x1="268" y1="340" x2="340" y2="268" stroke-width="2"/>
+  <line x1="292" y1="340" x2="340" y2="292" stroke-width="2"/>
+  <line x1="316" y1="340" x2="340" y2="316" stroke-width="2"/>
+  <text x="220" y="400" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">ハッチング：同じ角度・同じ間隔</text>
+  <path d="M142.4,297.6 A60,60 0 0 1 160,340" stroke="#45702A"/>
+  <text x="175" y="330" font-size="18" fill="#45702A" stroke="none" text-anchor="middle">45°</text>
+  <path d="M460,100 h240 v240 h-240 Z" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="460" y1="124" x2="484" y2="100" stroke-width="2"/>
+  <line x1="460" y1="148" x2="508" y2="100" stroke-width="2"/>
+  <line x1="460" y1="172" x2="532" y2="100" stroke-width="2"/>
+  <line x1="460" y1="196" x2="556" y2="100" stroke-width="2"/>
+  <line x1="460" y1="220" x2="580" y2="100" stroke-width="2"/>
+  <line x1="460" y1="244" x2="604" y2="100" stroke-width="2"/>
+  <line x1="460" y1="268" x2="628" y2="100" stroke-width="2"/>
+  <line x1="460" y1="292" x2="652" y2="100" stroke-width="2"/>
+  <line x1="460" y1="316" x2="676" y2="100" stroke-width="2"/>
+  <line x1="460" y1="340" x2="700" y2="100" stroke-width="2"/>
+  <line x1="484" y1="340" x2="700" y2="124" stroke-width="2"/>
+  <line x1="508" y1="340" x2="700" y2="148" stroke-width="2"/>
+  <line x1="532" y1="340" x2="700" y2="172" stroke-width="2"/>
+  <line x1="556" y1="340" x2="700" y2="196" stroke-width="2"/>
+  <line x1="580" y1="340" x2="700" y2="220" stroke-width="2"/>
+  <line x1="604" y1="340" x2="700" y2="244" stroke-width="2"/>
+  <line x1="628" y1="340" x2="700" y2="268" stroke-width="2"/>
+  <line x1="652" y1="340" x2="700" y2="292" stroke-width="2"/>
+  <line x1="676" y1="340" x2="700" y2="316" stroke-width="2"/>
+  <line x1="460" y1="316" x2="484" y2="340" stroke-width="2" stroke="#45702A"/>
+  <line x1="460" y1="292" x2="508" y2="340" stroke-width="2" stroke="#45702A"/>
+  <line x1="460" y1="268" x2="532" y2="340" stroke-width="2" stroke="#45702A"/>
+  <line x1="460" y1="244" x2="556" y2="340" stroke-width="2" stroke="#45702A"/>
+  <line x1="460" y1="220" x2="580" y2="340" stroke-width="2" stroke="#45702A"/>
+  <line x1="460" y1="196" x2="604" y2="340" stroke-width="2" stroke="#45702A"/>
+  <line x1="460" y1="172" x2="628" y2="340" stroke-width="2" stroke="#45702A"/>
+  <line x1="460" y1="148" x2="652" y2="340" stroke-width="2" stroke="#45702A"/>
+  <line x1="460" y1="124" x2="676" y2="340" stroke-width="2" stroke="#45702A"/>
+  <line x1="460" y1="100" x2="700" y2="340" stroke-width="2" stroke="#45702A"/>
+  <line x1="484" y1="100" x2="700" y2="316" stroke-width="2" stroke="#45702A"/>
+  <line x1="508" y1="100" x2="700" y2="292" stroke-width="2" stroke="#45702A"/>
+  <line x1="532" y1="100" x2="700" y2="268" stroke-width="2" stroke="#45702A"/>
+  <line x1="556" y1="100" x2="700" y2="244" stroke-width="2" stroke="#45702A"/>
+  <line x1="580" y1="100" x2="700" y2="220" stroke-width="2" stroke="#45702A"/>
+  <line x1="604" y1="100" x2="700" y2="196" stroke-width="2" stroke="#45702A"/>
+  <line x1="628" y1="100" x2="700" y2="172" stroke-width="2" stroke="#45702A"/>
+  <line x1="652" y1="100" x2="700" y2="148" stroke-width="2" stroke="#45702A"/>
+  <line x1="676" y1="100" x2="700" y2="124" stroke-width="2" stroke="#45702A"/>
+  <text x="580" y="400" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">クロス：向きを変えて重ねる</text>
+  <text x="400" y="460" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">線の間隔が詰まるほど暗く見える</text>
+</svg>

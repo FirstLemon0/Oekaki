@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <circle cx="400" cy="230" r="150" stroke-dasharray="8 8" opacity="0.6"/>
+  <path d="M230,420 Q190,230 260,130 Q400,10 540,130 Q610,230 570,420" stroke-width="3.5"/>
+  <line x1="400" y1="80" x2="400" y2="50" stroke="#45702A" stroke-width="2"/>
+  <path d="M403,56.3 L400,50 L397,56.3" stroke="#45702A" stroke-width="2"/>
+  <line x1="400" y1="50" x2="400" y2="80" stroke="#45702A" stroke-width="2"/>
+  <path d="M397,73.7 L400,80 L403,73.7" stroke="#45702A" stroke-width="2"/>
+  <text x="420" y="60" font-size="16" fill="#45702A" stroke="none" text-anchor="start">ボリューム</text>
+  <path d="M280,160 L300,250 L340,180 L380,260 L420,180 L460,255 L500,170 L520,240" stroke="#45702A" stroke-width="3"/>
+  <path d="M270,230 Q255,330 270,410"/>
+  <path d="M530,230 Q545,330 530,410"/>
+  <circle cx="400" cy="300" r="15" stroke="#45702A" stroke-width="2"/>
+  <text x="400" y="307" font-size="18" fill="#45702A" stroke="none" text-anchor="middle">1</text>
+  <text x="400" y="340" font-size="20" fill="#45702A" stroke="none" text-anchor="middle">前髪</text>
+  <circle cx="215" cy="330" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="215" y="337" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">2</text>
+  <text x="140" y="337" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">サイド</text>
+  <circle cx="585" cy="330" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="585" y="337" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">3</text>
+  <text x="660" y="337" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">サイド</text>
+  <circle cx="400" cy="100" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="400" y="107" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">4</text>
+  <text x="640" y="90" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">後ろ（外形）</text>
+  <text x="400" y="480" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">頭の球（点線）より外側に、塊ごとに描く</text>
+</svg>

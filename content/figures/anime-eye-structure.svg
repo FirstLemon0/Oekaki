@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M170,210 Q300,90 470,150 Q500,165 510,190" stroke-width="8"/>
+  <path d="M470,150 L505,125" stroke-width="4"/>
+  <path d="M492,165 L530,150" stroke-width="4"/>
+  <ellipse cx="330" cy="250" rx="80" ry="115"/>
+  <ellipse cx="330" cy="270" rx="32" ry="50" fill="currentColor" opacity="0.35"/>
+  <circle cx="300" cy="205" r="20" stroke="#45702A" stroke-width="3"/>
+  <path d="M270,375 Q340,390 420,355" stroke-width="3"/>
+  <circle cx="575" cy="70" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="575" y="77" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">1</text>
+  <text x="598" y="77" font-size="18" fill="currentColor" stroke="none" text-anchor="start">上まぶた（太く）</text>
+  <line x1="560" y1="75" x2="360" y2="120" stroke-width="1.5"/>
+  <circle cx="575" cy="150" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="575" y="157" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">2</text>
+  <text x="598" y="157" font-size="18" fill="currentColor" stroke="none" text-anchor="start">虹彩（縦長）</text>
+  <line x1="560" y1="155" x2="410" y2="230" stroke-width="1.5"/>
+  <circle cx="575" cy="230" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="575" y="237" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">3</text>
+  <text x="598" y="237" font-size="18" fill="currentColor" stroke="none" text-anchor="start">瞳孔</text>
+  <line x1="560" y1="235" x2="362" y2="270" stroke-width="1.5"/>
+  <circle cx="575" cy="310" r="15" stroke="#45702A" stroke-width="2"/>
+  <text x="575" y="317" font-size="18" fill="#45702A" stroke="none" text-anchor="middle">4</text>
+  <text x="598" y="317" font-size="18" fill="#45702A" stroke="none" text-anchor="start">ハイライト</text>
+  <line x1="560" y1="310" x2="320" y2="205" stroke="#45702A" stroke-width="1.5"/>
+  <circle cx="575" cy="390" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="575" y="397" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">5</text>
+  <text x="598" y="397" font-size="18" fill="currentColor" stroke="none" text-anchor="start">下まぶた（短く）</text>
+  <line x1="560" y1="390" x2="420" y2="360" stroke-width="1.5"/>
+  <circle cx="575" cy="460" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="575" y="467" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">6</text>
+  <text x="598" y="467" font-size="18" fill="currentColor" stroke="none" text-anchor="start">まつ毛（目じり）</text>
+  <line x1="560" y1="455" x2="520" y2="150" stroke-width="1.5"/>
+</svg>
