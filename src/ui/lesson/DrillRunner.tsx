@@ -6,10 +6,13 @@
  * - 全画面の採点シートは「セットを終えたとき」と「チップをタップしたとき」だけ出す
  * - 履歴（drillStats）・累計・絵の保存は「完了」を押したときに、確定した本だけまとめて行う
  *   （やり直した本は記録しない。保存に失敗したらシートの中で案内し、押し直せる）
+ * - 消しゴムも使える。消しても記録済みの点数は変えない（採点済みの線は消しゴムで削る前の線で対応づける）。
+ *   ヒート色は消した所を隠す。「完了」の保存・ハッチングの本数は getStrokes()（消えた区間を除いた線）で数える
  */
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { DrillStep } from '@/content/schema';
 import type { Drawing, Stroke, StrokePoint } from '@/scoring';
+import { isEraserStyle, type StrokeHistory } from '@/canvas';
 import { CanvasScreen } from '../screens/CanvasScreen';
 import { drillStats } from '../state';
 import { useEngine } from './common';
@@ -17,7 +20,7 @@ import { drillSetup, heatBand, scoreDrill, type DrillSetup, type Size } from './
 import { ScoreSheet } from './ScoreSheet';
 import { bump, recordDrillScores, saveStrokes, scorers, type LessonSession } from './stateBridge';
 import { counterKindOf, isSetDrill } from './steps';
-import { strokeKey, summarizeEntries, syncEntries, type DrillEntry } from './drillEntries';
+import { penStrokesOf, strokeKey, summarizeEntries, syncEntries, type DrillEntry } from './drillEntries';
 
 function pathLen(s: Stroke): number {
   let L = 0;
@@ -73,21 +76,65 @@ export function DrillGuideSvg({ setup, size }: { setup: DrillSetup; size: Size }
   );
 }
 
-/** 採点済みの線をヒート色で重ねる（描いた線の上に同じくらいの太さで） */
-function HeatStrokes({ entries }: { entries: readonly DrillEntry[] }) {
+/** 消しゴムストローク 1 本（履歴での位置つき） */
+interface EraserMark {
+  index: number;
+  pts: Stroke;
+  r: number;
+}
+
+/**
+ * 採点済みの線をヒート色で重ねる（描いた線の上に同じくらいの太さで）。
+ * その線より後の消しゴムで消した所は、マスクで隠す（キャンバスと同じ見た目にする）。
+ */
+function HeatStrokes({ entries, history, size }: { entries: readonly DrillEntry[]; history: StrokeHistory; size: Size }) {
+  const erasers: EraserMark[] = [];
+  const order = new Map<string, number>();
+  history.strokes.forEach((s, i) => {
+    const st = history.styles[i];
+    if (isEraserStyle(st)) erasers.push({ index: i, pts: s, r: st.size });
+    else order.set(strokeKey(s), i);
+  });
   return (
-    <g class="ls-guide__heat">
-      {entries.flatMap((e, ei) =>
-        e.strokes.map((s, si) => {
-          const heat = e.result.heat[si] ?? e.result.heat[0] ?? [];
-          return s.slice(1).map((q, i) => {
-            const a = s[i]!;
-            const h = heat[i + 1] ?? heat[i] ?? 0;
-            return <line key={`${ei}-${si}-${i}`} class={`is-${heatBand(h)}`} x1={a.x} y1={a.y} x2={q.x} y2={q.y} />;
-          });
-        }),
-      )}
-    </g>
+    <>
+      {entries.map((e, ei) => {
+        const at = Math.max(-1, ...e.keys.map((k) => order.get(k) ?? -1));
+        const after = erasers.filter((m) => m.index > at);
+        const maskId = after.length > 0 ? `ls-heat-mask-${ei}` : null;
+        return (
+          <g key={ei} class="ls-guide__heat" mask={maskId ? `url(#${maskId})` : undefined}>
+            {maskId && (
+              <mask id={maskId} maskUnits="userSpaceOnUse" x={0} y={0} width={size.width} height={size.height}>
+                <rect x={0} y={0} width={size.width} height={size.height} fill="white" />
+                {after.map((m, mi) =>
+                  m.pts.length === 1 ? (
+                    <circle key={mi} cx={m.pts[0]!.x} cy={m.pts[0]!.y} r={m.r} fill="black" />
+                  ) : (
+                    <polyline
+                      key={mi}
+                      points={m.pts.map((q) => `${q.x},${q.y}`).join(' ')}
+                      fill="none"
+                      stroke="black"
+                      stroke-width={m.r * 2}
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  ),
+                )}
+              </mask>
+            )}
+            {e.strokes.map((s, si) => {
+              const heat = e.result.heat[si] ?? e.result.heat[0] ?? [];
+              return s.slice(1).map((q, i) => {
+                const a = s[i]!;
+                const h = heat[i + 1] ?? heat[i] ?? 0;
+                return <line key={`${si}-${i}`} class={`is-${heatBand(h)}`} x1={a.x} y1={a.y} x2={q.x} y2={q.y} />;
+              });
+            })}
+          </g>
+        );
+      })}
+    </>
   );
 }
 
@@ -109,6 +156,8 @@ export function DrillRunner({ step, session, lessonId, onFinish, onExit }: Drill
   /** null: 描いている / 'last': チップから開いた最後の 1 本 / 'final': セットを終えた */
   const [sheet, setSheet] = useState<null | 'last' | 'final'>(null);
   const [strokeCount, setStrokeCount] = useState(0);
+  /** 消しゴムを含む生の履歴（ヒート色のマスク用） */
+  const [history, setHistory] = useState<StrokeHistory>({ strokes: [], styles: [] });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // 自己ベストは開いた時点の値（この回を含めない）
@@ -136,10 +185,12 @@ export function DrillRunner({ step, session, lessonId, onFinish, onExit }: Drill
   const evaluateSet = () => {
     const { setup: st, finished: fin } = live.current;
     if (fin) return;
+    // 採点は消しゴムで消えた区間を除いた線。対応づけは消しゴムで削る前の線（消しても採点を外さない）
     const strokes = engine.getStrokes().filter((s) => s.length >= 2);
     const result = scoreDrill(scorers.value, step.drill, st, strokes);
     if (!result) return;
-    add({ keys: strokes.map(strokeKey), strokes, result, target: null });
+    const raw = penStrokesOf(engine.getHistory());
+    add({ keys: raw.map(strokeKey), anchors: raw.map((s) => s[0]!).filter(Boolean), strokes, result, target: null });
   };
 
   useEffect(() => {
@@ -158,13 +209,15 @@ export function DrillRunner({ step, session, lessonId, onFinish, onExit }: Drill
       }
       const result = scoreDrill(scorers.value, step.drill, st, [s]);
       if (!result) return;
-      add({ keys: [strokeKey(s)], strokes: [s], result, target: targetOf(st) });
+      add({ keys: [strokeKey(s)], anchors: s[0] ? [s[0]] : [], strokes: [s], result, target: targetOf(st) });
     });
     const offChange = engine.on('change', () => {
-      const strokes = engine.getStrokes();
-      setStrokeCount(strokes.length);
+      setStrokeCount(engine.getStrokes().length);
+      const h = engine.getHistory();
+      setHistory(h);
       const cur = live.current.entries;
-      const kept = syncEntries(cur, strokes);
+      // 消しゴムでは採点を外さない（Undo・全消し・やり直しで線が無くなったときだけ外す）
+      const kept = syncEntries(cur, penStrokesOf(h));
       if (kept.length !== cur.length) {
         live.current.entries = kept;
         live.current.finished = kept.length >= target;
@@ -189,13 +242,13 @@ export function DrillRunner({ step, session, lessonId, onFinish, onExit }: Drill
     live.current.entries = rest;
     live.current.finished = false;
     setEntries(rest);
-    const all = engine.getStrokes();
-    const styles = engine.getStyles();
-    const keep = all.map((s) => !drop.has(strokeKey(s)));
-    engine.loadStrokes(
-      all.filter((_, k) => keep[k]),
-      styles.filter((_, k) => keep[k]),
-    );
+    // 消しゴムを含む履歴から、その本（消しゴムで削る前の線）だけを取り除く
+    const h = engine.getHistory();
+    const keep = h.strokes.map((s, k) => isEraserStyle(h.styles[k]) || !drop.has(strokeKey(s)));
+    engine.loadHistory({
+      strokes: h.strokes.filter((_, k) => keep[k]),
+      styles: h.styles.filter((_, k) => keep[k]),
+    });
     setStrokeCount(engine.getStrokes().length);
     setSheet(null);
     setError(null);
@@ -213,18 +266,14 @@ export function DrillRunner({ step, session, lessonId, onFinish, onExit }: Drill
     const d = done.current;
     try {
       if (!d.saved) {
-        await saveStrokes(
-          list.flatMap((e) => e.strokes),
-          'drill',
-          lessonId,
-          session,
-        );
+        // 保存はキャンバスの今の線（消しゴムで消えた区間を除く）。消しゴム込みの履歴も一緒に残る（saveStrokes）
+        await saveStrokes(engine.getStrokes(), 'drill', lessonId, session, engine.getStyles());
         d.saved = true;
       }
       await recordDrillScores(step.drill, scores, d.recorded);
       const ck = counterKindOf(step.counter);
       if (ck && !d.bumped) {
-        const n = setDrill ? list.reduce((a, e) => a + e.strokes.length, 0) : list.length;
+        const n = setDrill ? engine.getStrokes().filter((s) => s.length >= 2).length : list.length;
         await bump(ck, n, session);
       }
       d.bumped = true;
@@ -243,7 +292,10 @@ export function DrillRunner({ step, session, lessonId, onFinish, onExit }: Drill
   const rescale = (map: (q: StrokePoint) => StrokePoint) => {
     const moved = live.current.entries.map((e) => {
       const strokes = e.strokes.map((s) => s.map(map));
-      return { ...e, strokes, keys: strokes.map(strokeKey), target: e.target ? e.target.map((s) => s.map(map)) : null };
+      // 鍵は消しゴムで削る前の線の最初の点（キャンバス側も同じ変換で動く）
+      const anchors = e.anchors ? e.anchors.map(map) : undefined;
+      const keys = anchors ? anchors.map((q) => strokeKey([q])) : strokes.map(strokeKey);
+      return { ...e, strokes, keys, anchors, target: e.target ? e.target.map((s) => s.map(map)) : null };
     });
     live.current.entries = moved;
     setEntries(moved);
@@ -255,7 +307,7 @@ export function DrillRunner({ step, session, lessonId, onFinish, onExit }: Drill
   const guide = (sz: Size) => (
     <>
       {!finished && <DrillGuideSvg setup={setup} size={sz} />}
-      {!setDrill && <HeatStrokes entries={entries} />}
+      {!setDrill && <HeatStrokes entries={entries} history={history} size={sz} />}
     </>
   );
 

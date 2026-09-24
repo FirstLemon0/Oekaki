@@ -10,6 +10,7 @@ export type {
   EraserStyle,
   GridSpec,
   StrokeStyle,
+  StrokeHistory,
 } from './types';
 export { cropRect, inkBounds, exportScale, CROP_MARGIN_RATIO, CROP_MARGIN_MIN, type Rect } from './crop';
 export {
@@ -22,10 +23,11 @@ export {
   ERASER_SIZE_RANGE,
   sanitizeStyle,
   normalizeHexColor,
+  isEraserStyle,
   type PenPresetSpec,
   type PaletteColor,
 } from './pen';
-export { eraseSegments, type EraseResult } from './erase';
+export { eraseSegments, flattenHistory, type EraseResult } from './erase';
 export { normalizeGrid, gridLines, GRID_COLOR } from './grid';
-export { createCanvasEngine, DEFAULT_OPTIONS } from './engine';
+export { createCanvasEngine, DEFAULT_OPTIONS, historyOf } from './engine';
 export { CanvasView, type CanvasViewProps } from './CanvasView';

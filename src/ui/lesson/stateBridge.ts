@@ -18,7 +18,7 @@ import { downscaleToWebp } from '@/data/images';
 import { xpForDrillScore, xpForEvent } from '@/data/xp';
 import type { CounterKind, Drawing, DrawingKind, Progress, StrokeDrawing } from '@/data/types';
 import type { CritiqueResult } from '@/critic';
-import { createCanvasEngine, type StrokeStyle } from '@/canvas';
+import { createCanvasEngine, flattenHistory, historyOf, isEraserStyle, type StrokeHistory, type StrokeStyle } from '@/canvas';
 import type { Lesson } from '@/content/schema';
 import { completedIds, counters, critiques, drillStats, nextNode, path, profile, progress, reloadData, saveProfile, streak, uiPrefs } from '../state';
 import { baselineToRecord, scorersFor } from './limits';
@@ -148,9 +148,29 @@ export function readStrokeStyles(meta: Record<string, unknown> | null | undefine
 }
 
 /**
+ * 保存された絵の meta から「消しゴムを含む生の履歴」（meta.history = { strokes, styles }）を読む。
+ * 無い（消しゴムを使っていない絵・旧データ）・壊れているときは undefined（再生は strokes から）。
+ */
+export function readStrokeHistory(meta: Record<string, unknown> | null | undefined): StrokeHistory | undefined {
+  const raw = meta?.history;
+  if (typeof raw !== 'object' || raw === null) return undefined;
+  const { strokes, styles } = raw as Record<string, unknown>;
+  if (!Array.isArray(strokes) || !Array.isArray(styles) || strokes.length !== styles.length || strokes.length === 0) return undefined;
+  const okPoint = (q: unknown) =>
+    typeof q === 'object' && q !== null && Number.isFinite((q as { x?: unknown }).x) && Number.isFinite((q as { y?: unknown }).y);
+  if (!strokes.every((s) => Array.isArray(s) && s.every(okPoint))) return undefined;
+  return {
+    strokes: strokes as StrokeHistory['strokes'],
+    styles: styles.map((s) => (isStrokeStyle(s) ? s : undefined)),
+  };
+}
+
+/**
  * ストロークから絵を保存する（長辺 1024 の WebP）。
  * styles（engine.getStyles()）を渡すと、画像にも反映し、meta.strokeStyles に保存する
  * （スタイルの無い線は null。バックアップの JSON でも並びが崩れないように）。
+ * 消しゴムを使った絵は、消しゴムを含む生の履歴（history、省略時は historyOf(styles)）を meta.history に保存し、
+ * 画像も履歴から描く（画面と同じ見た目）。strokes（採点用の点列）は消えた部分を除いた線のまま。
  */
 export async function saveStrokes(
   strokes: StrokeDrawing,
@@ -158,18 +178,26 @@ export async function saveStrokes(
   lessonId: string | null,
   session?: LessonSession,
   styles?: StrokeStyles,
+  history?: StrokeHistory | null,
 ): Promise<Drawing | null> {
   if (strokes.length === 0) return null;
   const st = styles && styles.some((s) => s !== undefined) ? strokes.map((_, i) => styles[i]) : undefined;
+  const h = history ?? historyOf(styles);
+  // 消しゴムを含み、strokes と同じ絵の履歴だけを使う（別の絵の履歴を取り違えない）
+  const hist = h && h.styles.some((s) => isEraserStyle(s)) && flattenHistory(h.strokes, h.styles).strokes.length === strokes.length ? h : null;
   const tmp = createCanvasEngine();
-  tmp.loadStrokes(strokes, st);
+  if (hist) tmp.loadHistory(hist);
+  else tmp.loadStrokes(strokes, st);
   const image = await tmp.toWebp(1024);
+  const meta: Record<string, unknown> = {};
+  if (st) meta.strokeStyles = st.map((s) => s ?? null);
+  if (hist) meta.history = { strokes: hist.strokes, styles: hist.styles.map((s) => s ?? null) };
   const d = await saveDrawing({
     kind,
     lessonId,
     image,
     strokes,
-    ...(st ? { meta: { strokeStyles: st.map((s) => s ?? null) } } : {}),
+    ...(Object.keys(meta).length > 0 ? { meta } : {}),
   });
   session?.drawingIds.push(d.id);
   return d;

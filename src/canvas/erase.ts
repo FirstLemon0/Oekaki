@@ -1,7 +1,11 @@
-/** 部分消しゴム（純関数）。DOM 非依存。 */
+/**
+ * 消しゴムの点列側の処理（純関数）。DOM 非依存。
+ * 見た目の消しゴムはラスター（engine の destination-out）。ここは採点・保存用の点列から消えた部分を取り除くだけ。
+ */
 import type { Drawing, Stroke, StrokePoint, Vec2 } from '@/scoring/types';
 import type { StrokeStyle } from './types';
 import { distPointToSegment } from './hit';
+import { isEraserStyle } from './pen';
 
 /** 消した後に残る区間がこれより短ければ捨てる（px） */
 export const MIN_PIECE_LENGTH = 0.5;
@@ -215,4 +219,32 @@ export function eraseSegments(
   });
   if (!changed) return { strokes, styles: styles as (StrokeStyle | undefined)[], changed: false };
   return { strokes: outS, styles: outT, changed: true };
+}
+
+/**
+ * 消しゴムを含む生の履歴 → ペンのストロークだけの点列（getStrokes() / getStyles() の中身）。
+ * 消しゴムストロークに出会うたびに、それまでのペンの線から軌跡（半径 = style.size）に入る部分を取り除く
+ * （eraseSegments。残った連続区間は別のストロークに分ける）。消しゴムより後に描いた線は消えない。
+ */
+export function flattenHistory(
+  strokes: Drawing,
+  styles: readonly (StrokeStyle | undefined)[],
+): { strokes: Drawing; styles: (StrokeStyle | undefined)[] } {
+  let outS: Drawing = [];
+  let outT: (StrokeStyle | undefined)[] = [];
+  strokes.forEach((s, i) => {
+    const st = styles[i];
+    if (isEraserStyle(st)) {
+      if (outS.length === 0 || s.length === 0) return;
+      const r = eraseSegments(outS, outT, s, st.size);
+      if (r.changed) {
+        outS = r.strokes;
+        outT = r.styles;
+      }
+      return;
+    }
+    outS.push(s);
+    outT.push(st);
+  });
+  return { strokes: outS, styles: outT };
 }

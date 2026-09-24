@@ -1,13 +1,16 @@
 /**
  * ドリルの「採点済みの線」の扱い（純ロジック。DrillRunner から使う）。
  */
-import type { Drawing, ScoreResult, Stroke } from '@/scoring';
+import type { Drawing, ScoreResult, Stroke, StrokePoint } from '@/scoring';
+import { isEraserStyle, type StrokeHistory } from '@/canvas';
 import { average } from './steps';
 
 /** 採点した 1 本（ハッチングは 1 セット） */
 export interface DrillEntry {
-  /** キャンバス上の線と対応づける鍵（最初の点） */
+  /** キャンバス上の線（消しゴムで削る前の生の線）と対応づける鍵（最初の点） */
   keys: string[];
+  /** keys の元になった点（紙の大きさが変わったときに同じ変換で動かして keys を作り直す）。無ければ strokes の最初の点 */
+  anchors?: StrokePoint[];
   strokes: Drawing;
   result: ScoreResult;
   target: Drawing | null;
@@ -19,7 +22,18 @@ export function strokeKey(s: Stroke): string {
   return q ? `${q.x.toFixed(2)},${q.y.toFixed(2)},${q.t}` : '';
 }
 
-/** キャンバスから消えた（Undo・消しゴム・全消し）線の採点を外す */
+/**
+ * 生の履歴（engine.getHistory()）からペンの線だけを、消しゴムで削る前の形で取り出す。
+ * 採点済みの線との対応づけ（syncEntries）に使う。消しゴムで削っても線は履歴に残るので、点数は変わらない。
+ */
+export function penStrokesOf(h: StrokeHistory): Drawing {
+  return h.strokes.filter((_, i) => !isEraserStyle(h.styles[i]));
+}
+
+/**
+ * キャンバスから消えた（Undo・全消し）線の採点を外す。
+ * onCanvas は penStrokesOf(engine.getHistory())（消しゴムで削る前の線）を渡す（消しゴムでは採点を外さない）。
+ */
 export function syncEntries(entries: readonly DrillEntry[], onCanvas: Drawing): DrillEntry[] {
   const present = new Set(onCanvas.map(strokeKey));
   return entries.filter((e) => e.keys.every((k) => present.has(k)));

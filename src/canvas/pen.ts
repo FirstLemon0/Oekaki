@@ -99,7 +99,7 @@ export const PEN_OPACITY_RANGE: [number, number] = [0.1, 1];
 export const ERASER_SIZE_RANGE: [number, number] = [4, 40];
 
 export const DEFAULT_PEN: PenStyle = { preset: 'pen', size: PEN_PRESETS.pen.size, opacity: PEN_PRESETS.pen.opacity };
-export const DEFAULT_ERASER: EraserStyle = { mode: 'stroke', size: 12 };
+export const DEFAULT_ERASER: EraserStyle = { size: 12 };
 
 const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
 const lerp = (a: number, b: number, u: number): number => a + (b - a) * u;
@@ -118,10 +118,21 @@ export function clampEraserSize(v: number, fallback: number): number {
   return Number.isFinite(v) ? clamp(v, ERASER_SIZE_RANGE[0], ERASER_SIZE_RANGE[1]) : fallback;
 }
 
+/** 消しゴムストロークのスタイルか。 */
+export function isEraserStyle(s: StrokeStyle | undefined | null): s is StrokeStyle & { preset: 'eraser' } {
+  return !!s && s.preset === 'eraser';
+}
+
+/** 消しゴムストロークのスタイル（size は半径）。 */
+export function eraserStrokeStyle(radius: number): StrokeStyle {
+  return { preset: 'eraser', size: clampEraserSize(radius, DEFAULT_ERASER.size), opacity: 1 };
+}
+
 /** 読み込んだスタイルの検証。壊れていれば undefined（旧データ扱い）。 */
 export function sanitizeStyle(s: unknown): StrokeStyle | undefined {
   if (!s || typeof s !== 'object') return undefined;
   const o = s as Partial<StrokeStyle>;
+  if (o.preset === 'eraser') return eraserStrokeStyle(Number(o.size));
   if (!isPenPreset(o.preset)) return undefined;
   const spec = PEN_PRESETS[o.preset];
   const out: StrokeStyle = {

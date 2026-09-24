@@ -9,7 +9,8 @@
  * シルエット・再生・課題（?）。右横に取っ手 36×48、その下に「グリッド」ミニセグメント
  * （なし／2／3／4／6／8 分割 と 25／50／100 px の 2 段）。
  *
- * ペン・消しゴムは、選択中にもう一度タップ（またはロングプレス 400ms）で小パネル（ToolPanels）。
+ * ペン・消しゴムは、選択中にもう一度タップ（またはロングプレス 400ms）で小パネル（ペンは ToolPanels、消しゴムは太さだけ）。
+ * 消しゴムは普通のラスター消しゴム（通った所だけ消える）。選択中はカーソル位置に輪（半径 = 太さ）が出る。
  * 設定は端末内の好み（localStorage、canvasPrefs）。採点するドリル（lockPen）ではペン・墨に固定する。
  * 紙に触れたらパネルは閉じる（描いている間は出さない）。左右反転は絵だけ（グリッドは固定）。
  *
@@ -28,6 +29,7 @@ import {
   GRID_DIVIDE,
   GRID_PITCH,
   gridLabel,
+  ERASER_SIZE,
   gridSpecOf,
   loadEraserStyle,
   loadPenStyle,
@@ -38,7 +40,7 @@ import {
   saveRecentColors,
   type GridKey,
 } from './canvasPrefs';
-import { EraserPanel, PenPanel, penDotColor } from './ToolPanels';
+import { PenPanel, penDotColor } from './ToolPanels';
 
 /** 採点するドリルで使う固定のペン（「ペン」の既定・墨） */
 function lockedPen(): PenStyle {
@@ -46,6 +48,20 @@ function lockedPen(): PenStyle {
 }
 
 const LONG_PRESS_MS = 400;
+
+/** 消しゴムの小パネル: 太さ（半径 4〜40）だけ */
+function EraserSizePanel({ style, onChange }: { style: EraserStyle; onChange: (next: EraserStyle) => void }) {
+  return (
+    <div class="ls-pop ls-toolpanel" role="group" aria-label="消しゴムの設定">
+      <span class="ls-toolpanel__title">消しゴム</span>
+      <label class="ls-toolpanel__row">
+        <span class="ls-toolpanel__label">太さ</span>
+        <Slider value={style.size} min={ERASER_SIZE.min} max={ERASER_SIZE.max} onInput={(v) => onChange({ size: v })} label="消しゴムの太さ" width={150} />
+        <span class="num ls-pop__val">{style.size}</span>
+      </label>
+    </div>
+  );
+}
 
 export interface CanvasScreenProps {
   engine: CanvasEngine;
@@ -208,8 +224,9 @@ export function CanvasScreen(props: CanvasScreenProps) {
     savePenStyle(next);
   };
   const changeEraser = (next: EraserStyle) => {
-    setEraserStyle(next);
-    saveEraserStyle(next);
+    const v = { size: next.size };
+    setEraserStyle(v);
+    saveEraserStyle(v);
   };
   const rememberColor = (color: string) => {
     const list = pushRecentColor(recentColors, color);
@@ -223,10 +240,12 @@ export function CanvasScreen(props: CanvasScreenProps) {
       setPanel(panel === t ? null : t);
       return;
     }
+    engine.setTool(t); // 描画直後の最初のホバーから消しゴムの輪を出すため、effect を待たずに渡す
     setTool(t);
     setPanel(null);
   };
   const longPressTool = (t: 'pen' | 'eraser') => {
+    engine.setTool(t);
     setTool(t);
     setPanel(t);
   };
@@ -288,15 +307,12 @@ export function CanvasScreen(props: CanvasScreenProps) {
     prevSize.current = size;
     // 回転などで紙の大きさが変わった: 描いた線を同じ規則で動かす（目標は onSize で作り直される）
     if (prev && (prev.width !== size.width || prev.height !== size.height)) {
-      const strokes = engine.getStrokes();
-      if (strokes.length > 0) {
+      const h = engine.getHistory();
+      if (h.strokes.length > 0) {
         const map = rescaleMap(prev, size);
         onRescaleRef.current?.(map);
-        // 線ごとの見た目（ペンの種類・太さ・色）も一緒に戻す
-        engine.loadStrokes(
-          strokes.map((s) => s.map(map)),
-          engine.getStyles(),
-        );
+        // 消しゴムを含む履歴ごと動かす（線ごとの見た目・消した所もそのまま）
+        engine.loadHistory({ strokes: h.strokes.map((s) => s.map(map)), styles: h.styles });
       }
     }
     onSizeRef.current?.(size);
@@ -425,7 +441,7 @@ export function CanvasScreen(props: CanvasScreenProps) {
                     onClick={() => pickTool('eraser')}
                     onLongPress={() => longPressTool('eraser')}
                   />
-                  {panel === 'eraser' && <EraserPanel style={eraserStyle} onChange={changeEraser} />}
+                  {panel === 'eraser' && <EraserSizePanel style={eraserStyle} onChange={changeEraser} />}
                 </div>
               )}
               <ToolButton icon="undo" label="元に戻す" disabled={!engine.canUndo()} onClick={() => engine.undo()} />

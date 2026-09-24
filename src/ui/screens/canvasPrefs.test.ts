@@ -25,11 +25,13 @@ describe('canvasPrefs', () => {
     expect(parsePenStyle({ preset: 'pen', size: 'x', opacity: 1 })).toBeNull();
     expect(parsePenStyle({ preset: 'pen', size: 3, opacity: 1, color: 'red' })).toEqual({ preset: 'pen', size: 3, opacity: 1 });
   });
-  it('消しゴム: 既定は部分消し・12、範囲外は丸める', () => {
+  it('消しゴム: 太さだけ。既定 12、範囲外は丸める、旧形式 {mode,size} は size だけ読む', () => {
     expect(parseEraserStyle(undefined)).toEqual(DEFAULT_ERASER);
-    expect(DEFAULT_ERASER).toEqual({ mode: 'partial', size: 12 });
-    expect(parseEraserStyle({ mode: 'stroke', size: 99 })).toEqual({ mode: 'stroke', size: 40 });
-    expect(parseEraserStyle({ mode: 'bad', size: 1 })).toEqual({ mode: 'partial', size: 4 });
+    expect(DEFAULT_ERASER).toEqual({ size: 12 });
+    expect(parseEraserStyle({ mode: 'stroke', size: 99 })).toEqual({ size: 40 });
+    expect(parseEraserStyle({ mode: 'bad', size: 1 })).toEqual({ size: 4 });
+    expect(parseEraserStyle({ size: 20.4 })).toEqual({ size: 20 });
+    expect(parseEraserStyle({ mode: 'partial' })).toEqual({ size: 12 });
   });
   it('直近の任意色: 3 つまで・重複は先頭へ', () => {
     let list = parseRecentColors(['#111111', 'bad', '#222222']);

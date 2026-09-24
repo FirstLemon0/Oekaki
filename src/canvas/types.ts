@@ -19,13 +19,17 @@ export interface PenStyle {
   color?: string;
 }
 
-/** 'stroke': 触れた線を丸ごと消す（従来）。'partial': 触れた部分だけ消し、残りを別の線に分ける。 */
+/**
+ * 旧 API の名残（後方互換のため型だけ残す）。消しゴムは常に「通ったところを消す」ラスター消しゴムで、
+ * mode は受け付けても使わない。
+ */
 export type EraserMode = 'stroke' | 'partial';
 
 export interface EraserStyle {
-  mode: EraserMode;
   /** 半径 4..40 px */
   size: number;
+  /** @deprecated 使わない（渡しても無視する） */
+  mode?: EraserMode;
 }
 
 /** グリッド。divide: 画面を n 等分。pitch: 左上原点の等間隔（CSS px）。 */
@@ -34,13 +38,26 @@ export type GridSpec =
   | { kind: 'divide'; n: 2 | 3 | 4 | 6 | 8 }
   | { kind: 'pitch'; px: 25 | 50 | 100 };
 
-/** ストローク 1 本の見た目（getStrokes() と同じ順で getStyles() が返す）。 */
+/**
+ * ストローク 1 本の見た目（getStrokes() と同じ順で getStyles() が返す）。
+ * preset が 'eraser' のものは消しゴムストローク（size は半径、opacity は 1）。getHistory() にだけ現れ、
+ * getStyles() には出てこない。
+ */
 export interface StrokeStyle {
-  preset: PenPreset;
+  preset: PenPreset | 'eraser';
   size: number;
   opacity: number;
   /** `#RRGGBB`。未指定は inkColor（テーマ追従） */
   color?: string;
+}
+
+/**
+ * 消しゴムを含む生の描画履歴（描いた順）。strokes と styles は同じ並び・同じ長さ。
+ * styles の 'eraser' は消しゴムストローク、undefined は旧データのペン。
+ */
+export interface StrokeHistory {
+  strokes: Drawing;
+  styles: (StrokeStyle | undefined)[];
 }
 
 export interface OverlaySpec {
@@ -98,13 +115,21 @@ export interface CanvasEngine {
   clear(): void;
   canUndo(): boolean;
   canRedo(): boolean;
-  /** 描いた順（コピーを返す） */
+  /**
+   * 採点・保存用の点列（コピー）。ペンのストロークだけを描いた順に返す。
+   * 消しゴムで消えた点は取り除き、残った連続区間を別のストロークに分ける（見た目とは無関係の近似: 中心線で判定）。
+   */
   getStrokes(): Drawing;
   /** getStrokes() と同じ順・同じ長さのスタイル。undefined は旧データ（baseWidth のペン）。 */
   getStyles(): (StrokeStyle | undefined)[];
+  /** 再生・保存用: 消しゴムストロークを含む生の履歴（コピー）。 */
+  getHistory(): StrokeHistory;
+  /** getHistory() の結果を読み戻す（loadStrokes(h.strokes, h.styles) と同じ）。履歴はリセット。 */
+  loadHistory(h: { strokes: Drawing; styles?: (StrokeStyle | undefined)[] }): void;
   /**
    * 再生・復元用。履歴はリセットされる（Undo で読み込み前には戻らない）。
    * styles は d と同じ並び（省略・不足分は undefined = 旧データ扱い、余りは捨てる）。
+   * styles に 'eraser' があれば消しゴムストロークとして扱う（loadHistory と同じ）。
    */
   loadStrokes(d: Drawing, styles?: (StrokeStyle | undefined)[]): void;
   /**
@@ -113,6 +138,7 @@ export interface CanvasEngine {
    */
   setPen(style: Partial<PenStyle>): void;
   getPen(): PenStyle;
+  /** 消しゴムの半径（4..40 に丸める）。mode は無視する。 */
   setEraser(style: Partial<EraserStyle>): void;
   getEraser(): EraserStyle;
   replay(opts: { speed: number }): Promise<void>;

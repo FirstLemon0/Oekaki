@@ -250,8 +250,9 @@ describe('toWebp（偽 DOM）', () => {
     expect(Math.max(out.width, out.height)).toBeLessThanOrEqual(1024);
     expect(out.width / out.height).toBeCloseTo(r.width / r.height, 1);
     expect(out.width).not.toBe(out.height);
-    // 原点を切り詰め範囲の左上へずらして描く
-    const tf = out.calls.find((c) => c.name === 'setTransform')!.args as number[];
+    // 原点を切り詰め範囲の左上へずらして描く（線は透明な層に描いてから紙に重ねる）
+    const ink = canvases.at(-2)!;
+    const tf = ink.calls.find((c) => c.name === 'setTransform')!.args as number[];
     const k = tf[0]!;
     expect(tf[4]).toBeCloseTo(-r.x * k);
     expect(tf[5]).toBeCloseTo(-r.y * k);

@@ -23,7 +23,8 @@ export const PEN_PRESET_LABEL: Record<PenPreset, string> = {
 export const PEN_SIZE = { min: 1, max: 16 } as const;
 export const PEN_OPACITY = { min: 0.1, max: 1 } as const;
 export const ERASER_SIZE = { min: 4, max: 40 } as const;
-export const DEFAULT_ERASER: EraserStyle = { mode: 'partial', size: 12 };
+/** 消しゴムは太さ（半径）だけ。既定 12 */
+export const DEFAULT_ERASER: EraserStyle = { size: 12 };
 export const RECENT_COLORS_MAX = 3;
 
 function clamp(v: number, lo: number, hi: number): number {
@@ -56,15 +57,17 @@ export function parsePenStyle(raw: unknown): PenStyle | null {
   return style;
 }
 
-/** 保存値から消しゴム設定を読む。使えない値は既定（部分消し・12） */
+/**
+ * 保存値から消しゴム設定（{ size }）を読む。使えない値は既定（12）。
+ * 旧形式 { mode, size } は size だけを使う（消し方の切替は廃止）。
+ */
 export function parseEraserStyle(raw: unknown): EraserStyle {
   if (!isObj(raw)) return { ...DEFAULT_ERASER };
-  const mode = raw.mode === 'stroke' || raw.mode === 'partial' ? raw.mode : DEFAULT_ERASER.mode;
   const size =
     typeof raw.size === 'number' && Number.isFinite(raw.size)
       ? clamp(Math.round(raw.size), ERASER_SIZE.min, ERASER_SIZE.max)
       : DEFAULT_ERASER.size;
-  return { mode, size };
+  return { size };
 }
 
 export function parseRecentColors(raw: unknown): string[] {
@@ -105,7 +108,7 @@ function writeJson(key: string, v: unknown): void {
 export const loadPenStyle = (): PenStyle | null => parsePenStyle(readJson(PEN_STYLE_KEY));
 export const savePenStyle = (s: PenStyle): void => writeJson(PEN_STYLE_KEY, s);
 export const loadEraserStyle = (): EraserStyle => parseEraserStyle(readJson(ERASER_STYLE_KEY));
-export const saveEraserStyle = (s: EraserStyle): void => writeJson(ERASER_STYLE_KEY, s);
+export const saveEraserStyle = (s: EraserStyle): void => writeJson(ERASER_STYLE_KEY, { size: s.size });
 export const loadRecentColors = (): string[] => parseRecentColors(readJson(PEN_RECENT_COLORS_KEY));
 export const saveRecentColors = (list: readonly string[]): void => writeJson(PEN_RECENT_COLORS_KEY, list);
 

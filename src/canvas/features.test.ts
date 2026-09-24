@@ -18,9 +18,9 @@ import {
   taperFactor,
   TAPER_MIN,
 } from './pen';
-import { eraseSegments, eraseStroke } from './erase';
+import { eraseSegments, eraseStroke, flattenHistory } from './erase';
 import { gridLines, normalizeGrid, sameGrid } from './grid';
-import { createCanvasEngine } from './engine';
+import { createCanvasEngine, historyOf } from './engine';
 import { cropRect } from './crop';
 import { lineWidth } from './smooth';
 
@@ -368,15 +368,16 @@ describe('エンジン: ペン設定', () => {
     expect(n).toBe(k);
   });
 
-  it('setEraser / getEraser: 既定は stroke・半径 12、4..40 に丸め、toolchange', () => {
+  it('setEraser / getEraser: 既定は半径 12、4..40 に丸め、mode は無視、toolchange', () => {
     const e = createCanvasEngine();
-    expect(e.getEraser()).toEqual({ mode: 'stroke', size: 12 });
+    expect(e.getEraser()).toEqual({ size: 12 });
     let n = 0;
     e.on('toolchange', () => n++);
     e.setEraser({ mode: 'partial', size: 1 });
-    expect(e.getEraser()).toEqual({ mode: 'partial', size: 4 });
+    expect(e.getEraser()).toEqual({ size: 4 });
     e.setEraser({ size: 400 });
     expect(e.getEraser().size).toBe(40);
+    e.setEraser({ mode: 'stroke' }); // 変化なし → 通知なし
     expect(n).toBe(2);
   });
 
@@ -418,39 +419,188 @@ describe('エンジン: ペン設定', () => {
   });
 });
 
-describe('エンジン: 消しゴム', () => {
+describe('エンジン: 消しゴム（ラスター）', () => {
+  const marker: StrokeStyle = { preset: 'marker', size: 10, opacity: 0.45 };
   function setup() {
     const e = createCanvasEngine();
     e.attach(host());
-    const main = canvases[0]!;
-    const marker: StrokeStyle = { preset: 'marker', size: 10, opacity: 0.45 };
+    const [main, cache] = canvases as [FakeCanvas, FakeCanvas];
     e.loadStrokes([hline(21, 100, 0, 10), hline(21, 200, 0, 10)], [marker, undefined]);
     e.setTool('eraser');
-    return { e, main, marker };
+    e.setEraser({ size: 10 });
+    return { e, main, cache };
   }
+  const erased = (c: FakeCanvas) => c.calls.filter((x) => x.state.globalCompositeOperation === 'destination-out' && (x.name === 'stroke' || x.name === 'fill'));
 
-  it('stroke モード: 触れた線を丸ごと消す（従来）', () => {
-    const { e, main } = setup();
-    drag(main, [[100, 90], [100, 110]]);
-    expect(e.getStrokes()).toHaveLength(1);
-    expect(e.getStrokes()[0]![0]!.y).toBe(200);
-    expect(e.getStyles()).toEqual([undefined]);
+  it('なぞった所を destination-out の丸い線（幅 = 半径 × 2）で消す。線は分割せず、消しゴムストロークとして履歴に残る', () => {
+    const { e, main, cache } = setup();
+    cache.calls.length = 0;
+    drag(main, [[100, 80], [100, 100], [100, 120]]);
+    const hits = erased(cache);
+    expect(hits.length).toBeGreaterThan(0);
+    const st = hits.find((c) => c.name === 'stroke')!.state;
+    expect(st.lineWidth).toBe(20);
+    expect(st.lineCap).toBe('round');
+    // 生の履歴: ペン 2 本 + 消しゴム 1 本
+    const h = e.getHistory();
+    expect(h.strokes).toHaveLength(3);
+    expect(h.styles[2]).toEqual({ preset: 'eraser', size: 10, opacity: 1 });
+    expect(h.strokes[0]).toHaveLength(21); // 元の線はそのまま
+    expect(h.strokes[2]!.map((q) => [q.x, q.y])).toEqual([
+      [100, 80],
+      [100, 100],
+      [100, 120],
+    ]);
   });
 
-  it('partial モード: なぞった所だけ消えて分かれる。1 回の操作は Undo 1 手', () => {
-    const { e, main, marker } = setup();
-    e.setEraser({ mode: 'partial', size: 10 });
-    const undoBefore = e.canUndo();
-    drag(main, [[100, 80], [100, 100], [100, 120], [150, 200]]);
+  it('getStrokes / getStyles はペンだけ。消えた点を除き、残りを別の線に分ける（採点用）', () => {
+    const { e, main } = setup();
+    drag(main, [[100, 80], [100, 100], [100, 120]]);
     const s = e.getStrokes();
-    expect(s.length).toBe(4);
-    expect(e.getStyles()).toEqual([marker, marker, undefined, undefined]);
+    expect(s).toHaveLength(3);
+    expect(e.getStyles()).toEqual([marker, marker, undefined]);
     expect(s[0]!.at(-1)!.x).toBeCloseTo(90, 3);
     expect(s[1]![0]!.x).toBeCloseTo(110, 3);
-    expect(undoBefore).toBe(false);
-    e.undo();
-    expect(e.getStrokes()).toHaveLength(2);
+    expect(s[2]).toHaveLength(21);
+  });
+
+  it('1 回なぞる（down〜up）で Undo 1 手。Undo すると消しゴムだけ取り消され、cache は消しゴム無しで描き直す', () => {
+    const { e, main, cache } = setup();
     expect(e.canUndo()).toBe(false);
+    let changes = 0;
+    e.on('change', () => changes++);
+    drag(main, [[100, 80], [100, 100], [100, 120], [150, 200]]);
+    expect(changes).toBe(1);
+    expect(e.canUndo()).toBe(true);
+    cache.calls.length = 0;
+    e.undo();
+    expect(e.canUndo()).toBe(false);
+    expect(e.getStrokes()).toHaveLength(2);
+    expect(e.getHistory().strokes).toHaveLength(2);
+    expect(erased(cache)).toHaveLength(0);
+    e.redo();
+    expect(e.getStrokes()).toHaveLength(4);
+  });
+
+  it('何も無い所をなぞっても履歴に積まない', () => {
+    const { e, main } = setup();
+    drag(main, [[300, 20], [320, 30]]);
+    expect(e.canUndo()).toBe(false);
+    expect(e.getHistory().strokes).toHaveLength(2);
+  });
+
+  it('消しゴムの後に描いた線は消えない', () => {
+    const { e, main } = setup();
+    drag(main, [[100, 80], [100, 120]]);
+    e.setTool('pen');
+    drag(main, [[60, 100], [100, 100], [140, 100]]);
+    const s = e.getStrokes();
+    expect(s.at(-1)!.map((q) => q.x)).toEqual([60, 100, 140]);
+    expect(e.getHistory().styles.map((x) => x?.preset)).toEqual(['marker', undefined, 'eraser', 'pen']);
+  });
+
+  it('getHistory → loadHistory で同じ見た目・同じ点列に戻る。historyOf(getStyles()) で同じ履歴を引ける', () => {
+    const { e, main } = setup();
+    drag(main, [[100, 80], [100, 120]]);
+    const h = e.getHistory();
+    const styles = e.getStyles();
+    expect(historyOf(styles)).toEqual(h);
+    expect(historyOf([...styles])).toBeNull();
+    const e2 = createCanvasEngine();
+    e2.loadHistory(h);
+    expect(e2.getHistory()).toEqual(h);
+    expect(e2.getStrokes()).toEqual(e.getStrokes());
+    expect(e2.getStyles()).toEqual(e.getStyles());
+    expect(e2.canUndo()).toBe(false);
+  });
+
+  it('消しゴム選択中はペン／マウスの位置に輪（半径 = size）を出す。ペンに戻すと消える', () => {
+    const { e, main } = setup();
+    main.calls.length = 0;
+    main.listeners.get('pointermove')!(pe(50, 50));
+    flush();
+    const ring = main.calls.filter((c) => c.name === 'arc');
+    expect(ring).toHaveLength(1);
+    expect(ring[0]!.args.slice(0, 3)).toEqual([50, 50, 10]);
+    main.calls.length = 0;
+    e.setTool('pen');
+    expect(main.calls.filter((c) => c.name === 'arc')).toHaveLength(0);
+    expect(count(main, 'drawImage')).toBeGreaterThan(0);
+  });
+
+  it('紙は表示のときに塗り、cache は透明（消した所は紙が見える）', () => {
+    const { e, main, cache } = setup();
+    cache.calls.length = 0;
+    main.calls.length = 0;
+    e.setOptions({ silhouette: true });
+    expect(cache.calls.some((c) => c.name === 'fillRect')).toBe(false);
+    expect(cache.calls.some((c) => c.name === 'clearRect')).toBe(true);
+    const paper = main.calls.find((c) => c.name === 'fillRect')!;
+    expect(paper.state.fillStyle).toBe('#ffffff');
+  });
+
+  it('再生: 消しゴムも順番どおり cache から消す', () => {
+    const { e, main, cache } = setup();
+    drag(main, [[100, 80], [100, 120]]);
+    let clock = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => clock);
+    cache.calls.length = 0;
+    let done = false;
+    void e.replay({ speed: 1 }).then(() => (done = true));
+    // 開始直後は消しゴム前（何も消していない）
+    expect(erased(cache)).toHaveLength(0);
+    clock = 1e6;
+    flush();
+    const first = cache.calls.findIndex((c) => c.state.globalCompositeOperation === 'destination-out' && c.name === 'stroke');
+    const marker = cache.calls.findIndex((c) => c.name === 'drawImage');
+    expect(first).toBeGreaterThan(marker); // 線を描いてから消す
+    expect(e.getHistory().strokes).toHaveLength(3);
+    return Promise.resolve().then(() => expect(done).toBe(true));
+  });
+
+  it('toWebp: 線は透明な層に描いて消しゴムを掛けてから紙に重ねる。切り詰めは消えた後の線の範囲', async () => {
+    const e = createCanvasEngine();
+    e.attach(host());
+    const main = canvases[0]!;
+    e.loadStrokes([hline(21, 100, 0, 10)]);
+    const before = cropRect(e.getStrokes(), 3)!;
+    e.setTool('eraser');
+    e.setEraser({ size: 20 });
+    drag(main, [[150, 100], [250, 100]]); // 右半分を消す
+    await e.toWebp(1024);
+    const out = canvases.at(-1)!;
+    const ink = canvases.at(-2)!;
+    expect(erased(ink).length).toBeGreaterThan(0);
+    const img = out.calls.find((c) => c.name === 'drawImage')!;
+    expect(img.args[0]).toBe(ink);
+    expect(out.calls.findIndex((c) => c.name === 'fillRect')).toBeLessThan(out.calls.indexOf(img));
+    const after = cropRect(e.getStrokes(), 3)!;
+    expect(after.width).toBeLessThan(before.width);
+    expect(out.width / out.height).toBeCloseTo(after.width / after.height, 1);
+  });
+});
+
+describe('flattenHistory（純関数）', () => {
+  const pen: StrokeStyle = { preset: 'pen', size: 3, opacity: 1 };
+  const er: StrokeStyle = { preset: 'eraser', size: 5, opacity: 1 };
+
+  it('消しゴムはそれより前の線だけを削る。消しゴム自体は出てこない', () => {
+    const a = hline(11, 0);
+    const b = hline(11, 0);
+    const r = flattenHistory([a, [pt(50, -10), pt(50, 10)], b], [pen, er, undefined]);
+    expect(r.strokes).toHaveLength(3);
+    expect(r.styles).toEqual([pen, pen, undefined]);
+    expect(r.strokes[2]).toBe(b);
+  });
+
+  it('線が無い所の消しゴム・空の履歴', () => {
+    expect(flattenHistory([], [])).toEqual({ strokes: [], styles: [] });
+    expect(flattenHistory([[pt(0, 0)]], [er])).toEqual({ strokes: [], styles: [] });
+  });
+
+  it('sanitizeStyle は消しゴムを半径 4..40・不透明度 1 にそろえる', () => {
+    expect(sanitizeStyle({ preset: 'eraser', size: 99, opacity: 0.2 })).toEqual({ preset: 'eraser', size: 40, opacity: 1 });
+    expect(sanitizeStyle({ preset: 'eraser', size: 'x' })).toEqual({ preset: 'eraser', size: 12, opacity: 1 });
   });
 });
 

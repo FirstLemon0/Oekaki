@@ -14,7 +14,8 @@ import type { Stroke } from '@/scoring';
 import { counters, curriculum, drillStats, profile, progress } from '../state';
 import { href, parseHash } from '../router';
 import { ERROR_TEXT } from './critiqueText';
-import { strokeKey, summarizeEntries, syncEntries, type DrillEntry } from './drillEntries';
+import { penStrokesOf, strokeKey, summarizeEntries, syncEntries, type DrillEntry } from './drillEntries';
+import { createCanvasEngine } from '@/canvas';
 import { drillSetup, fitTemplate, orientationError, rescaleMap, scoreDrill, taperOutScore } from './drillSetup';
 import { scorersFor } from './limits';
 import {
@@ -25,6 +26,7 @@ import {
   recordDrillScores,
   resetLessonSession,
   endLessonSession,
+  readStrokeHistory,
 } from './stateBridge';
 import {
   activeDrawingMs,
@@ -273,11 +275,33 @@ describe('15: 採点済みの線', () => {
     target: null,
   });
 
-  it('Undo・消しゴムで消えた線の採点は外す', () => {
+  it('Undo・全消しで消えた線の採点は外す', () => {
     const es = [entry(s1, 80), entry(s2, 60)];
     expect(syncEntries(es, [s1, s2])).toHaveLength(2);
     expect(syncEntries(es, [s1])).toEqual([es[0]]);
     expect(syncEntries(es, [])).toEqual([]);
+  });
+
+  it('消しゴムで削っても採点は外さない（消しゴムで削る前の線で対応づける）。消しゴムの Undo でも同じ', () => {
+    const e = createCanvasEngine();
+    const pen = { preset: 'pen' as const, size: 3, opacity: 1 };
+    // s1 の始点と真ん中を消す消しゴム
+    const eraser = [pt(0, 0, 0), pt(50, 0, 1)];
+    e.loadHistory({ strokes: [s1, s2, eraser], styles: [pen, pen, { preset: 'eraser', size: 8, opacity: 1 }] });
+    const es = [entry(s1, 80), entry(s2, 60)];
+    // getStrokes() では s1 の始点が変わっている（採点・保存用の点列）
+    expect(e.getStrokes().map(strokeKey)).not.toContain(strokeKey(s1));
+    const raw = penStrokesOf(e.getHistory());
+    expect(raw).toHaveLength(2);
+    expect(syncEntries(es, raw)).toHaveLength(2);
+  });
+
+  it('meta.history（消しゴム込みの履歴）を読む。壊れていれば undefined', () => {
+    const h = { strokes: [s1, [pt(0, 0, 0)]], styles: [null, { preset: 'eraser', size: 8, opacity: 1 }] };
+    expect(readStrokeHistory({ history: h })).toEqual({ strokes: h.strokes, styles: [undefined, h.styles[1]] });
+    expect(readStrokeHistory({})).toBeUndefined();
+    expect(readStrokeHistory({ history: { strokes: [s1], styles: [] } })).toBeUndefined();
+    expect(readStrokeHistory({ history: { strokes: [[{ x: 'a', y: 0 }]], styles: [null] } })).toBeUndefined();
   });
 
   it('セットのまとめは平均点・一番低い本の助言', () => {

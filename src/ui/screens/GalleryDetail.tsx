@@ -6,11 +6,13 @@
  *
  * 再生: 表示中の画像と同じ枠に createCanvasEngine を attach し、loadStrokes(strokes, meta.strokeStyles) → replay({ speed: 2 })。
  * 線ごとの見た目（ペンの種類・太さ・色）は保存時の meta.strokeStyles。無い旧データは既定のペン。
+ * 消しゴムを使った絵は meta.history（消しゴムを含む生の履歴）があれば、そちらを loadHistory して再生する
+ * （消しゴムも描いた順に消える）。範囲（sourceRect）は従来どおり strokes（消えた所を除いた線）から出す。
  * キャンバスはストロークの座標（CSS px）のまま描くので、書き出し範囲（切り詰めなら cropRect、
  * 旧データの紙全体書き出しなら紙の大きさの推定）ぶんの箱を作って枠に合わせて拡大縮小する。
  */
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { createCanvasEngine, cropRect, DEFAULT_OPTIONS, type CanvasEngine, type Rect, type StrokeStyle } from '@/canvas';
+import { createCanvasEngine, cropRect, DEFAULT_OPTIONS, type CanvasEngine, type Rect, type StrokeHistory, type StrokeStyle } from '@/canvas';
 import { deleteDrawing, getCritique, getDrawing } from '@/data/repo';
 import type { Critique, Drawing, StrokeDrawing } from '@/data/types';
 import { Button, CritiqueFixes, CritiqueGood, CritiqueNext, EmptyState, Modal, showToast } from '../components';
@@ -18,7 +20,7 @@ import { formatDate, KIND_LABEL } from '../format';
 import { href, navigate } from '../router';
 import { path } from '../state';
 import { useObjectUrls } from '../useObjectUrl';
-import { readStrokeStyles } from '../lesson/stateBridge';
+import { readStrokeHistory, readStrokeStyles } from '../lesson/stateBridge';
 
 function CritiqueBlocks({ critique }: { critique: Critique }) {
   const r = critique.response;
@@ -73,6 +75,7 @@ function shift(strokes: StrokeDrawing, dx: number, dy: number): StrokeDrawing {
 function ReplayStage({
   strokes,
   styles,
+  history,
   imageAspect,
   runId,
   onEnd,
@@ -81,6 +84,8 @@ function ReplayStage({
   strokes: StrokeDrawing;
   /** strokes と同じ並びの線ごとの見た目（無ければ旧データのペン） */
   styles: (StrokeStyle | undefined)[] | undefined;
+  /** 消しゴムを含む生の履歴（あればこちらを再生する） */
+  history: StrokeHistory | undefined;
   imageAspect: number;
   /** 増えるたびに頭から再生する */
   runId: number;
@@ -114,14 +119,15 @@ function ReplayStage({
     if (!host) return;
     const engine = createCanvasEngine({ penOnly: true, allowMouse: false });
     engine.attach(host);
-    engine.loadStrokes(shift(strokes, rect.x, rect.y), styles);
+    if (history) engine.loadHistory({ strokes: shift(history.strokes, rect.x, rect.y), styles: history.styles });
+    else engine.loadStrokes(shift(strokes, rect.x, rect.y), styles);
     engineRef.current = engine;
     return () => {
       engine.cancelReplay();
       engine.detach();
       engineRef.current = null;
     };
-  }, [strokes, styles, rect, engineRef]);
+  }, [strokes, styles, history, rect, engineRef]);
 
   // 再生（runId が変わるたび）
   useEffect(() => {
@@ -178,6 +184,7 @@ export function GalleryDetail({ id }: { id: string }) {
   const list = useMemo(() => (drawing ? [drawing] : []), [drawing]);
   // 再生面の attach は styles の同一性で作り直すので、絵が変わったときだけ読み直す
   const strokeStyles = useMemo(() => readStrokeStyles(drawing?.meta), [drawing]);
+  const strokeHistory = useMemo(() => readStrokeHistory(drawing?.meta), [drawing]);
   const urls = useObjectUrls(list);
 
   if (drawing === undefined) return <div class="loading" aria-busy="true" />;
@@ -253,6 +260,7 @@ export function GalleryDetail({ id }: { id: string }) {
               <ReplayStage
                 strokes={strokes}
                 styles={strokeStyles}
+                history={strokeHistory}
                 imageAspect={imageAspect}
                 runId={runId}
                 engineRef={engineRef}

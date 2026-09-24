@@ -4,9 +4,9 @@
  * 選択中のツールをもう一度タップ（またはロングプレス 400ms）で開く。glass 地、当たり判定 48px。
  * 紙に触れた（pointerdown）ら閉じる（CanvasScreen 側）。値の保存も CanvasScreen 側。
  */
-import { PALETTE_COLORS, PEN_PRESETS, type EraserStyle, type PenPreset, type PenStyle } from '@/canvas';
+import { PALETTE_COLORS, PEN_PRESETS, type PenPreset, type PenStyle } from '@/canvas';
 import { Slider } from '../components';
-import { ERASER_SIZE, PEN_OPACITY, PEN_PRESET_LABEL, PEN_PRESET_ORDER, PEN_SIZE } from './canvasPrefs';
+import { PEN_OPACITY, PEN_PRESET_LABEL, PEN_PRESET_ORDER, PEN_SIZE } from './canvasPrefs';
 
 // ---------------------------------------------------------------------------
 // 色
@@ -166,41 +166,6 @@ export function PenPanel({
           />
         </label>
       </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// 消しゴム
-// ---------------------------------------------------------------------------
-
-export function EraserPanel({ style, onChange }: { style: EraserStyle; onChange: (next: EraserStyle) => void }) {
-  const modes: { value: EraserStyle['mode']; label: string }[] = [
-    { value: 'stroke', label: '線ごと' },
-    { value: 'partial', label: '部分消し' },
-  ];
-  return (
-    <div class="ls-pop ls-toolpanel" role="group" aria-label="消しゴムの設定">
-      <span class="ls-toolpanel__title">消しゴム</span>
-      <div class="ls-toolpanel__modes" role="radiogroup" aria-label="消し方">
-        {modes.map((m) => (
-          <button
-            key={m.value}
-            type="button"
-            role="radio"
-            aria-checked={style.mode === m.value}
-            class={style.mode === m.value ? 'ls-toolpanel__mode is-selected' : 'ls-toolpanel__mode'}
-            onClick={() => onChange({ ...style, mode: m.value })}
-          >
-            {m.label}
-          </button>
-        ))}
-      </div>
-      <label class="ls-toolpanel__row">
-        <span class="ls-toolpanel__label">太さ</span>
-        <Slider value={style.size} min={ERASER_SIZE.min} max={ERASER_SIZE.max} onInput={(v) => onChange({ ...style, size: v })} label="消しゴムの太さ" width={150} />
-        <span class="num ls-pop__val">{style.size}</span>
-      </label>
     </div>
   );
 }

@@ -2,10 +2,12 @@
  * キャンバス描画エンジン（契約 1）。
  * createCanvasEngine() は DOM に触らない。attach(host) で初めて <canvas> を作る。
  *
- * 表示の重ね順: 紙＋完了ストローク（オフスクリーン cache）→ 進行中ストローク（live レイヤー）→ 重ね（overlay）
+ * 表示の重ね順: 紙 → 完了ストローク（オフスクリーン cache、透明背景）→ 進行中ストローク（live レイヤー）→ 重ね（overlay）
  *   → 消しゴムの輪 → グリッド。左右反転は「紙〜重ね・消しゴムの輪」だけに掛け、グリッドは画面座標に固定。
  * 不透明度 < 1・multiply・筆圧で濃淡が変わるペンは、1 本ずつ別レイヤー（scratch）に描いてから合成する
  * （区間の継ぎ目が濃くならないように）。
+ * 消しゴムは普通のラスター消しゴム: 消しゴムストロークを cache に destination-out の丸い線（半径 size）で描く。
+ * 紙は cache に含めないので、消した所は紙が見える。
  */
 import type { Drawing, Stroke, StrokePoint, Vec2 } from '@/scoring/types';
 import type {
@@ -14,17 +16,17 @@ import type {
   EraserStyle,
   OverlaySpec,
   PenStyle,
+  StrokeHistory,
   StrokeStyle,
   Tool,
   ToWebpOptions,
 } from './types';
 import { UndoStack } from './history';
-import { strokeHit } from './hit';
 import { normalizePressure, quadSegmentAt, shouldAppend, tailSegment } from './smooth';
 import { buildReplaySchedule, visibleCounts, type ReplaySchedule } from './replay';
 import { resolveColor } from './color';
 import { cropRect, exportScale, type Rect } from './crop';
-import { eraseSegments } from './erase';
+import { flattenHistory } from './erase';
 import { GRID_COLOR, gridLines, normalizeGrid, sameGrid } from './grid';
 import {
   DEFAULT_ERASER,
@@ -34,6 +36,8 @@ import {
   clampOpacity,
   clampPenSize,
   cumulativeLength,
+  eraserStrokeStyle,
+  isEraserStyle,
   isPenPreset,
   jitterPoints,
   maxPenWidth,
@@ -67,15 +71,13 @@ const FALLBACK_PAPER = '#f3f0ea';
 const FALLBACK_INK = '#2b2926';
 const SILHOUETTE_PAPER = '#ffffff';
 const SILHOUETTE_INK = '#000000';
-/** 消しゴム（ストローク単位）のサンプル補間間隔（CSS px） */
-const ERASER_STEP = 4;
 /** 読み込んだ絵の続きを描くときにあける時間（ms） */
 const RESUME_GAP_MS = 300;
 
 type Ctx = CanvasRenderingContext2D;
 type Styles = (StrokeStyle | undefined)[];
 
-/** 履歴 1 手ぶんの状態。strokes と styles は同じ長さ・同じ並び。 */
+/** 履歴 1 手ぶんの状態（消しゴムストロークを含む生の履歴）。strokes と styles は同じ長さ・同じ並び。 */
 interface Doc {
   strokes: Drawing;
   styles: Styles;
@@ -106,7 +108,10 @@ interface LiveInput {
   /** 描画済みの最後の制御点インデックス（0 = まだ何も描いていない） */
   drawnCtrl: number;
   dotDrawn: boolean;
+  /** 消しゴムの輪を出す位置（最後の入力位置） */
   lastEraserPt: Vec2 | null;
+  /** 消しゴム: cache に消し込んだ点の数 */
+  erasedPts: number;
   style: StrokeStyle;
 }
 
@@ -116,8 +121,9 @@ interface ReplayState {
   start: number;
   /** cache に完成形を描き終えたストローク数（先頭から） */
   committed: number;
-  /** live レイヤーに途中まで描いているストローク（-1 = なし） */
+  /** live レイヤーに途中まで描いているストローク（-1 = なし）。消しゴムは cache に直接消し込む */
   partial: number;
+  /** ペン: 描いた制御点の番号。消しゴム: cache に消し込んだ点の数 */
   partialCtrl: number;
   partialDot: boolean;
   raf: number;
@@ -136,6 +142,44 @@ function strokeBounds(d: Drawing): { width: number; height: number } {
 
 function copyDrawing(d: Drawing): Drawing {
   return d.map((s) => s.map((p) => ({ x: p.x, y: p.y, p: p.p, t: p.t })));
+}
+
+/** getStyles() が返した配列 → その時点の生の履歴（historyOf 用） */
+const historyByStyles = new WeakMap<object, Doc>();
+
+function docToHistory(doc: Doc): StrokeHistory {
+  return { strokes: copyDrawing(doc.strokes), styles: doc.styles.map(copyStyle) };
+}
+
+/**
+ * engine.getStyles() が返した配列から、同じ時点の「消しゴムを含む生の履歴」（getHistory() と同じ形のコピー）を得る。
+ * getStyles() の戻り値でない（加工した配列など）ときは null。
+ * getStrokes()/getStyles() だけを受け取る保存処理が、呼び出し側を変えずに消しゴム込みの履歴も残せるようにするためのもの。
+ */
+export function historyOf(styles: readonly unknown[] | null | undefined): StrokeHistory | null {
+  if (!styles) return null;
+  const doc = historyByStyles.get(styles);
+  return doc ? docToHistory(doc) : null;
+}
+
+/** 点 q と線分 ab の距離 */
+function distToSegment(q: Vec2, a: Vec2, b: Vec2): number {
+  const vx = b.x - a.x;
+  const vy = b.y - a.y;
+  const L = vx * vx + vy * vy;
+  const u = L > 0 ? Math.max(0, Math.min(1, ((q.x - a.x) * vx + (q.y - a.y) * vy) / L)) : 0;
+  return Math.hypot(q.x - (a.x + vx * u), q.y - (a.y + vy * u));
+}
+
+/** 線分 ab と cd の距離（交わっていれば 0） */
+function segDist(a: Vec2, b: Vec2, c: Vec2, d: Vec2): number {
+  const cross = (o: Vec2, p: Vec2, q: Vec2) => (p.x - o.x) * (q.y - o.y) - (p.y - o.y) * (q.x - o.x);
+  const d1 = cross(a, b, c);
+  const d2 = cross(a, b, d);
+  const d3 = cross(c, d, a);
+  const d4 = cross(c, d, b);
+  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return 0;
+  return Math.min(distToSegment(a, c, d), distToSegment(b, c, d), distToSegment(c, a, b), distToSegment(d, a, b));
 }
 
 function copyStyle(s: StrokeStyle | undefined): StrokeStyle | undefined {
@@ -218,6 +262,35 @@ function drawTail(c: Ctx, g: Geom, rp: ResolvedPen, mul: number): void {
 }
 
 /**
+ * 消しゴムストロークの点 [from, to) を c から消す（destination-out・半径 radius の丸い線）。
+ * from > 0 なら点 from-1 からつなぐ。点が 1 個だけなら円。c は変換なし（デバイス px）を前提に xf で CSS px を写す。
+ * 終わると c の変換・globalAlpha・合成方法は既定に戻っている。
+ */
+function paintEraser(c: Ctx, pts: readonly StrokePoint[], radius: number, xf: Xf, from = 0, to = pts.length): void {
+  const end = Math.min(to, pts.length);
+  if (end <= from || end === 0) return;
+  c.setTransform(xf.k, 0, 0, xf.k, xf.ox, xf.oy);
+  c.globalAlpha = 1;
+  c.globalCompositeOperation = 'destination-out';
+  prep(c, '#000');
+  const start = Math.max(0, from - 1);
+  const first = pts[start]!;
+  if (end - start === 1) {
+    c.beginPath();
+    c.arc(first.x, first.y, radius, 0, Math.PI * 2);
+    c.fill();
+  } else {
+    c.lineWidth = radius * 2;
+    c.beginPath();
+    c.moveTo(first.x, first.y);
+    for (let i = start + 1; i < end; i++) c.lineTo(pts[i]!.x, pts[i]!.y);
+    c.stroke();
+  }
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.globalCompositeOperation = 'source-over';
+}
+
+/**
  * 完了ストローク 1 本を c に描く。c は変換なし（デバイス px）を前提に xf で CSS px を写す。
  * 重なりを避けたいペンは scratch（c と同じ大きさ以上）に描いてから opacity と blend で合成する。
  * 終わると c の変換・globalAlpha・合成方法は既定（恒等・1・source-over）に戻っている。
@@ -286,9 +359,17 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
   let eraser: EraserStyle = { ...DEFAULT_ERASER };
 
   const history = new UndoStack<Doc>({ strokes: [], styles: [] });
-  /** 消しゴムでなぞっている間の作業コピー（離したら 1 操作として commit） */
-  let working: Doc | null = null;
-  const current = (): Doc => working ?? history.present;
+  const current = (): Doc => history.present;
+  /** 履歴 → ペンだけの点列（消しゴムで消えた点を除く）。Doc ごとに 1 回だけ計算する */
+  const flatMemo = new WeakMap<Doc, Doc>();
+  function flat(doc: Doc): Doc {
+    let f = flatMemo.get(doc);
+    if (!f) {
+      f = flattenHistory(doc.strokes, doc.styles);
+      flatMemo.set(doc, f);
+    }
+    return f;
+  }
 
   let overlay: OverlaySpec | null = null;
   let overlayImg: HTMLImageElement | null = null;
@@ -308,6 +389,8 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
   let liveLayer: Layer | null = null;
   /** 1 本ずつ合成するための作業用 */
   let scratch: Layer | null = null;
+  /** 進行中の multiply ペンを「完了ストロークだけ」に掛けるための合成用（必要なときだけ作る） */
+  let mix: Layer | null = null;
   let ro: ResizeObserver | null = null;
   let dprMql: MediaQueryList | null = null;
   let cssW = 0;
@@ -317,6 +400,8 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
   let ink = FALLBACK_INK;
 
   let live: LiveInput | null = null;
+  /** 消しゴム選択中にペン／マウスが紙の上にある位置（輪を出す） */
+  let hoverPt: Vec2 | null = null;
   /** live レイヤーに何か描いてあり、合成に使う見た目 */
   let livePaint: Paint | null = null;
   let rafId = 0;
@@ -383,19 +468,33 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     if (!cache) return;
     const s = doc.strokes[i];
     if (!s) return;
-    paintStroke(cache.ctx, s, viewPaint(doc.styles[i]), { k: dpr, ox: 0, oy: 0 }, scratch, devSize());
+    const st = doc.styles[i];
+    if (isEraserStyle(st)) {
+      paintEraser(cache.ctx, s, st.size, { k: dpr, ox: 0, oy: 0 });
+      return;
+    }
+    paintStroke(cache.ctx, s, viewPaint(st), { k: dpr, ox: 0, oy: 0 }, scratch, devSize());
   }
 
-  /** cache を紙色で塗り、doc の先頭 upto 本を描く。 */
+  /** cache を透明にして、doc の先頭 upto 本（消しゴムを含む）を描く。紙は compose で塗る。 */
   function rebuildCache(doc: Doc = current(), upto = doc.strokes.length): void {
     if (!cache) return;
     const c = cache.ctx;
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.globalAlpha = 1;
     c.globalCompositeOperation = 'source-over';
-    c.fillStyle = opts.silhouette ? SILHOUETTE_PAPER : paper;
-    c.fillRect(0, 0, cache.canvas.width, cache.canvas.height);
+    c.clearRect(0, 0, cache.canvas.width, cache.canvas.height);
     for (let i = 0; i < upto; i++) paintCacheStroke(i, doc);
+  }
+
+  /** 進行中の消しゴムの、まだ消し込んでいない点を cache から消す。 */
+  function eraseLiveIncrement(): void {
+    if (!live || live.tool !== 'eraser' || !cache) return;
+    const n = live.points.length;
+    if (n <= live.erasedPts) return;
+    paintEraser(cache.ctx, live.points, live.style.size, { k: dpr, ox: 0, oy: 0 }, live.erasedPts, n);
+    live.erasedPts = n;
+    composeDirty = true;
   }
 
   /** グリッド（画面座標に固定。反転しない）。 */
@@ -452,11 +551,12 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     c.globalAlpha = 1;
   }
 
+  /** 消しゴムの輪（半径 = size）。なぞっている間と、ペン／マウスが紙の上にある間に出す。 */
   function drawEraserRing(c: Ctx): void {
-    if (!live || live.tool !== 'eraser' || !live.lastEraserPt) return;
-    const pt = live.lastEraserPt;
+    const pt = live ? (live.tool === 'eraser' ? live.lastEraserPt : null) : tool === 'eraser' && !replayState ? hoverPt : null;
+    if (!pt) return;
     applyView(c);
-    c.globalAlpha = 0.5;
+    c.globalAlpha = 0.45;
     c.strokeStyle = opts.silhouette ? SILHOUETTE_INK : ink;
     c.lineWidth = 1 / Math.max(1, dpr);
     c.beginPath();
@@ -469,9 +569,33 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
   function compose(): void {
     if (!ctx || !canvas) return;
     composeDirty = false;
-    applyView(ctx);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = opts.silhouette ? SILHOUETTE_PAPER : paper;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    applyView(ctx);
+    if (livePaint && liveLayer && cache && livePaint.pen.blend !== 'source-over') {
+      // multiply 等は紙ではなく完了ストロークにだけ掛ける（確定後の cache と同じ見た目にする）
+      if (!mix || mix.canvas.width !== cache.canvas.width || mix.canvas.height !== cache.canvas.height) {
+        mix = makeLayer(cache.canvas.width, cache.canvas.height);
+      }
+      if (mix) {
+        const m = mix.ctx;
+        clearLayer(mix);
+        m.drawImage(cache.canvas, 0, 0);
+        m.globalAlpha = livePaint.pen.opacity;
+        m.globalCompositeOperation = livePaint.pen.blend;
+        m.drawImage(liveLayer.canvas, 0, 0);
+        m.globalAlpha = 1;
+        m.globalCompositeOperation = 'source-over';
+        ctx.drawImage(mix.canvas, 0, 0, cssW, cssH);
+        drawOverlay(ctx);
+        drawEraserRing(ctx);
+        drawGrid(ctx);
+        return;
+      }
+    }
     if (cache) ctx.drawImage(cache.canvas, 0, 0, cssW, cssH);
     if (livePaint && liveLayer) {
       ctx.globalAlpha = livePaint.pen.opacity;
@@ -487,6 +611,11 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
 
   function fullRedraw(): void {
     rebuildCache();
+    // なぞっている途中の消しゴムは履歴にまだ無いので、描き直したら消し込み直す
+    if (live && live.tool === 'eraser') {
+      live.erasedPts = 0;
+      eraseLiveIncrement();
+    }
     compose();
   }
 
@@ -555,6 +684,7 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     const ph = Math.max(1, Math.round(h * dpr));
     canvas.width = pw;
     canvas.height = ph;
+    mix = null;
     for (const l of [cache, liveLayer, scratch]) {
       if (!l) continue;
       l.canvas.width = pw;
@@ -642,48 +772,63 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     return Math.max(0, e.timeStamp - timeOrigin);
   }
 
-  /** ストローク単位の消しゴム: 点に当たる線を丸ごと消す。当たり = 線幅 + (size − 4) px 以内。 */
-  function eraseWholeAt(pt: Vec2): void {
-    const src = current();
-    const margin = Math.max(0, eraser.size - 4);
-    const keep: number[] = [];
-    src.strokes.forEach((s, i) => {
-      const rp = resolvePen(src.styles[i], opts.baseWidth);
-      if (!strokeHit(s, pt, opts.baseWidth, margin, (p) => penWidth(rp, p))) keep.push(i);
-    });
-    if (keep.length === src.strokes.length) return;
-    working = { strokes: keep.map((i) => src.strokes[i]!), styles: keep.map((i) => src.styles[i]) };
-    fullDirty = true;
-  }
-
-  function eraseAlong(from: Vec2 | null, to: Vec2): void {
-    if (eraser.mode === 'partial') {
-      const src = current();
-      const res = eraseSegments(src.strokes, src.styles, from ? [from, to] : [to], eraser.size);
-      if (res.changed) {
-        working = { strokes: res.strokes, styles: res.styles };
-        fullDirty = true;
+  /**
+   * 消しゴムの軌跡（半径 r）が、いま見えている線（ペン、シルエット中は太い線）に届きうるか。
+   * 届かない消しゴムは履歴に積まない（何も無い所をなぞっても Undo の手数が増えないように）。
+   */
+  function eraserTouchesInk(pts: readonly StrokePoint[], r: number): boolean {
+    if (pts.length === 0) return false;
+    let ex0 = Infinity;
+    let ey0 = Infinity;
+    let ex1 = -Infinity;
+    let ey1 = -Infinity;
+    for (const q of pts) {
+      if (q.x < ex0) ex0 = q.x;
+      if (q.y < ey0) ey0 = q.y;
+      if (q.x > ex1) ex1 = q.x;
+      if (q.y > ey1) ey1 = q.y;
+    }
+    const doc = current();
+    return doc.strokes.some((s, i) => {
+      const st = doc.styles[i];
+      if (isEraserStyle(st) || s.length === 0) return false;
+      const rp = resolvePen(st, opts.baseWidth);
+      const pad = r + Math.max(maxPenWidth(rp), maxPenWidth(silhouettePen(rp))) / 2 + rp.grain + 2;
+      let sx0 = Infinity;
+      let sy0 = Infinity;
+      let sx1 = -Infinity;
+      let sy1 = -Infinity;
+      for (const q of s) {
+        if (q.x < sx0) sx0 = q.x;
+        if (q.y < sy0) sy0 = q.y;
+        if (q.x > sx1) sx1 = q.x;
+        if (q.y > sy1) sy1 = q.y;
       }
-      return;
-    }
-    if (!from) {
-      eraseWholeAt(to);
-      return;
-    }
-    const d = Math.hypot(to.x - from.x, to.y - from.y);
-    const steps = Math.max(1, Math.ceil(d / ERASER_STEP));
-    for (let i = 1; i <= steps; i++) {
-      eraseWholeAt({ x: from.x + ((to.x - from.x) * i) / steps, y: from.y + ((to.y - from.y) * i) / steps });
-    }
+      if (ex1 + pad < sx0 || ex0 - pad > sx1 || ey1 + pad < sy0 || ey0 - pad > sy1) return false;
+      // 線分どうしの距離（端点と線分の距離の最小）で詳しく見る
+      for (let k = 0; k < pts.length; k++) {
+        const a = pts[k]!;
+        const b = pts[k + 1] ?? a;
+        for (let j = 0; j < s.length; j++) {
+          const c = s[j]!;
+          const d = s[j + 1] ?? c;
+          if (segDist(a, b, c, d) <= pad) return true;
+        }
+      }
+      return false;
+    });
   }
 
   function addSample(e: PointerEvent): void {
     if (!live) return;
     const pos = toPoint(e);
     if (live.tool === 'eraser') {
-      eraseAlong(live.lastEraserPt, pos);
       live.lastEraserPt = pos;
       composeDirty = true;
+      const prevE = live.points[live.points.length - 1];
+      if (!shouldAppend(prevE, pos)) return;
+      live.points.push({ x: pos.x, y: pos.y, p: normalizePressure(e.pressure), t: timeOf(e) });
+      eraseLiveIncrement();
       return;
     }
     const prev = live.points[live.points.length - 1];
@@ -700,8 +845,8 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     } catch {
       /* 一部環境では失敗するが描画は続けられる */
     }
-    const style = styleFromPen(pen);
-    live = { pointerId: e.pointerId, tool, points: [], drawnCtrl: 0, dotDrawn: false, lastEraserPt: null, style };
+    const style = tool === 'eraser' ? eraserStrokeStyle(eraser.size) : styleFromPen(pen);
+    live = { pointerId: e.pointerId, tool, points: [], drawnCtrl: 0, dotDrawn: false, lastEraserPt: null, erasedPts: 0, style };
     clearLayer(liveLayer);
     livePaint = tool === 'pen' ? viewPaint(style) : null;
     addSample(e);
@@ -709,7 +854,16 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
   }
 
   function onMove(e: PointerEvent): void {
-    if (!live || e.pointerId !== live.pointerId) return;
+    if (!live) {
+      // 消しゴム選択中は、ペン／マウスの位置に輪を出す（タッチはホバーが無いので出さない）
+      if (tool === 'eraser' && canvas && !replayState && e.pointerType !== 'touch') {
+        hoverPt = toPoint(e);
+        composeDirty = true;
+        schedule();
+      }
+      return;
+    }
+    if (e.pointerId !== live.pointerId) return;
     e.preventDefault();
     const list = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : [];
     for (const ev of list.length > 0 ? list : [e]) addSample(ev);
@@ -730,18 +884,19 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     clearLayer(liveLayer);
     if (l.tool === 'eraser') {
       stopFrame();
-      const w = working;
-      working = null;
-      if (w && w !== history.present) {
-        history.commit(w);
-        fullDirty = false;
-        fullRedraw();
-        emitChange();
-      } else {
+      hoverPt = e.pointerType === 'touch' || cancelled ? null : l.lastEraserPt;
+      if (eraserTouchesInk(l.points, l.style.size)) {
+        // cache には消し込み済み。1 回なぞる（down〜up）で 1 操作
+        const prev = history.present;
+        history.commit({ strokes: [...prev.strokes, l.points], styles: [...prev.styles, l.style] });
         if (fullDirty) {
           fullDirty = false;
           fullRedraw();
         } else compose();
+        emitChange();
+      } else {
+        fullDirty = false;
+        fullRedraw();
       }
       return;
     }
@@ -769,6 +924,12 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
 
   const onUp = (e: PointerEvent): void => finish(e, false);
   const onCancel = (e: PointerEvent): void => finish(e, true);
+  const onLeave = (): void => {
+    if (!hoverPt) return;
+    hoverPt = null;
+    composeDirty = true;
+    schedule();
+  };
 
   // ---------- 再生 ----------
   /** 再生中のストローク（partial）の、まだ描いていない部分を live レイヤーに描く。 */
@@ -777,7 +938,17 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     const s = st.doc.strokes[st.partial];
     if (!s) return;
     const n = Math.min(s.length, visibleCounts(st.schedule, performance.now() - st.start)[st.partial] ?? 0);
-    const paint = viewPaint(st.doc.styles[st.partial]);
+    const style = st.doc.styles[st.partial];
+    if (isEraserStyle(style)) {
+      // 消しゴムは cache から直接消していく
+      livePaint = null;
+      if (cache && n > st.partialCtrl) {
+        paintEraser(cache.ctx, s, style.size, { k: dpr, ox: 0, oy: 0 }, st.partialCtrl, n);
+        st.partialCtrl = n;
+      }
+      return;
+    }
+    const paint = viewPaint(style);
     livePaint = paint;
     const c = liveLayer.ctx;
     const pts = s.slice(0, n);
@@ -853,10 +1024,12 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
   // ---------- 公開 API ----------
   function interruptInput(): void {
     if (live) {
+      const wasEraser = live.tool === 'eraser';
       live = null;
       livePaint = null;
-      working = null;
       clearLayer(liveLayer);
+      // 消し込み途中の cache を履歴どおりに戻す
+      if (wasEraser) fullRedraw();
     }
   }
 
@@ -883,6 +1056,7 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
       c.addEventListener('pointermove', onMove);
       c.addEventListener('pointerup', onUp);
       c.addEventListener('pointercancel', onCancel);
+      c.addEventListener('pointerleave', onLeave);
       c.addEventListener('contextmenu', preventDefault);
       resolveColors();
       cssW = 0;
@@ -911,6 +1085,7 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
         canvas.removeEventListener('pointermove', onMove);
         canvas.removeEventListener('pointerup', onUp);
         canvas.removeEventListener('pointercancel', onCancel);
+        canvas.removeEventListener('pointerleave', onLeave);
         canvas.removeEventListener('contextmenu', preventDefault);
         canvas.remove();
       }
@@ -919,11 +1094,18 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
       cache = null;
       liveLayer = null;
       scratch = null;
+      mix = null;
+      hoverPt = null;
       host = null;
     },
 
     setTool(t: Tool): void {
+      if (tool === t) return;
       tool = t;
+      if (t !== 'eraser' && hoverPt) {
+        hoverPt = null;
+        compose();
+      }
     },
 
     setPen(style: Partial<PenStyle>): void {
@@ -958,11 +1140,14 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
 
     setEraser(style: Partial<EraserStyle>): void {
       const prev = eraser;
-      const next: EraserStyle = { ...eraser };
-      if (style.mode === 'stroke' || style.mode === 'partial') next.mode = style.mode;
+      const next: EraserStyle = { size: eraser.size };
+      // mode は旧 API の名残。受け付けるが使わない（消しゴムは常にラスター消しゴム）
       if (style.size !== undefined) next.size = clampEraserSize(style.size, next.size);
       eraser = next;
-      if (prev.mode !== next.mode || prev.size !== next.size) emitToolChange();
+      if (prev.size !== next.size) {
+        if (hoverPt) compose();
+        emitToolChange();
+      }
     },
 
     getEraser: () => ({ ...eraser }),
@@ -1023,9 +1208,21 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     canUndo: () => history.canUndo(),
     canRedo: () => history.canRedo(),
 
-    getStrokes: () => copyDrawing(current().strokes),
+    getStrokes: () => copyDrawing(flat(current()).strokes),
 
-    getStyles: () => current().styles.map(copyStyle),
+    getStyles(): (StrokeStyle | undefined)[] {
+      const doc = current();
+      const out = flat(doc).styles.map(copyStyle);
+      // 返した配列から、同じ時点の生の履歴を引けるようにする（historyOf。保存側が消しゴム込みで残すため）
+      historyByStyles.set(out, doc);
+      return out;
+    },
+
+    getHistory: () => docToHistory(current()),
+
+    loadHistory(h: { strokes: Drawing; styles?: (StrokeStyle | undefined)[] }): void {
+      engine.loadStrokes(h.strokes, h.styles);
+    },
 
     loadStrokes(d: Drawing, styles?: (StrokeStyle | undefined)[]): void {
       endReplay();
@@ -1071,30 +1268,39 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
       if (typeof document === 'undefined') return Promise.reject(new Error('toWebp: document がありません'));
       if (!host) resolveColors();
       const doc = current();
+      const visible = flat(doc);
       const crop = o?.crop ?? true;
-      const cropped = crop ? cropRect(doc.strokes, opts.baseWidth, doc.styles) : null;
+      // 切り詰めは「消しゴムで消えた点を除いた線」の範囲
+      const cropped = crop ? cropRect(visible.strokes, opts.baseWidth, visible.styles) : null;
       let rect: Rect;
       if (cropped) {
         rect = cropped;
       } else {
-        const sz = cssW > 0 && cssH > 0 ? { width: cssW, height: cssH } : strokeBounds(doc.strokes);
+        const sz = cssW > 0 && cssH > 0 ? { width: cssW, height: cssH } : strokeBounds(visible.strokes);
         rect = { x: 0, y: 0, width: Math.max(1, sz.width), height: Math.max(1, sz.height) };
       }
       const k = exportScale(rect, maxEdge, dpr, cropped !== null);
       const W = Math.max(1, Math.round(rect.width * k));
       const H = Math.max(1, Math.round(rect.height * k));
-      const paints = doc.styles.map((s) => normalPaint(s));
-      // 作業用レイヤーは必要なときだけ（出力 canvas より先に作る）
-      const layer = paints.some((p) => needsLayer(p.pen)) ? makeLayer(W, H) : null;
+      const paints = doc.styles.map((s) => (isEraserStyle(s) ? null : normalPaint(s)));
+      // 作業用レイヤーは必要なときだけ（出力 canvas より先に作る）。線は透明な層に描いて（消しゴム込み）紙に重ねる
+      const layer = paints.some((p) => p !== null && needsLayer(p.pen)) ? makeLayer(W, H) : null;
+      const inkLayer = makeLayer(W, H);
       const out = document.createElement('canvas');
       out.width = W;
       out.height = H;
       const c = out.getContext('2d');
-      if (!c) return Promise.reject(new Error('toWebp: 2D コンテキストを作れません'));
+      if (!c || !inkLayer) return Promise.reject(new Error('toWebp: 2D コンテキストを作れません'));
+      const xf: Xf = { k, ox: -rect.x * k, oy: -rect.y * k };
+      doc.strokes.forEach((s, i) => {
+        const p = paints[i];
+        const st = doc.styles[i];
+        if (p) paintStroke(inkLayer.ctx, s, p, xf, layer, { w: W, h: H });
+        else if (isEraserStyle(st)) paintEraser(inkLayer.ctx, s, st.size, xf);
+      });
       c.fillStyle = paper;
       c.fillRect(0, 0, out.width, out.height);
-      const xf: Xf = { k, ox: -rect.x * k, oy: -rect.y * k };
-      doc.strokes.forEach((s, i) => paintStroke(c, s, paints[i]!, xf, layer, { w: W, h: H }));
+      c.drawImage(inkLayer.canvas, 0, 0);
       return new Promise<Blob>((resolve, reject) => {
         out.toBlob(
           (b) => {
