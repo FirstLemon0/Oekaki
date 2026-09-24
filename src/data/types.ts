@@ -168,6 +168,8 @@ export interface Counters {
 
 export type CritiqueEffort = 'low' | 'medium' | 'high';
 export type Theme = 'light' | 'dark' | 'system';
+export type Strictness = 'easy' | 'normal';
+export type FontScale = 'normal' | 'large';
 
 export interface Settings {
   /** Anthropic API キー。未設定なら null。 */
@@ -179,6 +181,19 @@ export interface Settings {
   /** ステージ7以降で使う外部お絵描きアプリ名。未設定なら null。 */
   externalAppName: string | null;
   theme: Theme;
+  /** 左利き。ツールバーと完了ボタンの位置が入れ替わる。 */
+  leftHanded: boolean;
+  /** ペン専用モード（指では描けない）。 */
+  penOnly: boolean;
+  /** 合格ラインの厳しさ。表示の点数だけが変わる。 */
+  strictness: Strictness;
+  /** 通知時刻 HH:MM。null は通知なし。 */
+  notifyTime: string | null;
+  fontScale: FontScale;
+  /** 最終バックアップ日時（ISO）。null は未実施。 */
+  lastBackupAt: string | null;
+  /** バックアップ通知を「あとで」にした日（YYYY-MM-DD）。 */
+  backupSnoozedOn: string | null;
   updatedAt: string;
 }
 

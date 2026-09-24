@@ -1,42 +1,37 @@
 /**
  * 教材ローダー
  *
- * content/stages/*.json と content/rubrics/*.json は明示 import する（vitest の
- * node 環境でも動くように import.meta.glob は使わない）。新しい教材ファイルを
- * 追加したら、下の RAW_STAGES / RAW_RUBRICS に追記すること。
+ * content/stages/*.json、content/rubrics/*.json、content/templates/*.json を
+ * import.meta.glob で自動登録する（Vite / vitest の両方で動く）。
+ * 教材ファイルを追加したら、置くだけで読み込まれる。登録の追記は不要。
  */
-import stageS0 from '@content/stages/s0.json';
-import stageS1 from '@content/stages/s1.json';
-import stageS1_5 from '@content/stages/s1_5.json';
-import rubricS1 from '@content/rubrics/s1.json';
-import rubricS1_5 from '@content/rubrics/s1_5.json';
-import tplSimpleShapes from '@content/templates/simple-shapes.json';
-import tplLeafSilhouette from '@content/templates/leaf-silhouette.json';
-import tplFlowerSilhouette from '@content/templates/flower-silhouette.json';
-import tplFaceOutlineCross from '@content/templates/face-outline-cross.json';
-import tplAnimeEyePair from '@content/templates/anime-eye-pair.json';
-import tplNoseMouthBrow from '@content/templates/nose-mouth-brow.json';
-import tplHairMass from '@content/templates/hair-mass.json';
-
 import type { Drawing } from '@/scoring/types';
 import { CurriculumSchema, type Curriculum, type Lesson, type Stage, type Unit } from './schema';
 
-const RAW_STAGES: unknown[] = [stageS0, stageS1, stageS1_5];
-const RAW_RUBRICS: unknown[] = [rubricS1, rubricS1_5];
+const stageModules = import.meta.glob('../../content/stages/*.json', { eager: true, import: 'default' });
+const rubricModules = import.meta.glob('../../content/rubrics/*.json', { eager: true, import: 'default' });
+const templateModules = import.meta.glob('../../content/templates/*.json', { eager: true, import: 'default' });
+
+/** ファイル名順で安定させる（検証エラーの位置が実行ごとに変わらないように） */
+function sortedValues(mods: Record<string, unknown>): unknown[] {
+  return Object.keys(mods)
+    .sort()
+    .map((k) => mods[k]);
+}
+
+const RAW_STAGES: unknown[] = sortedValues(stageModules);
+const RAW_RUBRICS: unknown[] = sortedValues(rubricModules);
 
 /**
  * なぞりテンプレート（trace step の template id → Drawing）。
  * content/templates/<id>.json。x,y は 0..1 正規化。生成元: content/templates/_gen/gen.mjs
  */
-const RAW_TEMPLATES: Record<string, Drawing> = {
-  'simple-shapes': tplSimpleShapes,
-  'leaf-silhouette': tplLeafSilhouette,
-  'flower-silhouette': tplFlowerSilhouette,
-  'face-outline-cross': tplFaceOutlineCross,
-  'anime-eye-pair': tplAnimeEyePair,
-  'nose-mouth-brow': tplNoseMouthBrow,
-  'hair-mass': tplHairMass,
-};
+const RAW_TEMPLATES: Record<string, Drawing> = Object.fromEntries(
+  Object.entries(templateModules).map(([path, mod]) => {
+    const id = path.replace(/^.*\//, '').replace(/\.json$/, '');
+    return [id, mod as Drawing];
+  }),
+);
 
 /** なぞりテンプレートを id で取得する。未登録なら undefined。 */
 export function getTemplate(id: string): Drawing | undefined {

@@ -139,8 +139,16 @@ const settingsSchema = z.object({
   dailyCritiqueLimit: z.number(),
   externalAppName: z.string().nullable(),
   theme: z.enum(['light', 'dark', 'system']),
+  // 以下は後から追加した項目。古いバックアップには無いので既定値で補う
+  leftHanded: z.boolean().default(false),
+  penOnly: z.boolean().default(true),
+  strictness: z.enum(['easy', 'normal']).default('normal'),
+  notifyTime: z.string().nullable().default('20:00'),
+  fontScale: z.enum(['normal', 'large']).default('normal'),
+  lastBackupAt: z.string().nullable().default(null),
+  backupSnoozedOn: z.string().nullable().default(null),
   updatedAt: isoString,
-}) satisfies z.ZodType<Settings>;
+});
 
 const referenceMetaSchema = z.object({
   id: z.string(),

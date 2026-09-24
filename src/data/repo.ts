@@ -287,7 +287,7 @@ export async function bumpCounter(kind: CounterKind, n = 1): Promise<Counters> {
 // settings（単一）
 // ---------------------------------------------------------------------------
 
-function defaultSettings(updatedAt: string): Settings {
+export function defaultSettings(updatedAt: string): Settings {
   return {
     apiKey: null,
     modelId: 'claude-opus-5-5',
@@ -295,13 +295,22 @@ function defaultSettings(updatedAt: string): Settings {
     dailyCritiqueLimit: 3,
     externalAppName: null,
     theme: 'system',
+    leftHanded: false,
+    penOnly: true,
+    strictness: 'normal',
+    notifyTime: '20:00',
+    fontScale: 'normal',
+    lastBackupAt: null,
+    backupSnoozedOn: null,
     updatedAt,
   };
 }
 
 export async function getSettings(): Promise<Settings> {
   const db = await openDb();
-  return (await db.get('settings', SINGLETON_KEY)) ?? defaultSettings(nowIso());
+  const stored = await db.get('settings', SINGLETON_KEY);
+  // 古い保存データに無い項目は既定値で補う（項目追加後の後方互換）
+  return stored ? { ...defaultSettings(stored.updatedAt), ...stored } : defaultSettings(nowIso());
 }
 
 export async function updateSettings(patch: Partial<Omit<Settings, 'updatedAt'>>): Promise<Settings> {
