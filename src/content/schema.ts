@@ -129,7 +129,15 @@ const ConstructStepSchema = z.object({
   counter: CounterSchema.optional(),
   /** このステップで描く個数（counter への加算数。既定 1） */
   count: z.number().int().positive().optional(),
+  /** 横（縦向きなら上）に表示するお手本。'builtin' は content/figures/<refId>.svg、'user' は取込画像 */
+  reference: z.enum(['builtin', 'user']).optional(),
+  refId: z.string().min(1).optional(),
+  /** true なら直前のステップで描いた線をキャンバスに残したまま始める（枠の上に描く等） */
+  keepPrevious: z.boolean().optional(),
 });
+
+/** ポーズ人形の出題グループ。all は 16 種すべて */
+export const PoseGroupSchema = z.enum(['all', 'standing', 'sitting', 'action']);
 
 const GestureStepSchema = z.object({
   type: z.literal('gesture'),
@@ -137,6 +145,8 @@ const GestureStepSchema = z.object({
   count: z.number().int().positive(),
   source: z.enum(['mannequin', 'user']),
   instruction: z.string().min(1),
+  /** source が mannequin のときの出題グループ（既定 all） */
+  poseGroup: PoseGroupSchema.optional(),
 });
 
 const QuizOptionSchema = z.object({
