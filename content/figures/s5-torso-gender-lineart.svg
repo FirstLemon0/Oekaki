@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M150,100 L310,100 Q335,105 330,130 L300,250 Q292,265 295,290 L300,330 Q300,380 230,395 Q160,380 160,330 L165,290 Q168,265 160,250 L130,130 Q125,105 150,100 Z"/>
+  <path d="M505,100 L635,100 Q655,105 650,125 L622,225 Q615,240 625,265 Q660,310 655,335 Q645,385 570,395 Q495,385 485,335 Q480,310 515,265 Q525,240 518,225 L490,125 Q485,105 505,100 Z"/>
+  <line x1="212" y1="100" x2="212" y2="86"/>
+  <line x1="248" y1="100" x2="248" y2="86"/>
+  <line x1="557" y1="100" x2="557" y2="86"/>
+  <line x1="583" y1="100" x2="583" y2="86"/>
+</svg>

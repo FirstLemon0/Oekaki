@@ -135,7 +135,7 @@ describe('選択式（U10-2 塗り技法）', () => {
     for (const l of u2.lessons) {
       expect(l.optional).toBe(true);
       const first = l.steps.find((st) => st.type === 'read');
-      expect(first && first.type === 'read' && first.body.startsWith('この技法を選ばない場合は次のユニットへ進んで OK')).toBe(true);
+      expect(first && first.type === 'read' && first.body.startsWith('この技法をやらない場合は、ヘッダの「この技法は飛ばす」で3課とも飛ばして OK です。')).toBe(true);
     }
   });
 

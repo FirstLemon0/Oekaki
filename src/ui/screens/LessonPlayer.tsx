@@ -3,28 +3,43 @@
  *
  * ヘッダ 80（✕＝ホームへ、8px 進捗セグメント、mono「2/7」）＋ ステップ型ごとの画面。
  * 開始時に復習の該当があれば、先頭に「復習」ステップ（該当ドリル 10 本）を差し込む。
+ * URL の番号はレッスン本来の番号だけ。復習は表示上の前置き（session.warmupsDone で進める）なので、
+ * 再読込しても本来のステップが飛ばない。
+ * セッションは画面を離れたら（アンマウントで）捨てる。前回の点数・絵・開始時刻は持ち越さない。
  * 最後のステップで completeLesson・ストリーク・XP を記録し、完了モーダル（卒業課題はステージ修了）を出す。
  *
  * 途中再開: ステップが進むたびに「次に開くステップ番号」（レッスン本来の番号）を保存する。
  * #/lesson/:id（番号なし）で開いたとき途中の記録があれば「続きから／最初から」のシートを出す。
  * 選択式（lesson.optional）: ヘッダの「この技法は飛ばす」で完了扱い（skipped）にして次のレッスンへ。
  */
-import { useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { Button, Sheet, showToast } from '../components';
 import { href, navigate } from '../router';
-import { path, progress, reviews } from '../state';
+import { completedIds, path, progress, reviews } from '../state';
 import { LsIcon } from '../lesson/LsIcon';
 import { DrillRunner } from '../lesson/DrillRunner';
 import { ConstructView, CopyView, CritiqueStepView, FreeStepView, MoshaView, SubmitStepView, TraceView, type StepCtx } from '../lesson/DrawSteps';
 import { DrillIntro, QuizView, ReadView } from '../lesson/StepViews';
-import { endLessonSession, finishLesson, getLessonSession, saveLessonStep, skipLesson, type LessonSummary } from '../lesson/stateBridge';
 import {
+  endLessonSession,
+  finishLesson,
+  getLessonSession,
+  resetLessonSession,
+  saveLessonStep,
+  skipLesson,
+  type LessonSession,
+  type LessonSummary,
+} from '../lesson/stateBridge';
+import {
+  afterStep,
+  BOX_REVIEW,
   clampStep,
   isSkippable,
-  lessonStepIndex,
-  nextStepIndex,
+  playIndexOf,
   progressSegments,
+  reachedBoxStage,
   resumeStepOf,
+  warmupCount,
   type DrillType,
 } from '../lesson/steps';
 import { GestureScreen } from './GestureScreen';
@@ -70,12 +85,17 @@ function Header({
 
 export function LessonPlayer({ id, step }: { id: string; step?: number }) {
   const node = useMemo(() => path.value.find((n) => n.lesson.id === id), [id, path.value]);
-  const startAt = step ?? 0;
-  // 「続きから」でセッションを作り直す（復習を差し込まない形で）ための鍵
-  const [sessionKey, setSessionKey] = useState(0);
-  const session = useMemo(() => (node ? getLessonSession(node.lesson, reviews.value, startAt) : null), [node, sessionKey]);
+  // セッションは画面ごとに持つ。開いたときに作り直し（前回の残りを引き継がない）、離れたら捨てる
+  const [session, setSession] = useState<LessonSession | null>(() =>
+    node ? resetLessonSession(node.lesson, reviews.value, (step ?? 0) === 0) : null,
+  );
+  useEffect(() => () => endLessonSession(id), [id]);
+  // 復習を 1 つ終えたときの再描画用
+  const [, setTick] = useState(0);
   const [drawing, setDrawing] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [finishError, setFinishError] = useState(false);
+  const finishingRef = useRef(false);
   const [skipping, setSkipping] = useState(false);
   const [summary, setSummary] = useState<LessonSummary | null>(null);
   // 番号なしで開いたときだけ、途中の記録を確かめる（開いた時点の値で固定）
@@ -99,23 +119,26 @@ export function LessonPlayer({ id, step }: { id: string; step?: number }) {
   }
 
   const total = session.steps.length;
-  const n = clampStep(startAt, total);
+  const warmups = warmupCount(session.steps);
+  const lessonTotal = total - warmups;
+  const lessonIndex = clampStep(step ?? 0, lessonTotal);
+  const n = playIndexOf(session.steps, session.warmupsDone, lessonIndex);
   const play = session.steps[n]!;
   const st = play.step;
 
+  /** レッスン本来の番号 k へ（URL と途中保存はこの番号） */
   const goStep = (k: number) => {
     setDrawing(false);
-    void saveLessonStep(id, lessonStepIndex(session.steps, k));
+    void saveLessonStep(id, k);
     navigate(href.lessonStep(id, k), { replace: true });
   };
 
-  const resume = (k: number) => {
+  const restart = (k: number | null) => {
     setResumeAt(null);
-    // 復習を差し込まないセッションで開き直す（保存した番号＝再生の番号になる）
-    endLessonSession(id);
-    setSessionKey((x) => x + 1);
+    // 続きから: 復習を差し込まない。最初から: 開き直した今の復習で作り直す
+    setSession(resetLessonSession(node.lesson, reviews.value, k === null));
     setDrawing(false);
-    navigate(href.lessonStep(id, k), { replace: true });
+    navigate(href.lessonStep(id, k ?? 0), { replace: true });
   };
 
   const skip = async () => {
@@ -126,25 +149,41 @@ export function LessonPlayer({ id, step }: { id: string; step?: number }) {
       showToast('飛ばしました。あとで戻れます', 'info');
       navigate(nextId ? href.lesson(nextId) : href.home());
     } catch {
-      showToast('飛ばせませんでした。もう一度お試しください', 'danger');
+      showToast('飛ばせませんでした。もう一度試しましょう', 'danger');
     } finally {
       setSkipping(false);
     }
   };
 
-  const onDone = async () => {
-    const nx = nextStepIndex(n, total);
-    if (nx !== null) {
-      goStep(nx);
-      return;
-    }
-    if (finishing) return;
+  const finish = async () => {
+    if (finishingRef.current) return;
+    finishingRef.current = true;
     setFinishing(true);
+    setFinishError(false);
     try {
       setSummary(await finishLesson(node.lesson, session));
+    } catch {
+      // 記録に失敗: 押し直せるようにする（済んだ記録は session.finish で繰り返さない）
+      setFinishError(true);
     } finally {
+      finishingRef.current = false;
       setFinishing(false);
     }
+  };
+
+  const onDone = () => {
+    const nx = afterStep(session.steps, session.warmupsDone, lessonIndex);
+    if (nx.kind === 'warmup') {
+      session.warmupsDone = nx.warmupsDone;
+      setDrawing(false);
+      setTick((t) => t + 1);
+      return;
+    }
+    if (nx.kind === 'step') {
+      goStep(nx.lessonIndex);
+      return;
+    }
+    void finish();
   };
 
   const close = () => {
@@ -153,21 +192,27 @@ export function LessonPlayer({ id, step }: { id: string; step?: number }) {
   };
 
   const onBack = () => {
-    if (n > 0) goStep(n - 1);
+    if (!play.warmup && lessonIndex > 0) goStep(lessonIndex - 1);
     else setDrawing(false);
   };
 
-  const ctx: StepCtx = { node, session, onDone: () => void onDone(), onBack };
+  const ctx: StepCtx = { node, session, onDone, onBack };
 
   if (summary) {
     const lastDrill = [...node.lesson.steps].reverse().find((s) => s.type === 'drill');
     const moreType: DrillType = lastDrill && lastDrill.type === 'drill' ? lastDrill.drill : 'line';
+    const boxes = reachedBoxStage(path.value, completedIds.value);
     return (
       <div class="ls-root ls-root--done">
         {summary.graduation ? (
           <StageDoneModal summary={summary} node={node} />
         ) : (
-          <LessonDoneModal summary={summary} node={node} onMore={() => navigate(`#/review/${moreType}`)} />
+          <LessonDoneModal
+            summary={summary}
+            node={node}
+            onMore={() => navigate(href.review(moreType))}
+            onBoxes={boxes ? () => navigate(href.review(BOX_REVIEW)) : undefined}
+          />
         )}
       </div>
     );
@@ -216,7 +261,7 @@ export function LessonPlayer({ id, step }: { id: string; step?: number }) {
       body = <SubmitStepView step={st} ctx={ctx} />;
       break;
     case 'free':
-      fullscreen = true;
+      fullscreen = st.source !== 'import';
       body = <FreeStepView step={st} ctx={ctx} />;
       break;
   }
@@ -235,9 +280,23 @@ export function LessonPlayer({ id, step }: { id: string; step?: number }) {
       <div class="ls-root__body" key={`${id}-${n}`}>
         {body}
       </div>
-      {finishing && (
-        <div class="ls-scrim ls-scrim--clear" aria-busy="true">
-          <span class="ls-muted">記録しています…</span>
+      {(finishing || finishError) && (
+        <div class="ls-scrim ls-scrim--clear" aria-busy={finishing}>
+          {finishing ? (
+            <span class="ls-muted">記録しています…</span>
+          ) : (
+            <div class="ls-finerr" role="alert">
+              <p class="ls-finerr__text">記録できませんでした。端末の空き容量を確かめて、もう一度押してみましょう。描いた絵は保存済みです。</p>
+              <div class="ls-finerr__actions">
+                <Button variant="secondary" onClick={() => setFinishError(false)}>
+                  閉じる
+                </Button>
+                <Button variant="primary" onClick={() => void finish()}>
+                  もう一度記録する
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
       <Sheet open={resumeAt !== null} onClose={() => setResumeAt(null)} title="続きから始めますか？">
@@ -247,10 +306,10 @@ export function LessonPlayer({ id, step }: { id: string; step?: number }) {
               前回は <span class="num">{resumeAt + 1}</span>/<span class="num">{node.lesson.steps.length}</span> ステップ目の途中で閉じました。
             </p>
             <div class="ls-resume__actions">
-              <Button variant="secondary" onClick={() => setResumeAt(null)}>
+              <Button variant="secondary" onClick={() => restart(null)}>
                 最初から
               </Button>
-              <Button variant="primary" onClick={() => resume(resumeAt)}>
+              <Button variant="primary" onClick={() => restart(resumeAt)}>
                 {`続きから（ステップ ${resumeAt + 1}）`}
               </Button>
             </div>

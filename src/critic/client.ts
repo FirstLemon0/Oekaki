@@ -20,7 +20,11 @@ import {
 } from './types';
 
 export const FALLBACK_MODEL = 'claude-opus-5';
-export const MAX_TOKENS = 2048;
+/**
+ * 思考（adaptive thinking）のトークンも max_tokens に含まれる。Opus 5.5 は思考を途中で
+ * 打ち切らないため、小さすぎると本文の前に上限に達して 'max_tokens' で終わる。
+ */
+export const MAX_TOKENS = 16000;
 
 const IMAGE_TYPES: ReadonlyArray<Base64ImageSource['media_type']> = [
   'image/jpeg',
@@ -61,7 +65,8 @@ function classify(e: unknown): CriticError {
   if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) {
     return new CriticError('no_api_key', e.message, { cause: e });
   }
-  if (e instanceof Anthropic.RateLimitError) return new CriticError('daily_limit', e.message, { cause: e });
+  // 429 は API 側のレート制限（アプリの 1 日上限とは別物）
+  if (e instanceof Anthropic.RateLimitError) return new CriticError('rate_limited', e.message, { cause: e });
   if (isModelUnavailable(e)) return new CriticError('model_unavailable', (e as Error).message, { cause: e });
   if (e instanceof Anthropic.APIError) {
     // 400/422 はこちらの送信内容の問題、それ以外（5xx/529 等）は再送で直る見込みの通信系として扱う
@@ -73,7 +78,7 @@ function classify(e: unknown): CriticError {
 
 function parseMessage(msg: Message): CritiqueBody {
   if (msg.stop_reason === 'refusal') throw new CriticError('refused', 'モデルが応答を控えました');
-  if (msg.stop_reason === 'max_tokens') throw new CriticError('bad_response', '応答が途中で切れました（max_tokens）');
+  if (msg.stop_reason === 'max_tokens') throw new CriticError('truncated', '応答が途中で切れました（max_tokens）');
   const text = msg.content
     .flatMap((b) => (b.type === 'text' ? [b.text] : []))
     .join('')

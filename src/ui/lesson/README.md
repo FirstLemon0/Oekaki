@@ -1,0 +1,32 @@
+# src/ui/lesson — レッスン再生・ドリル
+
+## ドリルの params（教材 → 採点）
+
+`drillSetup.ts` が教材の `params` から目標と手がかりを作り、`scoreDrill` が採点する。
+目標が無くても測れる条件は、`blend`（重み付きで総合点に混ぜ、サブ指標に足す）で点数に反映する。
+
+| ドリル | キー | 値 | 扱い |
+|---|---|---|---|
+| line | `mode` | `two-points` | 採点: 2 点の目標を出し、端点・ズレを見る |
+| line | `orientation` | `h` / `v` / `d` | 採点: 目標が無いときも線の向きを比べる（斜めは 20〜70°）。重み 0.35（サブ指標「向き」） |
+| line | `length` | `short` / `long` | 採点: 短辺に対する長さの比（long ≥ 45%、short ≤ 30%）。重み 0.2（「長さ」）。`two-points` のときは目標が長さを決める |
+| line | `speed` / `joint` / `technique` | — | **表示のみ**（課題文で案内。速さ・関節は測らない） |
+| curve | `shape` / `direction` / `bend` / `points` | — | 採点: 目標線の形を作る |
+| curve | `taper` | `out` | 採点: 終わり 15% の筆圧が中ほどより下がっているか。重み 0.2（「抜き」）。筆圧の差が無い入力（マウス・指）では混ぜない |
+| circle | `size` | `small` / `medium` / `large` | 採点: 半径と短辺の比（small ≤ 12%、medium 8〜30%、large ≥ 20%）。重み 0.2（「大きさ」） |
+| circle | `size` | `mixed` | **表示のみ**（大中小の順番は決めていない） |
+| circle | `direction` | `reverse` | **表示のみ**（「反対回り」の基準がその人の回しやすい向きなので、決め打ちで採点しない） |
+| circle | `joint` / `weight` | — | **表示のみ** |
+| ellipse | `degree` / `axisAngleDeg` | 数値 | 採点: 度合い・軸の向き |
+| ellipse | `mode` | `stacked` | **表示のみ**（1 個ずつ採点。軸に重ねたかは見ない） |
+| pressure | `profile` | `ramp-up` / `ramp-down` / `flat` | 採点 |
+| hatching | `spacing` / `angleDeg` | 数値 | 採点（1 セットで） |
+
+未知のキーは採点に使わない（教材側の整理は教材担当）。
+
+## ドリル中の表示
+
+- 1 本ごとの点数は右上のカウンター横の小さなチップと、線そのもののヒート色だけ。線は消さずに積み重ねる
+- 全画面の採点シートは「セットを終えたとき」と「チップをタップしたとき」だけ
+- 履歴（drillStats）・累計・絵の保存は「完了」を押したときに、確定した本だけまとめて行う。
+  Undo・消しゴム・「もう一回」で消した本は記録しない

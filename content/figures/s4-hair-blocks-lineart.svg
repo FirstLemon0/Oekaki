@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M168.5,265 Q175.25,375 290,430 Q404.75,375 411.5,265" stroke-width="1.5"/>
+  <path d="M125,405 Q110,165 210,85 Q290,55 370,85 Q470,165 455,405" stroke-width="3"/>
+  <path d="M160,195 Q143,295 160,410 L185,375 Q175,285 190,215" stroke-width="3"/>
+  <path d="M420,195 Q437,295 420,410 L395,375 Q405,285 390,215" stroke-width="3"/>
+  <path d="M165,165 Q182,210 190,250 Q196,205 212,175 Q222,230 230,270 Q236,225 252,167 Q267,215 275,255 Q281,210 298,165 Q312,235 320,275 Q326,230 342,169 Q357,215 365,255 Q371,210 382,179 Q392,195 400,235 Q406,190 415,185" stroke="currentColor" stroke-width="3.5"/>
+  <path d="M165,165 Q290,70 415,165" stroke="currentColor" stroke-width="2" opacity="0.8"/>
+</svg>

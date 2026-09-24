@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M70,60 L210,70 L220,170 L60,160 Z"/>
+  <path d="M82,64 Q125,135 208,154" stroke-width="2"/>
+  <path d="M82,70 Q145,115 208,160" stroke-width="2"/>
+  <path d="M82,76 Q165,95 208,166" stroke-width="2"/>
+  <path d="M320,60 Q400,230 480,60"/>
+  <path d="M328.4,64 Q400,112.5 471.6,64" stroke-width="2"/>
+  <path d="M334.4,64 Q400,150 465.6,64" stroke-width="2"/>
+  <path d="M339.68,64 Q400,183 460.32,64" stroke-width="2"/>
+  <line x1="570" y1="55" x2="750" y2="55" stroke-width="4"/>
+  <path d="M590,58 L580,190"/>
+  <path d="M730,58 L740,190"/>
+  <path d="M580,190 Q596,206 612,190 Q628,206 644,190 Q660,206 676,190 Q692,206 708,190 Q724,206 740,190"/>
+  <line x1="618" y1="60" x2="612" y2="196" stroke-width="2"/>
+  <line x1="646" y1="60" x2="644" y2="196" stroke-width="2"/>
+  <line x1="674" y1="60" x2="676" y2="196" stroke-width="2"/>
+  <line x1="702" y1="60" x2="708" y2="196" stroke-width="2"/>
+  <line x1="50" y1="392" x2="230" y2="392"/>
+  <line x1="50" y1="308" x2="230" y2="308"/>
+  <ellipse cx="50" cy="350" rx="12.6" ry="42" transform="rotate(0.01 50 350)"/>
+  <ellipse cx="230" cy="350" rx="12.6" ry="42" transform="rotate(0.01 230 350)"/>
+  <path d="M70,310 Q90,350 110,390" stroke-width="2"/>
+  <path d="M110,310 Q130,350 150,390" stroke-width="2"/>
+  <path d="M150,310 Q170,350 190,390" stroke-width="2"/>
+  <path d="M190,310 Q210,350 230,390" stroke-width="2"/>
+  <path d="M310,310 L325,300 L355,310 L385,300 L415,310 L445,300 L475,310"/>
+  <path d="M310,390 L325,400 L355,390 L385,400 L415,390 L445,400 L475,390"/>
+  <path d="M320,312 L335,350 L320,388" stroke-width="2"/>
+  <path d="M350,312 L365,350 L350,388" stroke-width="2"/>
+  <path d="M380,312 L395,350 L380,388" stroke-width="2"/>
+  <path d="M410,312 L425,350 L410,388" stroke-width="2"/>
+  <path d="M440,312 L455,350 L440,388" stroke-width="2"/>
+  <path d="M470,312 L485,350 L470,388" stroke-width="2"/>
+  <path d="M570,300 L660,330 Q690,342 710,370 L745,425"/>
+  <path d="M570,360 L640,380 Q655,386 665,400 L690,432"/>
+  <path d="M628,375 L650,360 L655,388" stroke-width="2"/>
+  <path d="M612,370 L636,352" stroke-width="2"/>
+</svg>

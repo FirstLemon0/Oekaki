@@ -26,7 +26,9 @@
 .btn:disabled { cursor: not-allowed; }
 .btn--lg { min-height: var(--btn-primary-h); font-size: var(--text-body); }
 .btn--md { min-height: var(--btn-secondary-h); font-size: 0.9375rem; }
-.btn--sm { min-height: 40px; padding: 0 14px; font-size: 0.8125rem; border-radius: 8px; }
+.btn--sm { position: relative; min-height: 40px; padding: 0 14px; font-size: 0.8125rem; border-radius: 8px; }
+/* 見た目 40 のまま、当たり判定を上下 4px 広げて 48 に */
+.btn--sm::after { content: ''; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
 .btn--block { display: flex; width: 100%; }
 
 /* 主: 若葉地 ＋ 墨文字（白文字は使わない） */
@@ -48,7 +50,7 @@
 /* 危険: danger 枠と文字、押下地 danger-soft */
 .btn--danger {
   background: transparent;
-  color: var(--color-danger);
+  color: var(--color-danger-text);
   border: var(--border-secondary) solid var(--color-danger);
 }
 .btn--danger:active:not(:disabled) { background: var(--color-danger-soft); filter: none; }
@@ -96,10 +98,10 @@
 .pill__text { display: inline-flex; align-items: baseline; gap: 4px; }
 .pill .num { font-size: 1.125rem; font-weight: 500; color: var(--color-ink); }
 .pill .num--sm { font-size: 1rem; font-weight: 400; }
-.pill .pill__of { font-size: 0.75rem; font-weight: 400; color: var(--color-ink-3); }
+.pill .pill__of { font-size: 0.75rem; font-weight: 400; color: var(--color-ink-2); }
 .pill--quiet { background: transparent; border-color: transparent; }
 .pill--accent { background: var(--color-accent-soft); border-color: var(--color-accent); color: var(--color-accent-text); font-weight: 500; font-size: 0.875rem; }
-.pill--danger { background: var(--color-danger-soft); border-color: var(--color-danger); color: var(--color-danger); }
+.pill--danger { background: var(--color-danger-soft); border-color: var(--color-danger); color: var(--color-danger-text); }
 
 /* ---------------- Chip（フィルタピル 40、選択は墨地） ---------------- */
 .chip {
@@ -119,6 +121,9 @@
     transform var(--motion-press) ease-out;
 }
 .chip:active:not(:disabled) { transform: scale(0.97); }
+/* 見た目 40 のまま、当たり判定を 48 に */
+.chip { position: relative; }
+.chip::after { content: ''; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
 .chip.is-selected { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-ink-inverse); font-weight: 500; }
 
 /* ---------------- Card ---------------- */
@@ -161,10 +166,10 @@
 .score { display: flex; flex-direction: column; gap: 6px; }
 .score__value { font-size: var(--text-score-xl); font-weight: 500; line-height: 1; letter-spacing: -0.02em; }
 .score--md .score__value { font-size: var(--text-score-sm); }
-.score__delta { font-size: 1.375rem; color: var(--color-danger); }
+.score__delta { font-size: 1.375rem; color: var(--color-danger-text); }
 .score__delta.is-up { color: var(--color-accent-text); }
-.score__best { font-size: 0.8125rem; color: var(--color-ink-3); }
-.score__note { font-size: 0.75rem; color: var(--color-ink-3); }
+.score__best { font-size: 0.8125rem; color: var(--color-ink-2); }
+.score__note { font-size: 0.75rem; color: var(--color-ink-2); }
 
 /* ---------------- SubMetric ---------------- */
 .submetric { display: grid; grid-template-columns: minmax(0, 1fr) 2fr 32px; align-items: center; gap: var(--sp-3); font-size: 0.875rem; }
@@ -225,7 +230,7 @@
 }
 .counter__label { font-size: 0.6875rem; color: var(--color-ink-2); line-height: 1.4; white-space: nowrap; }
 .counter__value { font-size: 1.25rem; line-height: 1.1; white-space: nowrap; }
-.counter__unit { font-family: var(--font-body); font-size: 0.6875rem; color: var(--color-ink-3); margin-left: 3px; }
+.counter__unit { font-family: var(--font-body); font-size: 0.6875rem; color: var(--color-ink-2); margin-left: 3px; }
 .counter__delta { font-size: 0.6875rem; color: var(--color-accent-text); margin-left: 6px; }
 .counter.is-bumped { background: var(--color-accent-soft); border-color: var(--color-accent); }
 
@@ -272,8 +277,8 @@ a.itile:active { transform: scale(0.97); }
 .lrow:last-child { border-bottom: 0; }
 .lrow__text { display: flex; flex-direction: column; min-width: 0; }
 .lrow__title { line-height: 1.5; }
-.lrow__desc { font-size: 0.75rem; color: var(--color-ink-3); line-height: 1.5; }
-.lrow__desc.is-danger { color: var(--color-danger); }
+.lrow__desc { font-size: 0.75rem; color: var(--color-ink-2); line-height: 1.5; }
+.lrow__desc.is-danger { color: var(--color-danger-text); }
 .lrow__control { display: flex; align-items: center; gap: var(--sp-2); flex: none; color: var(--color-ink-2); }
 .lrow--stacked { flex-direction: column; align-items: stretch; gap: 6px; padding: 12px 0; }
 .lrow--stacked .lrow__title { font-size: 0.8125rem; color: var(--color-ink-2); }
@@ -319,9 +324,13 @@ a.itile:active { transform: scale(0.97); }
   white-space: nowrap;
   transition: background-color var(--motion-state) var(--ease), color var(--motion-state) var(--ease);
 }
+/* 見た目 40（sm は 36）のまま、当たり判定を上下に広げて 48 に */
+.segment__item { position: relative; }
+.segment__item::after { content: ''; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
 .segment__item.is-selected { background: var(--color-surface); color: var(--color-ink); font-weight: 500; box-shadow: var(--shadow-1); }
 .segment--sm { padding: 3px; gap: 3px; border-radius: 8px; }
 .segment--sm .segment__item { min-height: 36px; padding: 0 14px; border-radius: 6px; font-size: 0.8125rem; }
+.segment--sm .segment__item::after { top: -6px; bottom: -6px; }
 /* 地を locked にしたいとき（ギャラリーのヘッダ） */
 .segment--locked { background: var(--color-locked); }
 
@@ -356,11 +365,11 @@ a.itile:active { transform: scale(0.97); }
 .toggle.is-on .toggle__knob { transform: translateX(24px); }
 .toggle:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* ---------------- Slider（高さ 36、accent） ---------------- */
+/* ---------------- Slider（見た目の溝 6、当たり判定 48、accent） ---------------- */
 .slider {
   -webkit-appearance: none;
   appearance: none;
-  height: 36px;
+  height: 48px; /* 当たり判定 48（見た目の溝は 6px のまま） */
   background: transparent;
   cursor: pointer;
   accent-color: var(--color-accent);
@@ -409,6 +418,9 @@ a.itile:active { transform: scale(0.97); }
   cursor: pointer;
   border-radius: var(--radius-md);
 }
+/* 見た目 44 のまま、当たり判定を 48 に */
+.stepper__btn { position: relative; }
+.stepper__btn::after { content: ''; position: absolute; inset: -2px; }
 .stepper__btn:disabled { color: var(--color-dash); cursor: not-allowed; }
 .stepper__btn:active:not(:disabled) { background: var(--color-chip); }
 .stepper__value { min-width: 36px; text-align: center; font-size: 1rem; }

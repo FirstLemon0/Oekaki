@@ -3,6 +3,7 @@ import {
   CRITIQUE_JSON_SCHEMA,
   CriticError,
   FALLBACK_MODEL,
+  MAX_TOKENS,
   SYSTEM_PROMPT,
   TEST_MAX_TOKENS,
   critique,
@@ -131,7 +132,8 @@ describe('critique', () => {
       output_config: { effort: string; format: { type: string; schema: unknown } };
     };
     expect(body.model).toBe('claude-opus-5-5');
-    expect(body.max_tokens).toBe(2048);
+    expect(body.max_tokens).toBe(16000);
+    expect(body.max_tokens).toBe(MAX_TOKENS);
     expect(body.system).toBe(SYSTEM_PROMPT);
     expect(body.thinking).toBeUndefined();
     expect(body.output_config.effort).toBe('medium');
@@ -187,9 +189,9 @@ describe('critique', () => {
     expect(calls).toHaveLength(0);
   });
 
-  it('429 → daily_limit（再試行しない）', async () => {
+  it('429 → rate_limited（アプリの daily_limit とは区別・再試行しない）', async () => {
     const { fetchImpl, calls } = mockFetch(() => apiError(429, 'rate_limit_error'));
-    await expectKind(critique(makeReq(), { fetchImpl }), 'daily_limit');
+    await expectKind(critique(makeReq(), { fetchImpl }), 'rate_limited');
     expect(calls).toHaveLength(1);
   });
 
@@ -203,6 +205,13 @@ describe('critique', () => {
   it("stop_reason === 'refusal' → refused", async () => {
     const { fetchImpl } = mockFetch(() => json(200, messageBody({ text: '', stop_reason: 'refusal' })));
     await expectKind(critique(makeReq(), { fetchImpl }), 'refused');
+  });
+
+  it("stop_reason === 'max_tokens' → truncated（bad_response とは区別）", async () => {
+    const { fetchImpl } = mockFetch(() =>
+      json(200, messageBody({ text: '{"good": ["線が', stop_reason: 'max_tokens' })),
+    );
+    await expectKind(critique(makeReq(), { fetchImpl }), 'truncated');
   });
 
   it('壊れた JSON → bad_response', async () => {
@@ -313,7 +322,7 @@ describe('testConnection', () => {
     expect(r404.ok === false && r404.kind).toBe('model_unavailable');
 
     const r429 = await testConnection(settings, mockFetch(() => apiError(429, 'rate_limit_error')));
-    expect(r429.ok === false && r429.kind).toBe('daily_limit');
+    expect(r429.ok === false && r429.kind).toBe('rate_limited');
 
     const net = await testConnection(settings, {
       fetchImpl: (async () => {

@@ -4,14 +4,21 @@
  * 地 canvas。上中央 課題ピル（折り畳み可）、右上 カウンター、左中央 ツールバー＋取っ手＋グリッド、
  * 左下「ペンのみ」、右下 主「完了」。左利きではツールバーが右端、完了が左下。
  * 描いている間は何も動かさない（トースト・アニメなし）。採点シートは sheet に渡す。
+ *
+ * ツールバー（DESIGN_SYSTEM §2）: ペン・消しゴム・元に戻す・やり直す・全消し・お手本・グリッド・左右反転・
+ * シルエット・再生・課題（?）。右横に取っ手 36×48、その下に「グリッド」ミニセグメント（なし／3分割／4分割）。
+ *
+ * 紙の大きさが変わったとき（画面の回転など）は、描いた線を「中心合わせ・短辺の比で拡縮」して動かす。
+ * お手本（fitTemplate）やドリルの手がかりも同じ規則で作り直されるので、線と目標がずれない。
  */
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { CanvasView, type CanvasEngine, type OverlaySpec } from '@/canvas';
+import type { StrokePoint } from '@/scoring';
 import { Icon, Slider } from '../components';
 import { uiPrefs } from '../state';
 import { LsIcon } from '../lesson/LsIcon';
-import type { Size } from '../lesson/drillSetup';
+import { rescaleMap, type Size } from '../lesson/drillSetup';
 
 export type Grid = 'none' | 'thirds' | 'quarters';
 
@@ -21,6 +28,12 @@ export interface CanvasScreenProps {
   task: string;
   /** 右上「7/10」 */
   counter?: string | null;
+  /** カウンターの左に並べる小さな表示（ドリルの点数チップ） */
+  counterExtra?: ComponentChildren;
+  /** 紙の大きさが変わって線を動かしたときに、同じ変換を受け取る（採点済みの線などを合わせる） */
+  onRescale?: (map: (q: StrokePoint) => StrokePoint) => void;
+  /** 完了ボタンの上に出す案内（保存の失敗など。トーストは描画中に出さない） */
+  error?: string | null;
   onDone?: () => void;
   doneLabel?: string;
   doneDisabled?: boolean;
@@ -48,8 +61,8 @@ export interface CanvasScreenProps {
 
 const GRID_OPTIONS: { value: Grid; label: string }[] = [
   { value: 'none', label: 'なし' },
-  { value: 'thirds', label: '3' },
-  { value: 'quarters', label: '4' },
+  { value: 'thirds', label: '3分割' },
+  { value: 'quarters', label: '4分割' },
 ];
 
 function ToolButton({
@@ -93,6 +106,8 @@ export function CanvasScreen(props: CanvasScreenProps) {
   const [taskOpen, setTaskOpen] = useState(true);
   const [opacityOpen, setOpacityOpen] = useState(false);
   const [opacity, setOpacity] = useState(overlay?.opacity ?? 0.4);
+  /** グリッドのツールボタンで戻す先（最後に選んだ分割） */
+  const [lastGrid, setLastGrid] = useState<Exclude<Grid, 'none'>>('thirds');
   const [, setTick] = useState(0);
   const [replaying, setReplaying] = useState(false);
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
@@ -144,9 +159,24 @@ export function CanvasScreen(props: CanvasScreenProps) {
 
   const onSizeRef = useRef(props.onSize);
   onSizeRef.current = props.onSize;
+  const onRescaleRef = useRef(props.onRescale);
+  onRescaleRef.current = props.onRescale;
+  const prevSize = useRef<Size | null>(null);
   useEffect(() => {
-    if (size.width > 0) onSizeRef.current?.(size);
-  }, [size]);
+    if (size.width <= 0 || size.height <= 0) return;
+    const prev = prevSize.current;
+    prevSize.current = size;
+    // 回転などで紙の大きさが変わった: 描いた線を同じ規則で動かす（目標は onSize で作り直される）
+    if (prev && (prev.width !== size.width || prev.height !== size.height)) {
+      const strokes = engine.getStrokes();
+      if (strokes.length > 0) {
+        const map = rescaleMap(prev, size);
+        onRescaleRef.current?.(map);
+        engine.loadStrokes(strokes.map((s) => s.map(map)));
+      }
+    }
+    onSizeRef.current?.(size);
+  }, [size, engine]);
 
   const replay = async () => {
     if (replaying) {
@@ -209,12 +239,17 @@ export function CanvasScreen(props: CanvasScreenProps) {
               aria-expanded={taskOpen}
               onClick={() => setTaskOpen(!taskOpen)}
             >
-              {taskOpen ? <LsIcon name="collapse" size={20} /> : <LsIcon name="task" size={20} />}
+              {taskOpen ? <LsIcon name="collapse" size={20} /> : <Icon name="help" size={20} />}
             </button>
           </div>
         )}
 
-        {props.counter && <div class="ls-counter num">{props.counter}</div>}
+        {(props.counter || props.counterExtra) && (
+          <div class="ls-counterbox">
+            {props.counterExtra}
+            {props.counter && <div class="ls-counter num">{props.counter}</div>}
+          </div>
+        )}
 
         {props.topLeft && <div class="ls-canvas__topleft">{props.topLeft}</div>}
 
@@ -228,7 +263,6 @@ export function CanvasScreen(props: CanvasScreenProps) {
               <ToolButton icon="trash" label="全部消す" disabled={!engine.canUndo() && engine.getStrokes().length === 0} onClick={() => engine.clear()} />
               {!props.mini && (
                 <>
-                  <span class="ls-toolbar__sep" aria-hidden="true" />
                   <div class="ls-toolbar__pop-host">
                     <ToolButton
                       icon="overlay"
@@ -244,47 +278,63 @@ export function CanvasScreen(props: CanvasScreenProps) {
                       </div>
                     )}
                   </div>
+                  <ToolButton
+                    icon="grid"
+                    label={grid === 'none' ? 'グリッドを出す' : 'グリッドを消す'}
+                    selected={grid !== 'none'}
+                    onClick={() => setGrid(grid === 'none' ? lastGrid : 'none')}
+                  />
                   <ToolButton icon="flip" label="左右反転" selected={flipped} onClick={() => setFlipped(!flipped)} />
                   <ToolButton icon="silhouette" label="シルエット" selected={silhouette} onClick={() => setSilhouette(!silhouette)} />
                   <ToolButton icon="play" label={replaying ? '再生を止める' : '描いた順に再生'} selected={replaying} onClick={() => void replay()} />
-                  <ToolButton label={taskOpen ? '課題を隠す' : '課題を見る'} selected={taskOpen} onClick={() => setTaskOpen(!taskOpen)}>
-                    <LsIcon name="task" size={24} />
-                  </ToolButton>
+                  <ToolButton icon="help" label={taskOpen ? '課題を隠す' : '課題を見る'} selected={taskOpen} onClick={() => setTaskOpen(!taskOpen)} />
                 </>
               )}
             </div>
           )}
-          <button
-            type="button"
-            class="ls-toolbar__handle"
-            aria-label={collapsed ? 'ツールバーを開く' : 'ツールバーを畳む'}
-            aria-expanded={!collapsed}
-            onClick={() => setCollapsed(!collapsed)}
-          >
-            <span aria-hidden="true" class="ls-toolbar__grip" />
-          </button>
-          {!collapsed && !props.mini && (
-            <div class="ls-gridseg" role="radiogroup" aria-label="グリッド">
-              <Icon name="grid" size={18} />
-              {GRID_OPTIONS.map((o) => (
-                <button
-                  key={o.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={grid === o.value}
-                  class={grid === o.value ? 'ls-gridseg__item is-selected' : 'ls-gridseg__item'}
-                  onClick={() => setGrid(o.value)}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
-          )}
+          <div class="ls-toolbar__aside">
+            <button
+              type="button"
+              class="ls-toolbar__handle"
+              aria-label={collapsed ? 'ツールバーを開く' : 'ツールバーを畳む'}
+              aria-expanded={!collapsed}
+              onClick={() => setCollapsed(!collapsed)}
+            >
+              <span aria-hidden="true" class="ls-toolbar__grip" />
+            </button>
+            {!collapsed && !props.mini && (
+              <div class="ls-gridseg" role="radiogroup" aria-label="グリッド">
+                <span class="ls-gridseg__label" aria-hidden="true">
+                  グリッド
+                </span>
+                {GRID_OPTIONS.map((o) => (
+                  <button
+                    key={o.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={grid === o.value}
+                    class={grid === o.value ? 'ls-gridseg__item is-selected' : 'ls-gridseg__item'}
+                    onClick={() => {
+                      setGrid(o.value);
+                      if (o.value !== 'none') setLastGrid(o.value);
+                    }}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {prefs.penOnly && <div class="ls-penonly">ペンのみ — 指では描けません</div>}
 
         <div class="ls-canvas__actions">
+          {props.error && (
+            <p class="ls-canvas__error" role="alert">
+              {props.error}
+            </p>
+          )}
           {props.extraAction}
           {props.onDone && (
             <button type="button" class="ls-donebtn" disabled={props.doneDisabled} onClick={props.onDone}>

@@ -39,8 +39,25 @@ export interface DrillGuide {
   sample: { kind: 'ellipse'; degree: number; axisAngleDeg: number } | { kind: 'hatch'; angleDeg: number; spacing: number } | null;
 }
 
+/**
+ * 教材 params のうち、目標が無くても採点に足せる条件（scoreDrill で点数に混ぜる）。
+ * minDim はキャンバスの短辺（長さ・大きさの比の基準）。
+ */
+export interface DrillChecks {
+  minDim: number;
+  /** 直線の向き（h 水平・v 垂直・d 斜め）。2 点を結ぶ目標があるときは目標が向きを決めるので使わない */
+  orientation?: 'h' | 'v' | 'd';
+  /** 直線の長さ */
+  length?: 'short' | 'long';
+  /** 円の大きさ */
+  circleSize?: 'small' | 'medium' | 'large';
+  /** 曲線の抜き（終わりに向けて細く＝筆圧を下げる） */
+  taper?: 'out';
+}
+
 export interface DrillSetup {
   guide: DrillGuide;
+  checks?: DrillChecks;
   line?: LineTarget;
   curve?: Stroke;
   ellipse?: EllipseTarget;
@@ -99,8 +116,18 @@ export function catmullRom(points: Vec2[], perSeg = 24): Vec2[] {
   return out;
 }
 
+function lineChecks(params: Params, size: Size): DrillChecks {
+  const o = str(params, 'orientation');
+  const len = str(params, 'length');
+  return {
+    minDim: Math.min(size.width, size.height),
+    ...(o === 'h' || o === 'v' || o === 'd' ? { orientation: o } : {}),
+    ...(len === 'short' || len === 'long' ? { length: len } : {}),
+  };
+}
+
 function lineSetup(params: Params, size: Size, rnd: () => number): DrillSetup {
-  if (str(params, 'mode') !== 'two-points') return { guide: EMPTY_GUIDE };
+  if (str(params, 'mode') !== 'two-points') return { guide: EMPTY_GUIDE, checks: lineChecks(params, size) };
   const m = Math.min(size.width, size.height);
   const long = str(params, 'length') === 'long';
   const len = m * (long ? 0.6 : 0.3) * (0.9 + rnd() * 0.2);
@@ -192,10 +219,18 @@ export function drillSetup(drill: DrillType, params: Params, size: Size, index: 
       return {
         guide: { ...EMPTY_GUIDE, points: anchors ?? [], path: anchors ? null : pts },
         curve: toStroke(pts),
+        ...(str(params, 'taper') === 'out' ? { checks: { minDim: Math.min(size.width, size.height), taper: 'out' as const } } : {}),
       };
     }
-    case 'circle':
-      return { guide: EMPTY_GUIDE };
+    case 'circle': {
+      const sz = str(params, 'size');
+      return {
+        guide: EMPTY_GUIDE,
+        ...(sz === 'small' || sz === 'medium' || sz === 'large'
+          ? { checks: { minDim: Math.min(size.width, size.height), circleSize: sz } }
+          : {}),
+      };
+    }
     case 'ellipse': {
       const degree = num(params, 'degree');
       const axisAngleDeg = num(params, 'axisAngleDeg');
@@ -235,18 +270,130 @@ export function drillSetup(drill: DrillType, params: Params, size: Size, index: 
   }
 }
 
+// ---------------------------------------------------------------------------
+// params の条件を点数に混ぜる
+// ---------------------------------------------------------------------------
+
+/** 条件の点数（0..100）を weight の重みで総合点に混ぜ、サブ指標に足す。条件が低いときは助言も差し替える */
+function blend(r: ScoreResult, key: string, value: number, weight: number, hint: string): ScoreResult {
+  const v = Math.max(0, Math.min(100, value));
+  return {
+    ...r,
+    score: Math.round(r.score * (1 - weight) + v * weight),
+    sub: { ...r.sub, [key]: Math.round(v) },
+    hint: v < 60 ? hint : r.hint,
+  };
+}
+
+/** 水平からの傾き（0..90°）。angleDeg は 0..180 の軸の向き */
+function tiltFromHorizontal(angleDeg: number): number {
+  const a = ((angleDeg % 180) + 180) % 180;
+  return Math.min(a, 180 - a);
+}
+
+/** 向きのズレ（°）。斜めは 20〜70° を許す */
+export function orientationError(angleDeg: number, orientation: 'h' | 'v' | 'd'): number {
+  const t = tiltFromHorizontal(angleDeg);
+  if (orientation === 'h') return t;
+  if (orientation === 'v') return 90 - t;
+  if (t < 20) return 20 - t;
+  if (t > 70) return t - 70;
+  return 0;
+}
+
+const ORIENT_HINT: Record<'h' | 'v' | 'd', string> = {
+  h: '向きがずれています。水平（横まっすぐ）を狙って引きましょう。',
+  v: '向きがずれています。垂直（縦まっすぐ）を狙って引きましょう。',
+  d: '向きがずれています。斜め（45° くらい）を狙って引きましょう。',
+};
+
+function applyLineChecks(r: ScoreResult, c: DrillChecks): ScoreResult {
+  let out = r;
+  const angle = r.raw.angleDeg;
+  if (c.orientation && typeof angle === 'number') {
+    const err = orientationError(angle, c.orientation);
+    out = blend(out, 'line.orient', 100 - Math.max(0, err - 4) * 3, 0.35, ORIENT_HINT[c.orientation]);
+  }
+  const L = r.raw.length;
+  if (c.length && typeof L === 'number' && c.minDim > 0) {
+    const ratio = L / c.minDim;
+    if (c.length === 'long') {
+      out = blend(out, 'line.length', (ratio / 0.45) * 100, 0.2, 'もう少し長く、画面いっぱいを目指して肩から引きましょう。');
+    } else {
+      out = blend(out, 'line.length', ratio <= 0.3 ? 100 : (1 - (ratio - 0.3) / 0.3) * 100, 0.2, '長すぎます。手首だけで短く引きましょう。');
+    }
+  }
+  return out;
+}
+
+/** 円の半径の許す範囲（短辺に対する比） */
+const CIRCLE_RANGE: Record<'small' | 'medium' | 'large', [number, number]> = {
+  small: [0.015, 0.12],
+  medium: [0.08, 0.3],
+  large: [0.2, 0.5],
+};
+
+const CIRCLE_HINT: Record<'small' | 'medium' | 'large', string> = {
+  small: '大きさが違います。指1〜2本分くらいの小さな円にしましょう。',
+  medium: '大きさが違います。手のひらくらいの中くらいの円にしましょう。',
+  large: '大きさが違います。画面の半分くらいの大きな円にしましょう。',
+};
+
+function applyCircleChecks(r: ScoreResult, c: DrillChecks): ScoreResult {
+  const radius = r.raw.r;
+  if (!c.circleSize || typeof radius !== 'number' || c.minDim <= 0) return r;
+  const ratio = radius / c.minDim;
+  const [lo, hi] = CIRCLE_RANGE[c.circleSize];
+  const off = ratio < lo ? (lo - ratio) / lo : ratio > hi ? (ratio - hi) / hi : 0;
+  return blend(r, 'circle.size', (1 - off * 1.5) * 100, 0.2, CIRCLE_HINT[c.circleSize]);
+}
+
+/**
+ * 抜き（終わりに向けて筆圧を下げる）の点数。筆圧の差が無い入力（マウス・指）では null（採点に混ぜない）。
+ */
+export function taperOutScore(stroke: Stroke): number | null {
+  const ps = stroke.map((q) => q.p);
+  if (ps.length < 8) return null;
+  const max = Math.max(...ps);
+  const min = Math.min(...ps);
+  if (max - min < 0.05) return null;
+  const n = ps.length;
+  const mean = (a: number, b: number) => {
+    const xs = ps.slice(Math.floor(a * n), Math.max(Math.floor(a * n) + 1, Math.floor(b * n)));
+    return xs.reduce((x, y) => x + y, 0) / xs.length;
+  };
+  const mid = mean(0.3, 0.7);
+  const end = mean(0.85, 1);
+  if (!(mid > 0)) return null;
+  const ratio = end / mid;
+  return ratio <= 0.7 ? 100 : Math.max(0, ((1 - ratio) / 0.3) * 100);
+}
+
+function applyTaper(r: ScoreResult, c: DrillChecks | undefined, stroke: Stroke): ScoreResult {
+  if (c?.taper !== 'out') return r;
+  const v = taperOutScore(stroke);
+  if (v === null) return r;
+  return blend(r, 'curve.taper', v, 0.2, '最後はペンを持ち上げながら、細く抜きましょう。');
+}
+
 /** 1 本（ハッチングは 1 セット）を採点する */
 export function scoreDrill(scorers: Scorers, drill: DrillType, setup: DrillSetup, strokes: Drawing): ScoreResult | null {
   const usable = strokes.filter((s) => s.length >= 2);
   if (usable.length === 0) return null;
   const last = usable[usable.length - 1]!;
   switch (drill) {
-    case 'line':
-      return scorers.scoreLine(last, setup.line);
-    case 'curve':
-      return setup.curve ? scorers.scoreCurve(last, setup.curve) : scorers.jitterScore(last);
-    case 'circle':
-      return scorers.scoreCircle(last);
+    case 'line': {
+      const r = scorers.scoreLine(last, setup.line);
+      return !setup.line && setup.checks ? applyLineChecks(r, setup.checks) : r;
+    }
+    case 'curve': {
+      const r = setup.curve ? scorers.scoreCurve(last, setup.curve) : scorers.jitterScore(last);
+      return applyTaper(r, setup.checks, last);
+    }
+    case 'circle': {
+      const r = scorers.scoreCircle(last);
+      return setup.checks ? applyCircleChecks(r, setup.checks) : r;
+    }
     case 'ellipse':
       return scorers.scoreEllipse(last, setup.ellipse);
     case 'pressure':
@@ -262,6 +409,15 @@ export function fitTemplate(template: Drawing, size: Size, fill = 0.82): Drawing
   const ox = (size.width - S) / 2;
   const oy = (size.height - S) / 2;
   return template.map((s) => s.map((q) => ({ ...q, x: ox + q.x * S, y: oy + q.y * S })));
+}
+
+/**
+ * 紙の大きさが from → to に変わったときの点の写し方。
+ * 中心をそろえ、短辺の比で拡縮する（fitTemplate・ドリルの目標と同じ規則）。
+ */
+export function rescaleMap(from: Size, to: Size): (q: StrokePoint) => StrokePoint {
+  const k = Math.min(to.width, to.height) / Math.max(1, Math.min(from.width, from.height));
+  return (q) => ({ ...q, x: to.width / 2 + (q.x - from.width / 2) * k, y: to.height / 2 + (q.y - from.height / 2) * k });
 }
 
 /** ヒートマップの色段階 */

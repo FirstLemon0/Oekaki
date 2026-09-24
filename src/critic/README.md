@@ -15,7 +15,8 @@ try {
   // r.good / r.issues / r.next_one / r.encourage / r.model / r.at / r.usage
 } catch (e) {
   if (e instanceof CriticError) {
-    // e.kind: no_api_key | daily_limit | network | model_unavailable | refused | bad_response
+    // e.kind: no_api_key | network | model_unavailable | refused | bad_response | rate_limited | truncated
+    // （daily_limit は型に残っているが critic は投げない。1 日上限は UI 側の判定）
   }
 }
 ```
@@ -48,7 +49,7 @@ else show(r.kind, r.message); // kind は critique と同じ CriticErrorKind
 | 構造化出力 | **あり**。SDK 0.128.0 の型に `output_config.format`（`{ type: 'json_schema', schema }`）があるので、それを使います。受け取った本文には、念のため `JSON.parse` と zod 検証（`CritiqueBodySchema`）もかけます。 |
 | effort | **`output_config.effort`** に `settings.effort` をそのまま渡します（型定義で確認済み）。`extra_body` などの抜け道は使っていません。 |
 | thinking | 指定しません（API の既定に任せます）。応答に thinking ブロックが混じっても、text ブロックだけを読みます。 |
-| max_tokens | 2048 |
+| max_tokens | 16000（`MAX_TOKENS`）。adaptive thinking の思考トークンも max_tokens に含まれ、Opus 5.5 は思考を途中で切らないため、2048 では本文の前に上限に達していた |
 | 再試行 | SDK の `maxRetries: 0`。再送は UI の「再送」ボタンで行います。 |
 | フォールバック | 1 回目が `NotFoundError`（404）または `error.type === 'not_found_error'` のときだけ、`claude-opus-5` で 1 回再送します。結果の `model` には実際に使ったモデルが入ります。指定モデルがもともと `claude-opus-5` のときや、再送も 404 だったときは `model_unavailable` になります。 |
 
@@ -57,12 +58,15 @@ else show(r.kind, r.message); // kind は critique と同じ CriticErrorKind
 | 状況 | kind |
 |---|---|
 | キーが空（API は呼ばない）、401 `AuthenticationError`、403 `PermissionDeniedError` | `no_api_key` |
-| 429 `RateLimitError`（API 側のレート制限もここに含める） | `daily_limit` |
+| 429 `RateLimitError`（API 側のレート制限。アプリの 1 日上限とは別） | `rate_limited` |
 | `APIConnectionError`（タイムアウトを含む）、5xx や 529 などのその他の API エラー | `network` |
 | `APIUserAbortError`（signal による中断） | `network`（message は `'aborted'`） |
 | 404 でフォールバックもできなかった | `model_unavailable` |
 | `stop_reason === 'refusal'` | `refused` |
-| JSON として壊れている、スキーマに合わない、テキストが空、`max_tokens` で途中終了、400 や 422 | `bad_response` |
+| `stop_reason === 'max_tokens'`（思考＋本文で上限に達し途中で切れた） | `truncated` |
+| JSON として壊れている、スキーマに合わない、テキストが空、400 や 422 | `bad_response` |
+
+`daily_limit` は型には残していますが、critic からは投げません。アプリの 1 日上限（`settings.dailyCritiqueLimit`）の判定は UI 側で、試行回数は `src/data/repo.ts` の `recordCritiqueAttempt` / `getTodayCritiqueAttempts` で数えます（失敗した呼び出しも送信前に数える想定）。
 
 ### 応答スキーマ（数値スコアなし）
 
@@ -97,6 +101,6 @@ npx vitest run src/critic
 - 正常応答の変換
 - ペイロードの中身（画像の base64、課題文、観点、構造化出力、effort、thinking を指定していないこと）
 - 404 からのフォールバック
-- 401 と 403、キー空、429、通信断、refusal、壊れた JSON、スキーマ不正、score キーの除去、件数の切り詰め、費用表
+- 401 と 403、キー空、429（`rate_limited`）、`max_tokens` 打ち切り（`truncated`）、通信断、refusal、壊れた JSON、スキーマ不正、score キーの除去、件数の切り詰め、費用表
 - `pos` あり／なし／範囲外（クランプ）／不正値（省略）
-- `testConnection` の成功（最小ペイロード）、404 フォールバック、401・404×2・429・通信断の kind、キー空
+- `testConnection` の成功（最小ペイロード）、404 フォールバック、401・404×2・429（`rate_limited`）・通信断の kind、キー空

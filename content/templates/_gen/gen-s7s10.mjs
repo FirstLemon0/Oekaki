@@ -102,12 +102,7 @@ saveTpl('s7-clean-curves', [
 }
 
 // ---- s8-room-corner-guide: 室内の一角（部屋の角・床と壁の境目・窓）
-saveTpl('s8-room-corner-guide', [
-  toStroke(poly([0.5, 0.04], [0.5, 0.72]), 60),
-  toStroke(poly([0.5, 0.72], [0.06, 0.94]), 60),
-  toStroke(poly([0.5, 0.72], [0.94, 0.94]), 60),
-  toStroke(poly([0.6, 0.22], [0.78, 0.17], [0.78, 0.5], [0.6, 0.52], [0.6, 0.22]), 80),
-]);
+// s8-room-corner-guide（2点透視） → tools/gen-review-figures.mjs で生成（2026-09 教材レビューで作り直し。ここで再生成すると古い版に戻るので外した）
 
 /* ================================================================== */
 /* 図解 SVG                                                            */
@@ -536,25 +531,7 @@ svg('s8-sky-ground', [
   text(100, 80, '空：上ほど濃く、地平線近くは薄く', { size: 16, anchor: 'start' }),
   text(400, 470, '地平線の高さ＝見ている人の目の高さ', { size: 19 }),
 ]);
-svg('s8-room-corner', [
-  frame(80, 40, 640, 400),
-  line(80, 200, 720, 200, { stroke: G, 'stroke-dasharray': '6 6' }),
-  text(710, 190, 'アイレベル', { size: 16, anchor: 'end', color: G }),
-  circle(400, 200, 6, { fill: G, stroke: 'none' }),
-  text(430, 225, '消失点', { size: 16, color: G, anchor: 'start' }),
-  line(400, 40, 400, 360, { 'stroke-width': 3 }),
-  line(400, 360, 80, 440),
-  line(400, 360, 720, 440),
-  line(400, 200, 130, 440, { opacity: 0.3, 'stroke-dasharray': '4 6' }),
-  line(400, 200, 670, 440, { opacity: 0.3, 'stroke-dasharray': '4 6' }),
-  rect(470, 90, 120, 110, { rx: 2 }),
-  line(530, 90, 530, 200),
-  line(470, 145, 590, 145),
-  text(530, 80, '窓', { size: 16 }),
-  path('M150,410 L150,320 L260,320 L260,395'),
-  text(205, 310, '机', { size: 16 }),
-  title('部屋の角1本＋床と壁の境目2本。奥へ向かう線は消失点へ'),
-]);
+// s8-room-corner → tools/gen-review-figures.mjs で生成（2026-09 教材レビューで作り直し。ここで再生成すると古い版に戻るので外した）
 {
   const speed = [];
   for (let k = 0; k < 28; k++) {
@@ -645,21 +622,7 @@ svg('s9-hsv', [
   text(650, 388, '明るさ（左ほど暗い）', { size: 16 }),
   title('色は「種類・鮮やかさ・明るさ」の3つのつまみでできている'),
 ]);
-svg('s9-color-schemes', [
-  [['類似色', [200, 225, 250]], ['補色', [30, 210]], ['トライアド', [0, 120, 240]]].map(([n, hs], i) => {
-    const cx = 140 + i * 260;
-    return [
-      circle(cx, 200, 90, { opacity: 0.35 }),
-      hs.map((h) => {
-        const a = (h / 360) * TAU - Math.PI / 2;
-        return circle(cx + 90 * Math.cos(a), 200 + 90 * Math.sin(a), 22, { fill: hsl(h, 70, 55), stroke: 'none' });
-      }),
-      text(cx, 340, n, { size: 22, weight: 700 }),
-      text(cx, 370, ['となり同士：落ち着く', '反対同士：目立つ', '三角形：にぎやか'][i], { size: 16 }),
-    ];
-  }),
-  title('色相環の「どこから取るか」で雰囲気が決まる'),
-]);
+// s9-color-schemes → tools/gen-review-figures.mjs で生成（2026-09 教材レビューで作り直し。ここで再生成すると古い版に戻るので外した）
 svg('s9-palette-extract', [
   rect(62, 62, 296, 170, { fill: '#BFD9EE', stroke: 'none' }),
   rect(62, 232, 296, 166, { fill: '#8FB07A', stroke: 'none' }),

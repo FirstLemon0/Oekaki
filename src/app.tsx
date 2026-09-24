@@ -35,7 +35,7 @@ function FullscreenScreen({ r }: { r: Route }) {
       return <LessonPlayer key={r.id} id={r.id} step={r.name === 'lessonStep' ? r.step : undefined} />;
     }
     case 'free':
-      return <FreeDraw />;
+      return <FreeDraw key={r.save ?? 'free'} save={r.save} />;
     case 'calibrate':
       return <Calibrate />;
     case 'review':

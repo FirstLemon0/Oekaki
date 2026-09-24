@@ -15,6 +15,8 @@ export default defineConfig({
     baseURL: 'http://localhost:4173',
     trace: 'on-first-retry',
     acceptDownloads: true,
+    // PWA の Service Worker がキャッシュを返すと、ビルド差分やデータ消去の検証が不安定になる
+    serviceWorkers: 'block',
     viewport: { width: 1472, height: 920 },
   },
   projects: [
@@ -22,7 +24,7 @@ export default defineConfig({
       name: 'chromium',
       // devices['Desktop Chrome'] 自体の viewport (1280x720) で上書きされないよう、
       // 上の既定ビューポート（1472x920）を明示的に再指定する。
-      use: { ...devices['Desktop Chrome'], viewport: { width: 1472, height: 920 } },
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1472, height: 920 }, serviceWorkers: 'block' },
     },
   ],
   webServer: {

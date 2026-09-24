@@ -6,7 +6,7 @@
  * （`backup.ts`）が「id（または自然キー）が衝突したら updatedAt が新しい方を採用」
  * というルールで動くための前提。
  */
-import { nowIso, todayLocalDate } from './date';
+import { diffDays, nowIso, todayLocalDate } from './date';
 import { genId } from './id';
 import { openDb, SINGLETON_KEY } from './db';
 import { applyActivity, createInitialStreak, useFreezeToday } from './streak';
@@ -40,13 +40,20 @@ function defaultProfile(updatedAt: string): Profile {
     afterDrawingId: null,
     calibration: null,
     lastMonthlyPromptAt: null,
+    critiqueAttemptsByDay: {},
     updatedAt,
   };
 }
 
+/** 古い保存データに無い項目を既定値で補う（項目追加後の後方互換）。 */
+function withProfileDefaults(stored: Profile | undefined): Profile | undefined {
+  if (!stored) return undefined;
+  return { ...defaultProfile(stored.updatedAt), ...stored };
+}
+
 export async function getProfile(): Promise<Profile> {
   const db = await openDb();
-  const existing = await db.get('profile', SINGLETON_KEY);
+  const existing = withProfileDefaults(await db.get('profile', SINGLETON_KEY));
   return existing ?? defaultProfile(nowIso());
 }
 
@@ -56,6 +63,47 @@ export async function updateProfile(patch: Partial<Omit<Profile, 'updatedAt'>>):
   const next: Profile = { ...current, ...patch, updatedAt: nowIso() };
   await db.put('profile', next, SINGLETON_KEY);
   return next;
+}
+
+/** AI 批評の試行回数を何日分残すか。 */
+export const CRITIQUE_ATTEMPT_KEEP_DAYS = 14;
+
+/** `day` から見て直近 `CRITIQUE_ATTEMPT_KEEP_DAYS` 日（当日含む）の分だけ残す。未来日は時計ずれとして残す。 */
+export function pruneCritiqueAttempts(
+  byDay: Record<string, number>,
+  day: string,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(byDay)) {
+    if (diffDays(k, day) < CRITIQUE_ATTEMPT_KEEP_DAYS) out[k] = v;
+  }
+  return out;
+}
+
+/**
+ * AI 批評を 1 回試みたことを記録し、その日の試行回数（記録後）を返す。
+ * 成否に関係なく、API を呼ぶ直前に呼ぶ想定（失敗した呼び出しも上限に数えるため）。
+ * 読み→書きは 1 トランザクションで行い、同時に呼ばれても取りこぼさない。
+ */
+export async function recordCritiqueAttempt(day: string = todayLocalDate()): Promise<number> {
+  const db = await openDb();
+  const tx = db.transaction('profile', 'readwrite');
+  const store = tx.objectStore('profile');
+  const current = withProfileDefaults(await store.get(SINGLETON_KEY)) ?? defaultProfile(nowIso());
+  const count = (current.critiqueAttemptsByDay[day] ?? 0) + 1;
+  const critiqueAttemptsByDay = pruneCritiqueAttempts(
+    { ...current.critiqueAttemptsByDay, [day]: count },
+    day,
+  );
+  await store.put({ ...current, critiqueAttemptsByDay, updatedAt: nowIso() }, SINGLETON_KEY);
+  await tx.done;
+  return count;
+}
+
+/** 今日（端末ローカル日）の AI 批評の試行回数。 */
+export async function getTodayCritiqueAttempts(day: string = todayLocalDate()): Promise<number> {
+  const profile = await getProfile();
+  return profile.critiqueAttemptsByDay[day] ?? 0;
 }
 
 export async function setCalibration(calibration: CalibrationResult): Promise<Profile> {
@@ -112,7 +160,11 @@ export async function completeLesson(
         completedAt: existing.completedAt ?? now,
         attempts: existing.attempts + 1,
         lastScore: options.score ?? existing.lastScore,
-        skipped: options.skipped ?? false,
+        // 一度きちんと完了（skipped: false）したレッスンは、後から「飛ばす」で呼ばれても
+        // 飛ばした扱いに戻さない
+        skipped: existing.completedAt !== null && existing.skipped !== true
+          ? false
+          : (options.skipped ?? false),
         lastStep: null,
         updatedAt: now,
       }

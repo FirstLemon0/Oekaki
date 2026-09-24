@@ -2,12 +2,12 @@
  * 描かないステップの画面: read / drill の開始画面 / quiz / 取り込み（submit・critique import）
  */
 import type { ComponentChildren } from 'preact';
-import { useState } from 'preact/hooks';
+import { useMemo, useState } from 'preact/hooks';
 import type { DrillStep, QuizStep, ReadStep } from '@/content/schema';
 import { Button, Icon } from '../components';
 import { drillStats } from '../state';
 import { Figure, ImportButton } from './common';
-import { DRILL_LABEL } from './steps';
+import { DRILL_LABEL, shuffledOrder } from './steps';
 
 /** レッスン本文の段落（空行区切り） */
 export function Paragraphs({ text, class: cls }: { text: string; class?: string }) {
@@ -218,7 +218,13 @@ export function DrillIntro({
 // quiz
 // ---------------------------------------------------------------------------
 
+/**
+ * 選択式。表示のたびに選択肢を並べ替える（教材は正解が 1 番目に偏っているため）。
+ * 正誤は「表示の位置 → 元の番号」の対応で判定する。
+ */
 export function QuizView({ step, onNext }: { step: QuizStep; onNext: (correct: boolean) => void }) {
+  const order = useMemo(() => shuffledOrder(step.options.length), [step]);
+  /** 選んだ元の選択肢の番号 */
   const [chosen, setChosen] = useState<number | null>(null);
   const answered = chosen !== null;
   const correct = chosen === step.answer;
@@ -236,21 +242,22 @@ export function QuizView({ step, onNext }: { step: QuizStep; onNext: (correct: b
         <span class="ls-label ls-label--accent">クイズ</span>
         <h2 class="ls-h-lesson">{step.question}</h2>
         <ul class={hasFigures ? 'ls-quiz__opts has-figures' : 'ls-quiz__opts'} role="radiogroup" aria-label="選択肢">
-          {step.options.map((o, i) => {
-            const state = !answered ? '' : i === step.answer ? 'is-answer' : i === chosen ? 'is-chosen' : 'is-dim';
+          {order.map((orig) => {
+            const o = step.options[orig]!;
+            const state = !answered ? '' : orig === step.answer ? 'is-answer' : orig === chosen ? 'is-chosen' : 'is-dim';
             return (
-              <li key={i}>
+              <li key={orig}>
                 <button
                   type="button"
                   role="radio"
-                  aria-checked={chosen === i}
+                  aria-checked={chosen === orig}
                   class={`ls-quiz__opt ${state}`}
                   disabled={answered}
-                  onClick={() => setChosen(i)}
+                  onClick={() => setChosen(orig)}
                 >
                   {o.figure && <Figure id={o.figure} class="ls-quiz__fig" label={o.text} />}
                   <span class="ls-quiz__text">{o.text}</span>
-                  {answered && i === step.answer && <Icon name="check" size={22} />}
+                  {answered && orig === step.answer && <Icon name="check" size={22} />}
                 </button>
               </li>
             );
@@ -278,6 +285,7 @@ export function ImportView({
   note,
   onFile,
   busy,
+  error,
 }: {
   label: string;
   title: string;
@@ -285,6 +293,8 @@ export function ImportView({
   note?: string;
   onFile: (f: File) => void;
   busy?: boolean;
+  /** 保存に失敗したときの案内 */
+  error?: string | null;
 }) {
   return (
     <StepFrame class="ls-import">
@@ -293,6 +303,11 @@ export function ImportView({
         <h2 class="ls-h-lesson">{title}</h2>
         <Paragraphs text={body} class="ls-prose" />
         {note && <p class="ls-aside">{note}</p>}
+        {error && (
+          <p class="ls-warn" role="alert">
+            {error}
+          </p>
+        )}
         <div class="ls-import__action">{busy ? <span class="ls-muted">取り込んでいます…</span> : <ImportButton variant="primary" onFile={onFile} />}</div>
       </div>
     </StepFrame>

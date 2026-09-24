@@ -1,11 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
   <ellipse cx="260" cy="250" rx="170" ry="80" transform="rotate(-25 260 250)"/>
-  <line x1="87.8" y1="330.3" x2="432.2" y2="169.7" stroke-dasharray="8 8" opacity="0.6"/>
-  <line x1="200.8" y1="123.1" x2="319.2" y2="376.9" stroke="#7BB661" stroke-width="4"/>
-  <text x="260" y="460" font-size="20" fill="#7BB661" stroke="none" text-anchor="middle">短い径の軸（緑）が「向き」</text>
+  <line x1="87.8" y1="330.3" x2="432.2" y2="169.7" stroke="#7BB661" stroke-width="4"/>
+  <line x1="213.5" y1="150.3" x2="306.5" y2="349.7" stroke-dasharray="8 8" opacity="0.6"/>
+  <text x="260" y="440" font-size="20" fill="#7BB661" stroke="none" text-anchor="middle">長い径（緑）が楕円の「軸」</text>
+  <text x="260" y="468" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">軸の傾き＝楕円の傾き</text>
   <ellipse cx="620" cy="250" rx="70" ry="150"/>
-  <line x1="620" y1="80" x2="620" y2="420" stroke-dasharray="8 8" opacity="0.6"/>
-  <line x1="480" y1="250" x2="760" y2="250" stroke="#7BB661" stroke-width="4"/>
+  <line x1="620" y1="80" x2="620" y2="420" stroke="#7BB661" stroke-width="4"/>
+  <line x1="530" y1="250" x2="710" y2="250" stroke-dasharray="8 8" opacity="0.6"/>
   <path d="M620,235 L635,235 L635,250" stroke-width="2"/>
-  <text x="620" y="460" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">長い径と直角に交わる</text>
+  <text x="620" y="440" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">短い径は軸と直角に交わる</text>
+  <text x="620" y="468" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">縦長の楕円＝軸が縦</text>
 </svg>

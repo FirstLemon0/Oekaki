@@ -11,7 +11,7 @@ import type { Drawing, DrawingKind } from '@/data/types';
 import { Button, Chip, EmptyState, ImageTile, Segment } from '../components';
 import { formatBytes, KIND_LABEL, nf } from '../format';
 import { href, navigate } from '../router';
-import { profile } from '../state';
+import { drawingsVersion, profile } from '../state';
 import { useObjectUrls } from '../useObjectUrl';
 
 type View = 'grid' | 'compare';
@@ -50,19 +50,39 @@ function shortDate(iso: string): string {
   return `${d.getMonth() + 1}.${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/** 端末ローカルの YYYY-MM */
+function monthKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** 「9月」。今年以外は「2025.9月」 */
+function monthLabel(iso: string, thisYear: number): string {
+  const d = new Date(iso);
+  return d.getFullYear() === thisYear ? `${d.getMonth() + 1}月` : `${d.getFullYear()}.${d.getMonth() + 1}月`;
+}
+
+/** 今月の描き直し（自由お絵描きを After として保存する） */
+const AFTER_HREF = '#/free?save=after';
+
 // ---------------------------------------------------------------------------
 // Before / After 比較
 // ---------------------------------------------------------------------------
 
 function CompareView({ drawings }: { drawings: Drawing[] }) {
   const pf = profile.value;
-  const afters = useMemo(
-    () => drawings.filter((d) => d.kind === 'after').sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1)),
-    [drawings],
-  );
+  // 月ごとの描き直し: kind 'after' を作成月でまとめ、各月の最新 1 枚を古い月から並べる
+  const afters = useMemo(() => {
+    const byMonth = new Map<string, Drawing>();
+    const sorted = drawings.filter((d) => d.kind === 'after').sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
+    for (const d of sorted) byMonth.set(monthKey(d.createdAt), d);
+    return [...byMonth.values()];
+  }, [drawings]);
+  // Before: profile.beforeDrawingId を正に、無ければ最初の kind 'before'（drawings は新しい順）
   const before =
     drawings.find((d) => d.id === pf?.beforeDrawingId) ?? drawings.filter((d) => d.kind === 'before').at(-1);
-  const defaultAfter = drawings.find((d) => d.id === pf?.afterDrawingId) ?? afters.at(-1);
+  // After の既定: 最新の描き直し。無ければ profile.afterDrawingId
+  const defaultAfter = afters.at(-1) ?? drawings.find((d) => d.id === pf?.afterDrawingId);
   const [pickedId, setPickedId] = useState<string | null>(null);
   const after = (pickedId ? afters.find((d) => d.id === pickedId) : undefined) ?? defaultAfter;
   const pair = useMemo(() => [before, after].filter((d): d is Drawing => !!d), [before, after]);
@@ -80,8 +100,11 @@ function CompareView({ drawings }: { drawings: Drawing[] }) {
   const days = after
     ? Math.max(0, Math.round((new Date(after.createdAt).getTime() - new Date(before.createdAt).getTime()) / 86_400_000))
     : null;
-  const nextMonth = new Date();
-  nextMonth.setMonth(nextMonth.getMonth() + (afters.length > 0 ? 1 : 0));
+  // 「＋」は今月の描き直しがまだなら今月、済んでいれば来月
+  const nowDate = new Date();
+  const doneThisMonth = afters.some((d) => monthKey(d.createdAt) === monthKey(nowDate.toISOString()));
+  const nextMonth = new Date(nowDate.getFullYear(), nowDate.getMonth() + (doneThisMonth ? 1 : 0), 1);
+  const thisYear = nowDate.getFullYear();
 
   return (
     <div class="ba">
@@ -97,7 +120,12 @@ function CompareView({ drawings }: { drawings: Drawing[] }) {
           {after ? (
             <img src={pairUrls.get(after.id)} alt="After の絵" />
           ) : (
-            <p class="ba__none">今月の 1 枚を描くと、ここに並びます</p>
+            <div class="ba__none">
+              <p>今月の 1 枚を描くと、ここに並びます</p>
+              <Button variant="secondary" size="md" href={AFTER_HREF}>
+                今月の 1 枚を描く
+              </Button>
+            </div>
           )}
           <figcaption class="ba__cap">
             <span class="ba__tag ba__tag--after">AFTER</span>
@@ -129,10 +157,10 @@ function CompareView({ drawings }: { drawings: Drawing[] }) {
               <span class={after?.id === d.id ? 'ba__thumb is-selected' : 'ba__thumb'}>
                 <img src={monthUrls.get(d.id)} alt="" loading="lazy" />
               </span>
-              <span class="ba__month-label">{new Date(d.createdAt).getMonth() + 1}月</span>
+              <span class="ba__month-label">{monthLabel(d.createdAt, thisYear)}</span>
             </button>
           ))}
-          <a class="ba__month" href={href.free()} aria-label="今月の 1 枚を描く">
+          <a class="ba__month" href={AFTER_HREF} aria-label="今月の 1 枚を描く">
             <span class="ba__thumb ba__thumb--future">＋</span>
             <span class="ba__month-label faint">{nextMonth.getMonth() + 1}月</span>
           </a>
@@ -151,6 +179,7 @@ export function Gallery() {
   const [filter, setFilter] = useState<Filter>(rememberedFilter);
   const [drawings, setDrawings] = useState<Drawing[] | null>(null);
 
+  const version = drawingsVersion.value;
   useEffect(() => {
     let alive = true;
     listDrawings()
@@ -159,7 +188,7 @@ export function Gallery() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [version]);
 
   const all = drawings ?? EMPTY;
   const shown = useMemo(

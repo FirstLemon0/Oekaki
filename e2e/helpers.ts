@@ -16,21 +16,27 @@ export async function gotoApp(page: Page, hash = '#/'): Promise<void> {
 }
 
 /**
- * 現在のページの IndexedDB（seichotsu）を消す。
- * 手順: いったん about:blank へ退避して既存の接続を閉じ、再度アプリへ戻ってから削除する。
- * （同一オリジンで開いたままだと `deleteDatabase` が blocked のまま進まないため）
+ * アプリの IndexedDB（seichotsu）を消す。
+ * 手順: いったん about:blank へ移ってアプリの接続を確実に閉じ、同じオリジンの
+ * 静的ファイル（アプリの JS が動かないページ）を開いてから `deleteDatabase` する。
+ * アプリを開いたまま消すと、接続が残って blocked のまま進まないことがあるため。
+ * 消し終わるまで待つ（blocked が続く・失敗した場合は例外）。呼び出し後はアプリ外のページに
+ * いるので、続けて `gotoApp` すること。
  */
 export async function wipeIndexedDb(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    return new Promise<void>((resolve) => {
-      const req = indexedDB.deleteDatabase('seichotsu');
-      req.onsuccess = () => resolve();
-      req.onerror = () => resolve();
-      req.onblocked = () => resolve();
-      // 実行中の接続がある場合、次の reload で確実に閉じられて処理が進む
-      setTimeout(resolve, 500);
-    });
-  });
+  await page.goto('about:blank');
+  await page.goto('/manifest.webmanifest');
+  const result = await page.evaluate(
+    () =>
+      new Promise<string>((resolve) => {
+        const req = indexedDB.deleteDatabase('seichotsu');
+        req.onsuccess = () => resolve('ok');
+        req.onerror = () => resolve(`error: ${String(req.error)}`);
+        // blocked は「待ち」。接続が閉じれば onsuccess が来るので、ここでは解決しない
+        setTimeout(() => resolve('timeout'), 10_000);
+      }),
+  );
+  if (result !== 'ok') throw new Error(`IndexedDB を消せませんでした（${result}）`);
 }
 
 /**

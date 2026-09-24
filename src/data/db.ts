@@ -63,14 +63,75 @@ function upgrade(db: IDBPDatabase<SeichotsuDB>, oldVersion: number): void {
   }
 }
 
+/**
+ * 接続まわりの出来事（UI が案内を出すための通知）。
+ * - `blocked`    … 新しい版で開こうとしたが、古い版を開いたままの別タブがあって待っている。
+ *                  「ほかのタブを閉じてください」と案内する。閉じられれば自動で進む。
+ * - `blocking`   … 別タブが新しい版で開こうとしている。こちらの接続はここで閉じたので、
+ *                  UI は再読込を促す（このタブのままでは古いコードで動き続けてしまう）。
+ * - `terminated` … ブラウザ側で接続が異常終了した（ストレージ削除など）。次の `openDb()` で
+ *                  開き直す。UI は再読込を促してよい。
+ */
+export type DbEventType = 'blocked' | 'blocking' | 'terminated';
+export interface DbEvent {
+  type: DbEventType;
+  /** blocked/blocking: 相手側（または自分）が開こうとしている版。terminated では null。 */
+  newVersion: number | null;
+}
+
+const dbListeners = new Set<(e: DbEvent) => void>();
+let lastDbEvent: DbEvent | null = null;
+
+/** 接続まわりの出来事を購読する。戻り値で解除。 */
+export function onDbEvent(cb: (e: DbEvent) => void): () => void {
+  dbListeners.add(cb);
+  return () => {
+    dbListeners.delete(cb);
+  };
+}
+
+/** 直近に起きた接続まわりの出来事（購読前に起きていた場合の確認用）。無ければ null。 */
+export function getLastDbEvent(): DbEvent | null {
+  return lastDbEvent;
+}
+
+function emitDbEvent(e: DbEvent): void {
+  lastDbEvent = e;
+  for (const cb of dbListeners) {
+    try {
+      cb(e);
+    } catch {
+      // 購読側の例外で他の購読者や DB 処理を止めない
+    }
+  }
+}
+
 /** DB 接続を開く（プロセス内でシングルトン）。テストでは `resetDbForTests` で切り替える。 */
 export function openDb(): Promise<SeichotsuDBHandle> {
   if (!dbPromise) {
-    dbPromise = openDB<SeichotsuDB>(DB_NAME, DB_VERSION, {
+    const p: Promise<SeichotsuDBHandle> = openDB<SeichotsuDB>(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion) {
         upgrade(db, oldVersion);
       },
+      blocked(_currentVersion, blockedVersion) {
+        emitDbEvent({ type: 'blocked', newVersion: blockedVersion ?? DB_VERSION });
+      },
+      blocking(_currentVersion, blockedVersion) {
+        // 別タブの版上げを止めないよう、こちらの接続をすぐ閉じる
+        void p.then((db) => db.close()).catch(() => undefined);
+        if (dbPromise === p) dbPromise = null;
+        emitDbEvent({ type: 'blocking', newVersion: blockedVersion ?? null });
+      },
+      terminated() {
+        if (dbPromise === p) dbPromise = null;
+        emitDbEvent({ type: 'terminated', newVersion: null });
+      },
     });
+    // 開けなかった場合は次回やり直せるようにキャッシュを捨てる
+    p.catch(() => {
+      if (dbPromise === p) dbPromise = null;
+    });
+    dbPromise = p;
   }
   return dbPromise;
 }

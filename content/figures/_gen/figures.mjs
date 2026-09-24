@@ -213,18 +213,7 @@ svg('ellipse-degree', [
 ]);
 
 // 楕円の軸の向き
-svg('ellipse-axis', [
-  ell(260, 250, 170, 80, -25),
-  line(260 - 190 * Math.cos((25 * Math.PI) / 180), 250 + 190 * Math.sin((25 * Math.PI) / 180), 260 + 190 * Math.cos((25 * Math.PI) / 180), 250 - 190 * Math.sin((25 * Math.PI) / 180), { ...DASH }),
-  // 短径の軸（長径に直角）
-  line(260 - 140 * Math.sin((25 * Math.PI) / 180), 250 - 140 * Math.cos((25 * Math.PI) / 180), 260 + 140 * Math.sin((25 * Math.PI) / 180), 250 + 140 * Math.cos((25 * Math.PI) / 180), { stroke: G, 'stroke-width': 4 }),
-  text(260, 460, '短い径の軸（緑）が「向き」', { color: G, size: 20 }),
-  ell(620, 250, 70, 150),
-  line(620, 80, 620, 420, { ...DASH }),
-  line(480, 250, 760, 250, { stroke: G, 'stroke-width': 4 }),
-  path('M620,235 L635,235 L635,250', { 'stroke-width': 2 }),
-  text(620, 460, '長い径と直角に交わる', { size: 20 }),
-]);
+// ellipse-axis → tools/gen-review-figures.mjs で生成（2026-09 教材レビューで作り直し。ここで再生成すると古い版に戻るので外した）
 
 // 円柱の口
 svg('cylinder-mouth', [

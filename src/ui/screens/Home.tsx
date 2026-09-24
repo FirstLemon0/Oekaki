@@ -655,16 +655,17 @@ function TodayCard() {
               <Button variant="secondary" size="md" onClick={() => setAsking(false)}>
                 やめる
               </Button>
-              <Button variant="primary" size="md" disabled={freezing} onClick={() => void confirmFreeze()}>
+              <Button variant="primary" size="md" disabled={freezing || !avail.ok} onClick={() => void confirmFreeze()}>
                 使う
               </Button>
             </>
           }
         >
           <p class="muted">
-            今日の分をスキップして、ストリークを保ちます。残り <span class="num">{freezes}</span> →{' '}
-            <span class="num">{Math.max(0, freezes - 1)}</span>。
+            今日はお休みにして、ストリークを保ちます。フリーズは残り <span class="num">{freezes}</span> →{' '}
+            <span class="num">{Math.max(0, freezes - 1)}</span> になります。
           </p>
+          {!avail.ok && <p class="muted">{avail.reason}</p>}
         </Modal>
       </section>
     );
@@ -742,7 +743,7 @@ function NoticeRow() {
     return (
       <div class="notice-row" role="note">
         <span class="notice-row__text">今月の Before / After を描きましょう</span>
-        <Button variant="secondary" size="sm" href={href.free()}>
+        <Button variant="secondary" size="sm" href="#/free?save=after">
           描く
         </Button>
         <button type="button" class="notice-row__later" onClick={() => void saveProfile({ lastMonthlyPromptAt: t })}>

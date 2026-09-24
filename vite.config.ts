@@ -31,7 +31,11 @@ export default defineConfig({
           params: { files: [{ name: 'image', accept: ['image/*'] }] },
         },
       },
-      workbox: {
+      // 共有シート（POST /share-target）を受けるため自前の SW（src/sw.ts）に precache を注入する
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,json,glb}'],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
       },

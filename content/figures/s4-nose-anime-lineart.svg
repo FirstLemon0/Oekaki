@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <line x1="200" y1="125" x2="240" y2="125" stroke-width="1.5"/>
+  <line x1="295" y1="125" x2="345" y2="125" stroke-width="1.5"/>
+  <line x1="250" y1="220" x2="288" y2="220" stroke-width="1.5"/>
+  <circle cx="270" cy="180" r="4" fill="currentColor" stroke="none"/>
+  <line x1="400" y1="125" x2="440" y2="125" stroke-width="1.5"/>
+  <line x1="495" y1="125" x2="545" y2="125" stroke-width="1.5"/>
+  <line x1="450" y1="220" x2="488" y2="220" stroke-width="1.5"/>
+  <path d="M474,155 L464,183 L477,186" stroke-width="2.5"/>
+  <line x1="600" y1="125" x2="640" y2="125" stroke-width="1.5"/>
+  <line x1="695" y1="125" x2="745" y2="125" stroke-width="1.5"/>
+  <line x1="650" y1="220" x2="688" y2="220" stroke-width="1.5"/>
+  <path d="M672,157 L682,185 L666,185 Z" fill="currentColor" opacity="0.35" stroke="none"/>
+  <line x1="191" y1="315" x2="222" y2="315" stroke-width="1.5"/>
+  <line x1="286" y1="315" x2="345" y2="315" stroke-width="1.5"/>
+  <line x1="232" y1="410" x2="270" y2="410" stroke-width="1.5"/>
+  <circle cx="252" cy="370" r="4" fill="currentColor" stroke="none"/>
+  <line x1="391" y1="315" x2="422" y2="315" stroke-width="1.5"/>
+  <line x1="486" y1="315" x2="545" y2="315" stroke-width="1.5"/>
+  <line x1="432" y1="410" x2="470" y2="410" stroke-width="1.5"/>
+  <path d="M458,343 L444,373 L456,376" stroke-width="2.5"/>
+  <line x1="591" y1="315" x2="622" y2="315" stroke-width="1.5"/>
+  <line x1="686" y1="315" x2="745" y2="315" stroke-width="1.5"/>
+  <line x1="632" y1="410" x2="670" y2="410" stroke-width="1.5"/>
+  <path d="M654,345 L666,375 L650,375 Z" fill="currentColor" opacity="0.35" stroke="none"/>
+  <path d="M192,95 Q190,205 270,250 Q350,205 352,95"/>
+  <path d="M392,95 Q390,205 470,250 Q550,205 552,95"/>
+  <path d="M592,95 Q590,205 670,250 Q750,205 752,95"/>
+  <path d="M182,280 Q172,375 250,438 Q332,425 354,280"/>
+  <path d="M382,280 Q372,375 450,438 Q532,425 554,280"/>
+  <path d="M582,280 Q572,375 650,438 Q732,425 754,280"/>
+</svg>

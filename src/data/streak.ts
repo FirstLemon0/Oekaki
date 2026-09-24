@@ -6,7 +6,7 @@
  * - 前回の活動日の「翌日」なら current + 1。
  * - 2 暦日以上空いた場合、フリーズを 1 個持っていれば「そのフリーズを 1 個消費して
  *   継続」（current + 1・freezes - 1）。フリーズが 0 個ならストリークをリセットする
- *   （current = 1、その日から再スタート）。何日空いても消費するフリーズは 1 個のみ
+ *   （current = 1、その日から再スタート。nextFreezeAt も 7 に戻す）。何日空いても消費するフリーズは 1 個のみ
  *   （Duolingo のフリーズ挙動を踏襲）。
  * - フリーズは current が 7 の倍数の閾値（nextFreezeAt）に達するたびに 1 個獲得し、
  *   最大 2 個までしか保持しない（3個目以降は獲得しても切り捨て）。
@@ -61,6 +61,7 @@ export function applyActivity(streak: Streak, day: string, updatedAt: string = d
 
   let current: number;
   let freezes = streak.freezes;
+  let nextFreezeAt = streak.nextFreezeAt;
 
   if (streak.lastActiveDay === null) {
     current = 1;
@@ -77,8 +78,9 @@ export function applyActivity(streak: Streak, day: string, updatedAt: string = d
       freezes -= 1;
       current = streak.current + 1;
     } else {
-      // フリーズが無いのでリセット
+      // フリーズが無いのでリセット。獲得の閾値も最初（7日）に戻す
       current = 1;
+      nextFreezeAt = FREEZE_EVERY_DAYS;
     }
   }
 
@@ -86,6 +88,7 @@ export function applyActivity(streak: Streak, day: string, updatedAt: string = d
     ...streak,
     current,
     freezes,
+    nextFreezeAt,
   });
 
   return {

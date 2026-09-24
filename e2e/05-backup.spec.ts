@@ -6,8 +6,14 @@
  * 「明日」表示になる（src/ui/screens/Home.tsx）。進捗が戻ったことは L1「完了」・
  * L2「明日」（＝ロックが外れている）で判定する。
  */
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { drawLine, gotoApp, wipeIndexedDb } from './helpers';
+
+/** 設定画面を開き、見出しが出るまで待つ（ハッシュ遷移だけでは描画完了を保証しないため） */
+async function gotoSettings(page: Page): Promise<void> {
+  await gotoApp(page, '#/settings');
+  await expect(page.getByRole('heading', { name: '設定', level: 1 })).toBeVisible();
+}
 
 test.describe('バックアップ', () => {
   test('書き出し→データ消去→読み込みで進捗が戻る', async ({ page }) => {
@@ -26,23 +32,24 @@ test.describe('バックアップ', () => {
     await expect(page.getByRole('button', { name: /^L2 .*（明日）$/ })).toBeVisible();
 
     // 書き出し
-    await gotoApp(page, '#/settings');
+    await gotoSettings(page);
+    const exportButton = page.getByRole('button', { name: 'zip で書き出す' });
+    await expect(exportButton).toBeVisible();
+    await expect(exportButton).toBeEnabled();
     const downloadPromise = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'zip で書き出す' }).click();
+    await exportButton.click();
     const download = await downloadPromise;
     await expect(page.getByText('バックアップを書き出しました')).toBeVisible();
     const filePath = await download.path();
     expect(filePath).not.toBeNull();
 
-    // データを消して再読込（初回起動の状態に戻ることを確認）
+    // データを消して開き直す（初回起動の状態に戻ることを確認）
     await wipeIndexedDb(page);
-    await page.reload();
-    await page.locator('.loading').waitFor({ state: 'detached' }).catch(() => undefined);
     await gotoApp(page, '#/');
     await expect(page.getByRole('link', { name: 'Before を描く' })).toBeVisible();
 
     // 読み込み
-    await gotoApp(page, '#/settings');
+    await gotoSettings(page);
     await page.locator('input[type="file"]').setInputFiles(filePath as string);
     const dialog = page.getByRole('dialog', { name: 'データを置き換えますか' });
     await expect(dialog).toBeVisible();

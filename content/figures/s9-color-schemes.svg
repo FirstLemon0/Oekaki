@@ -1,20 +1,60 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
-  <circle cx="140" cy="200" r="90" opacity="0.35"/>
-  <circle cx="109.2" cy="284.6" r="22" fill="hsl(200,70%,55%)" stroke="none"/>
-  <circle cx="76.4" cy="263.6" r="22" fill="hsl(225,70%,55%)" stroke="none"/>
-  <circle cx="55.4" cy="230.8" r="22" fill="hsl(250,70%,55%)" stroke="none"/>
+  <circle cx="140" cy="200" r="90" opacity="0.3"/>
+  <circle cx="140" cy="110" r="8" fill="hsl(0,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="185" cy="122.1" r="8" fill="hsl(30,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="217.9" cy="155" r="8" fill="hsl(60,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="230" cy="200" r="8" fill="hsl(90,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="217.9" cy="245" r="8" fill="hsl(120,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="185" cy="277.9" r="8" fill="hsl(150,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="140" cy="290" r="8" fill="hsl(180,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="95" cy="277.9" r="8" fill="hsl(210,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="62.1" cy="245" r="8" fill="hsl(240,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="50" cy="200" r="8" fill="hsl(270,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="62.1" cy="155" r="8" fill="hsl(300,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="95" cy="122.1" r="8" fill="hsl(330,75%,55%)" stroke="none" opacity="0.55"/>
+  <path d="M95,277.9 L62.1,245 L50,200 Z" stroke-width="1.5" opacity="0.6"/>
+  <circle cx="95" cy="277.9" r="22" fill="hsl(210,75%,55%)" stroke="currentColor" stroke-width="2"/>
+  <circle cx="62.1" cy="245" r="22" fill="hsl(240,75%,55%)" stroke="currentColor" stroke-width="2"/>
+  <circle cx="50" cy="200" r="22" fill="hsl(270,75%,55%)" stroke="currentColor" stroke-width="2"/>
   <text x="140" y="340" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">類似色</text>
-  <text x="140" y="370" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">となり同士：落ち着く</text>
-  <circle cx="400" cy="200" r="90" opacity="0.35"/>
-  <circle cx="445" cy="122.1" r="22" fill="hsl(30,70%,55%)" stroke="none"/>
-  <circle cx="355" cy="277.9" r="22" fill="hsl(210,70%,55%)" stroke="none"/>
+  <text x="140" y="370" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">水色・青・青紫：落ち着く</text>
+  <circle cx="400" cy="200" r="90" opacity="0.3"/>
+  <circle cx="400" cy="110" r="8" fill="hsl(0,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="445" cy="122.1" r="8" fill="hsl(30,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="477.9" cy="155" r="8" fill="hsl(60,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="490" cy="200" r="8" fill="hsl(90,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="477.9" cy="245" r="8" fill="hsl(120,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="445" cy="277.9" r="8" fill="hsl(150,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="400" cy="290" r="8" fill="hsl(180,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="355" cy="277.9" r="8" fill="hsl(210,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="322.1" cy="245" r="8" fill="hsl(240,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="310" cy="200" r="8" fill="hsl(270,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="322.1" cy="155" r="8" fill="hsl(300,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="355" cy="122.1" r="8" fill="hsl(330,75%,55%)" stroke="none" opacity="0.55"/>
+  <path d="M322.1,245 L477.9,155" stroke-width="1.5" opacity="0.6"/>
+  <circle cx="322.1" cy="245" r="22" fill="hsl(240,75%,55%)" stroke="currentColor" stroke-width="2"/>
+  <circle cx="477.9" cy="155" r="22" fill="hsl(60,75%,55%)" stroke="currentColor" stroke-width="2"/>
   <text x="400" y="340" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">補色</text>
-  <text x="400" y="370" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">反対同士：目立つ</text>
-  <circle cx="660" cy="200" r="90" opacity="0.35"/>
-  <circle cx="660" cy="110" r="22" fill="hsl(0,70%,55%)" stroke="none"/>
-  <circle cx="737.9" cy="245" r="22" fill="hsl(120,70%,55%)" stroke="none"/>
-  <circle cx="582.1" cy="245" r="22" fill="hsl(240,70%,55%)" stroke="none"/>
+  <text x="400" y="370" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">青と黄（反対同士）：目立つ</text>
+  <circle cx="660" cy="200" r="90" opacity="0.3"/>
+  <circle cx="660" cy="110" r="8" fill="hsl(0,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="705" cy="122.1" r="8" fill="hsl(30,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="737.9" cy="155" r="8" fill="hsl(60,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="750" cy="200" r="8" fill="hsl(90,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="737.9" cy="245" r="8" fill="hsl(120,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="705" cy="277.9" r="8" fill="hsl(150,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="660" cy="290" r="8" fill="hsl(180,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="615" cy="277.9" r="8" fill="hsl(210,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="582.1" cy="245" r="8" fill="hsl(240,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="570" cy="200" r="8" fill="hsl(270,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="582.1" cy="155" r="8" fill="hsl(300,75%,55%)" stroke="none" opacity="0.55"/>
+  <circle cx="615" cy="122.1" r="8" fill="hsl(330,75%,55%)" stroke="none" opacity="0.55"/>
+  <path d="M660,110 L737.9,245 L582.1,245 Z" stroke-width="1.5" opacity="0.6"/>
+  <circle cx="660" cy="110" r="22" fill="hsl(0,75%,55%)" stroke="currentColor" stroke-width="2"/>
+  <circle cx="737.9" cy="245" r="22" fill="hsl(120,75%,55%)" stroke="currentColor" stroke-width="2"/>
+  <circle cx="582.1" cy="245" r="22" fill="hsl(240,75%,55%)" stroke="currentColor" stroke-width="2"/>
   <text x="660" y="340" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">トライアド</text>
-  <text x="660" y="370" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">三角形：にぎやか</text>
+  <text x="660" y="370" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">赤・緑・青（三角形）：にぎやか</text>
+  <text x="400" y="430" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">お絵描きアプリの色相環（HSV）。赤の反対はシアン、青の反対は黄</text>
   <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">色相環の「どこから取るか」で雰囲気が決まる</text>
 </svg>

@@ -1,7 +1,10 @@
 /**
  * 描くステップ: trace / copy / construct / mosha / free / critique / submit
+ *
+ * 保存ボタンはどれも useBusy で入口を止める（保存待ちに 2 回押しても 1 回だけ記録）。
+ * 保存に失敗したら画面の中に案内を出し（描画中はトーストを出さない）、押し直せる。
  */
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { PathNode } from '@/content';
 import { getTemplate } from '@/content';
 import type { ConstructStep, CopyStep, CritiqueStep, FreeStep, MoshaStep, SubmitStep, TraceStep } from '@/content/schema';
@@ -11,12 +14,20 @@ import type { Drawing, ScoreResult } from '@/scoring';
 import { Button, Segment } from '../components';
 import { CanvasScreen } from '../screens/CanvasScreen';
 import { CritiqueScreen, findRubric } from '../screens/CritiqueScreen';
-import { Figure, ReferencePicker, useBlobUrl, useEngine } from './common';
+import { Figure, ReferencePicker, useBlobUrl, useBusy, useEngine } from './common';
 import { fitTemplate, type Size } from './drillSetup';
 import { loadFigure, svgForOverlay } from './figures';
 import { ScoreSheet } from './ScoreSheet';
-import { bumpForStep, saveDrawingMeta, saveImported, saveStrokes, scorers, type LessonSession } from './stateBridge';
-import { drawingKindForStep } from './steps';
+import {
+  bumpForStep,
+  freeDrawingKind,
+  markBeforeAfter,
+  saveDrawingMeta,
+  saveImported,
+  saveStrokes,
+  scorers,
+  type LessonSession,
+} from './stateBridge';
 import { ImportView, StepFrame } from './StepViews';
 
 export interface StepCtx {
@@ -75,7 +86,16 @@ function useRefOverlay(source: RefSource | null, on: boolean, opacity: number, c
 // trace
 // ---------------------------------------------------------------------------
 
-export function TraceView({ step, ctx }: { step: TraceStep; ctx: StepCtx }) {
+export interface TraceRunnerProps {
+  step: TraceStep;
+  lessonId: string | null;
+  session?: LessonSession;
+  onFinish: () => void;
+  onExit: () => void;
+}
+
+/** なぞり（レッスンのステップと、箱の追加ドリルで使う） */
+export function TraceRunner({ step, lessonId, session, onFinish, onExit }: TraceRunnerProps) {
   const engine = useEngine();
   const count = step.count ?? 1;
   const [i, setI] = useState(0);
@@ -83,6 +103,9 @@ export function TraceView({ step, ctx }: { step: TraceStep; ctx: StepCtx }) {
   const [scored, setScored] = useState<{ result: ScoreResult; strokes: Drawing; best: number | null } | null>(null);
   const [n, setN] = useState(0);
   const [best, setBest] = useState<number | null>(null);
+  const { busy, error, run } = useBusy();
+  /** この回（i 回目）の記録の進み具合。失敗して押し直したときに二重にしない */
+  const rec = useRef({ saved: false, bumped: false, scored: false });
   const template = getTemplate(step.template);
 
   const fitted = useMemo(() => (template && size.width > 0 ? fitTemplate(template, size) : null), [template, size]);
@@ -91,36 +114,50 @@ export function TraceView({ step, ctx }: { step: TraceStep; ctx: StepCtx }) {
   useEffect(() => engine.on('change', () => setN(engine.getStrokes().length)), [engine]);
 
   const score = () => {
-    if (!fitted) return;
+    if (!fitted || scored) return;
     const strokes = engine.getStrokes();
     const result = scorers.value.scoreTrace(strokes, fitted, 3);
     setScored({ result, strokes, best });
   };
 
   const again = () => {
+    if (busy) return;
     setScored(null);
     engine.loadStrokes([]);
   };
 
-  const next = async () => {
-    if (!scored) return;
-    ctx.session.otherScores.push(scored.result.score);
-    // 累計（counter があれば 1 回なぞるごとに 1）
-    void bumpForStep(step, ctx.session);
-    setBest((b) => (b === null ? scored.result.score : Math.max(b, scored.result.score)));
-    if (i + 1 >= count) {
-      await saveStrokes(scored.strokes, 'lesson', ctx.node.lesson.id, ctx.session);
-      ctx.onDone();
-      return;
-    }
-    setI(i + 1);
-    setScored(null);
-    engine.loadStrokes([]);
-  };
+  const next = () =>
+    run(async () => {
+      if (!scored) return;
+      const r = rec.current;
+      const last = i + 1 >= count;
+      if (last && !r.saved) {
+        await saveStrokes(scored.strokes, 'lesson', lessonId, session);
+        r.saved = true;
+      }
+      // 累計（counter があれば 1 回なぞるごとに 1）
+      if (!r.bumped) {
+        await bumpForStep(step, session);
+        r.bumped = true;
+      }
+      if (!r.scored) {
+        session?.otherScores.push(scored.result.score);
+        r.scored = true;
+      }
+      setBest((b) => (b === null ? scored.result.score : Math.max(b, scored.result.score)));
+      rec.current = { saved: false, bumped: false, scored: false };
+      if (last) {
+        onFinish();
+        return;
+      }
+      setI(i + 1);
+      setScored(null);
+      engine.loadStrokes([]);
+    });
 
   if (!template) {
     return (
-      <StepFrame footer={<Button variant="primary" onClick={ctx.onDone}>次へ</Button>}>
+      <StepFrame footer={<Button variant="primary" onClick={onFinish}>次へ</Button>}>
         <p class="ls-prose">なぞりのお手本（{step.template}）が見つかりませんでした。このステップは飛ばします。</p>
       </StepFrame>
     );
@@ -133,7 +170,7 @@ export function TraceView({ step, ctx }: { step: TraceStep; ctx: StepCtx }) {
       counter={count > 1 ? `${i + 1}/${count}` : null}
       overlay={overlay}
       onSize={setSize}
-      onExit={ctx.onBack}
+      onExit={onExit}
       onDone={score}
       doneLabel="採点"
       doneDisabled={n === 0 || scored !== null}
@@ -146,12 +183,18 @@ export function TraceView({ step, ctx }: { step: TraceStep; ctx: StepCtx }) {
             best={scored.best}
             onAgain={again}
             onNext={() => void next()}
-            nextLabel={i + 1 >= count ? '終える' : '次へ'}
+            nextLabel={i + 1 >= count ? '完了' : '次へ'}
+            busy={busy}
+            error={error}
           />
         ) : null
       }
     />
   );
+}
+
+export function TraceView({ step, ctx }: { step: TraceStep; ctx: StepCtx }) {
+  return <TraceRunner step={step} lessonId={ctx.node.lesson.id} session={ctx.session} onFinish={ctx.onDone} onExit={ctx.onBack} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -165,7 +208,7 @@ export function CopyView({ step, ctx }: { step: CopyStep; ctx: StepCtx }) {
   );
   const [comparing, setComparing] = useState(false);
   const [n, setN] = useState(0);
-  const [busy, setBusy] = useState(false);
+  const { busy, error, run } = useBusy();
   const overlay = useRefOverlay(source, comparing, 0.55, 'accent');
 
   useEffect(() => engine.on('change', () => setN(engine.getStrokes().length)), [engine]);
@@ -180,18 +223,16 @@ export function CopyView({ step, ctx }: { step: CopyStep; ctx: StepCtx }) {
   }
 
   const finish = async () => {
-    setBusy(true);
-    try {
+    const ok = await run(async () => {
       await saveStrokes(engine.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session);
-    } finally {
-      setBusy(false);
-    }
-    ctx.onDone();
+    });
+    if (ok) ctx.onDone();
   };
 
   return (
     <CanvasScreen
       engine={engine}
+      error={error}
       task={comparing ? 'お手本を重ねました。形・大きさ・位置の違いを見てみましょう。' : step.instruction}
       side={
         <div class="ls-refview">
@@ -222,25 +263,28 @@ export function CopyView({ step, ctx }: { step: CopyStep; ctx: StepCtx }) {
 export function ConstructView({ step, ctx }: { step: ConstructStep; ctx: StepCtx }) {
   const engine = useEngine();
   const [k, setK] = useState(0);
-  const [busy, setBusy] = useState(false);
+  const { busy, error, run } = useBusy();
+  const rec = useRef<{ saved: boolean | null; bumped: boolean }>({ saved: null, bumped: false });
   const stage = step.stages[k]!;
   const last = k + 1 >= step.stages.length;
 
   const finish = async () => {
-    setBusy(true);
-    try {
-      const saved = await saveStrokes(engine.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session);
+    const ok = await run(async () => {
+      const r = rec.current;
+      if (r.saved === null) r.saved = (await saveStrokes(engine.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session)) !== null;
       // 累計（counter があれば count ぶん）。何も描かずに進んだときは足さない
-      if (saved) await bumpForStep(step, ctx.session);
-    } finally {
-      setBusy(false);
-    }
-    ctx.onDone();
+      if (r.saved && !r.bumped) {
+        await bumpForStep(step, ctx.session);
+        r.bumped = true;
+      }
+    });
+    if (ok) ctx.onDone();
   };
 
   return (
     <CanvasScreen
       engine={engine}
+      error={error}
       task={step.instruction}
       counter={`${k + 1}/${step.stages.length}`}
       onExit={ctx.onBack}
@@ -357,12 +401,14 @@ function MarkView({
 export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
   const engine = useEngine();
   const engine2 = useEngine();
-  const [source, setSource] = useState<RefSource | null>(null);
-  const [phase, setPhase] = useState<'pick' | 'draw' | 'mark' | 'modify'>('pick');
+  // 内蔵のお手本（refId）があれば取込なしでそれを使う
+  const [source, setSource] = useState<RefSource | null>(step.refId ? { kind: 'builtin', id: step.refId } : null);
+  const [phase, setPhase] = useState<'pick' | 'draw' | 'mark' | 'modify'>(step.refId ? 'draw' : 'pick');
   const [first, setFirst] = useState<StoredDrawing | null>(null);
   const [n, setN] = useState(0);
   const [n2, setN2] = useState(0);
-  const [busy, setBusy] = useState(false);
+  const { busy, error, run } = useBusy();
+  const second = useRef<StoredDrawing | null>(null);
 
   useEffect(() => engine.on('change', () => setN(engine.getStrokes().length)), [engine]);
   useEffect(() => engine2.on('change', () => setN2(engine2.getStrokes().length)), [engine2]);
@@ -421,15 +467,18 @@ export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
         engine={engine}
         task="お手本を横に見ながら模写しましょう。描き終えたら「完了」。"
         side={side}
-        onExit={() => setPhase('pick')}
+        onExit={step.refId ? ctx.onBack : () => setPhase('pick')}
+        error={error}
         onDone={() => {
-          setBusy(true);
-          void saveStrokes(engine.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session)
-            .then((d) => {
-              setFirst(d);
-              setPhase('mark');
-            })
-            .finally(() => setBusy(false));
+          if (first) {
+            setPhase('mark');
+            return;
+          }
+          void run(async () => {
+            const d = await saveStrokes(engine.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session);
+            setFirst(d);
+            if (d) setPhase('mark');
+          });
         }}
         doneDisabled={n === 0 || busy}
       />
@@ -442,7 +491,8 @@ export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
         source={source}
         drawing={first}
         onDone={(marks) => {
-          void saveDrawingMeta(first.id, { moshaMarks: marks, reference: source.kind === 'builtin' ? source.id : source.ref.id });
+          // 印は付加情報。保存に失敗しても描き直しへは進める
+          void saveDrawingMeta(first.id, { moshaMarks: marks, reference: source.kind === 'builtin' ? source.id : source.ref.id }).catch(() => undefined);
           setPhase('modify');
         }}
       />
@@ -456,14 +506,15 @@ export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
       task="1か所だけ自由に変えて、もう1枚描きましょう。形・向き・大きさ、どれでもOKです。"
       side={side}
       onExit={() => setPhase('mark')}
+      error={error}
       onDone={() => {
-        setBusy(true);
-        void saveStrokes(engine2.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session)
-          .then((d) => {
-            if (d && first) void saveDrawingMeta(d.id, { moshaVariantOf: first.id });
-            ctx.onDone();
-          })
-          .finally(() => setBusy(false));
+        void run(async () => {
+          if (!second.current) second.current = await saveStrokes(engine2.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session);
+          const d = second.current;
+          if (d && first) await saveDrawingMeta(d.id, { moshaVariantOf: first.id });
+        }).then((ok) => {
+          if (ok) ctx.onDone();
+        });
       }}
       doneDisabled={n2 === 0 || busy}
     />
@@ -476,9 +527,36 @@ export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
 
 export function FreeStepView({ step, ctx }: { step: FreeStep; ctx: StepCtx }) {
   const engine = useEngine();
-  const [busy, setBusy] = useState(false);
+  const { busy, error, run } = useBusy();
   const [n, setN] = useState(0);
+  /** 保存済みの絵（Before/After の記録だけ失敗したときに、絵を二重に保存しない） */
+  const saved = useRef<StoredDrawing | null>(null);
   useEffect(() => engine.on('change', () => setN(engine.getStrokes().length)), [engine]);
+  const kind = freeDrawingKind(step.save);
+
+  /** 保存 → Before/After なら profile に記録 → 次へ */
+  const keep = (make: () => Promise<StoredDrawing | null>) => {
+    void run(async () => {
+      if (!saved.current) saved.current = await make();
+      if (saved.current && step.save) await markBeforeAfter(saved.current.id, step.save);
+    }).then((ok) => {
+      if (ok) ctx.onDone();
+    });
+  };
+
+  if (step.source === 'import') {
+    return (
+      <ImportView
+        label={step.save === 'before' ? 'Before' : step.save === 'after' ? 'After' : '自由'}
+        title="外部アプリで描いた絵を取り込みましょう"
+        body={step.instruction ?? '描き終えた絵を画像で書き出して、ここで取り込みます。採点はありません。'}
+        busy={busy}
+        error={error}
+        onFile={(f) => keep(() => saveImported(f, kind, ctx.node.lesson.id, ctx.session))}
+      />
+    );
+  }
+
   return (
     <CanvasScreen
       engine={engine}
@@ -486,12 +564,14 @@ export function FreeStepView({ step, ctx }: { step: FreeStep; ctx: StepCtx }) {
       onExit={ctx.onBack}
       doneLabel="終わる"
       doneDisabled={busy}
+      error={error}
       onDone={() => {
-        setBusy(true);
         const strokes = engine.getStrokes();
-        void (n > 0 ? saveStrokes(strokes, drawingKindForStep('free'), ctx.node.lesson.id, ctx.session) : Promise.resolve(null))
-          .then(() => ctx.onDone())
-          .finally(() => setBusy(false));
+        if (n === 0 && !saved.current) {
+          ctx.onDone();
+          return;
+        }
+        keep(() => saveStrokes(strokes, kind, ctx.node.lesson.id, ctx.session));
       }}
     />
   );
@@ -520,7 +600,7 @@ function CritiqueStage({ ctx, drawing, rubricId, task }: { ctx: StepCtx; drawing
 export function CritiqueStepView({ step, ctx }: { step: CritiqueStep; ctx: StepCtx }) {
   const engine = useEngine();
   const [drawing, setDrawing] = useState<StoredDrawing | null>(null);
-  const [busy, setBusy] = useState(false);
+  const { busy, error, run } = useBusy();
   const [n, setN] = useState(0);
   useEffect(() => engine.on('change', () => setN(engine.getStrokes().length)), [engine]);
 
@@ -533,11 +613,11 @@ export function CritiqueStepView({ step, ctx }: { step: CritiqueStep; ctx: StepC
         title="描いた絵を取り込みましょう"
         body={step.instruction}
         busy={busy}
+        error={error}
         onFile={(f) => {
-          setBusy(true);
-          void saveImported(f, 'submit', ctx.node.lesson.id, ctx.session)
-            .then(setDrawing)
-            .finally(() => setBusy(false));
+          void run(async () => {
+            setDrawing(await saveImported(f, 'submit', ctx.node.lesson.id, ctx.session));
+          });
         }}
       />
     );
@@ -550,11 +630,12 @@ export function CritiqueStepView({ step, ctx }: { step: CritiqueStep; ctx: StepC
       onExit={ctx.onBack}
       doneLabel="提出へ"
       doneDisabled={n === 0 || busy}
+      error={error}
       onDone={() => {
-        setBusy(true);
-        void saveStrokes(engine.getStrokes(), 'submit', ctx.node.lesson.id, ctx.session)
-          .then((d) => d && setDrawing(d))
-          .finally(() => setBusy(false));
+        void run(async () => {
+          const d = await saveStrokes(engine.getStrokes(), 'submit', ctx.node.lesson.id, ctx.session);
+          if (d) setDrawing(d);
+        });
       }}
     />
   );
@@ -562,20 +643,20 @@ export function CritiqueStepView({ step, ctx }: { step: CritiqueStep; ctx: StepC
 
 export function SubmitStepView({ step, ctx }: { step: SubmitStep; ctx: StepCtx }) {
   const [drawing, setDrawing] = useState<StoredDrawing | null>(null);
-  const [busy, setBusy] = useState(false);
+  const { busy, error, run } = useBusy();
   if (drawing) return <CritiqueStage ctx={ctx} drawing={drawing} rubricId={step.rubric} task={step.instruction} />;
   return (
     <ImportView
       label="提出"
-      title="外部アプリで描いてから戻ってきてください"
+      title="外部アプリで描いてから戻ってきましょう"
       body={step.instruction}
       note="描き終えたら画像を書き出して、ここで取り込みます。アプリはこのまま閉じても、また続きから始められます。"
       busy={busy}
+      error={error}
       onFile={(f) => {
-        setBusy(true);
-        void saveImported(f, 'submit', ctx.node.lesson.id, ctx.session)
-          .then(setDrawing)
-          .finally(() => setBusy(false));
+        void run(async () => {
+          setDrawing(await saveImported(f, 'submit', ctx.node.lesson.id, ctx.session));
+        });
       }}
     />
   );

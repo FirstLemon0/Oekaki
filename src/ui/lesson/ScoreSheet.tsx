@@ -13,6 +13,10 @@ const SUB_LABEL: Record<string, string> = {
   'line.p90': '大きなズレ',
   'line.endpoint': '始点・終点',
   'line.direction': '向きの安定',
+  'line.orient': '向き',
+  'line.length': '長さ',
+  'circle.size': '大きさ',
+  'curve.taper': '抜き',
   'curve.chamfer': '目標との近さ',
   'curve.smooth': 'なめらかさ',
   'circle.fit': '丸さ',
@@ -77,11 +81,37 @@ export interface ScoreSheetProps {
   onAgain: () => void;
   nextLabel?: string;
   heatLabel?: string;
+  /** 保存中（ボタンを止める） */
+  busy?: boolean;
+  /** 保存に失敗したときの案内（シートの中に出す。描画中はトーストを出さない） */
+  error?: string | null;
+  /** 「もう一回」の文言 */
+  againLabel?: string;
 }
 
-export function ScoreSheet({ result, strokes, target, best, onNext, onAgain, nextLabel = '次へ', heatLabel = 'ヒートマップ — 最後の1本' }: ScoreSheetProps) {
+export function ScoreSheet({
+  result,
+  strokes,
+  target,
+  best,
+  onNext,
+  onAgain,
+  nextLabel = '次へ',
+  heatLabel = 'ヒートマップ — 最後の1本',
+  busy = false,
+  error = null,
+  againLabel = 'もう一回',
+}: ScoreSheetProps) {
   const delta = best === null ? null : result.score - best;
-  const subs = Object.entries(result.sub).slice(0, 5);
+  // 5 つまで。多いときは低い（直すところのある）ものを残し、並びは元の順
+  const all = Object.entries(result.sub);
+  const keep = new Set(
+    [...all]
+      .sort((a, b) => a[1] - b[1])
+      .slice(0, 5)
+      .map(([k]) => k),
+  );
+  const subs = all.filter(([k]) => keep.has(k));
   return (
     <div class="ls-sheet" role="dialog" aria-label="採点">
       <div class="ls-sheet__grip" aria-hidden="true" />
@@ -131,11 +161,16 @@ export function ScoreSheet({ result, strokes, target, best, onNext, onAgain, nex
         </div>
       </div>
       <div class="ls-sheet__foot">
-        <Button variant="secondary" onClick={onNext}>
-          {nextLabel}
+        {error && (
+          <p class="ls-sheet__error" role="alert">
+            {error}
+          </p>
+        )}
+        <Button variant="secondary" disabled={busy} onClick={onNext}>
+          {busy ? '保存しています…' : nextLabel}
         </Button>
-        <Button variant="primary" icon="undo" class="ls-sheet__primary" onClick={onAgain}>
-          もう一回
+        <Button variant="primary" icon="undo" class="ls-sheet__primary" disabled={busy} onClick={onAgain}>
+          {againLabel}
         </Button>
       </div>
     </div>

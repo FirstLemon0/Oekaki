@@ -113,6 +113,16 @@ Curriculum
 
 - `counter`（任意）: 累計カウンターの種別。`lines`（直線）/ `ellipses`（楕円）/
   `circles`（円）/ `boxes`（箱。250箱チャレンジ）。1本（1個）描くごとに加算される。
+  「直線」に数えるのは `line` のドリルだけ（曲線・ハッチング・筆圧のドリルには付けない）。
+- `params` に書けるキー（`tools/check-content.mjs` で検査）:
+  `line` … `orientation`（h/v/d）・`length`（short/long）・`mode`（two-points: 2点をアプリが置く）／
+  `curve` … `shape`（c/s/wave/spiral/through-points）・`bend`（strong）・`points`・`direction`（表示のみ）・`taper`（表示のみ）／
+  `circle` … `size`・`direction`（表示のみ）／`ellipse` … `degree`・`axisAngleDeg`／`pressure` … `profile`／
+  `hatching` … `spacing`・`angleDeg`。速さ・使う関節などは params に書かず、本文で説明する。
+- 楕円の `axisAngleDeg` は **長い径（楕円の「軸」）の角度**（画面座標・0〜180、0 = 横長、90 = 縦長）。
+  採点とドリルの見本も同じ定義。円柱の「中心の軸」は楕円の短い径と同じ向き（長い径とは直角）。
+- 曲線ドリル（c/s/wave/spiral）は画面に破線のガイドが出て、ガイドとの重なりで採点される。
+  through-points と直線の two-points は、点をアプリが置く。instruction はこれに合わせて書く。
 - 筆圧ドリル（`"drill": "pressure"`）の `params.profile` は `ramp-up`（弱→強）/
   `ramp-down`（強→弱）/ `flat`（一定）。別名 `increasing` / `decreasing` / `constant` も
   読み込み時に正式な値へそろえるが、新しく書くときは正式な値を使う。それ以外の値は検証エラー。
@@ -206,9 +216,13 @@ Curriculum
 ```json
 {
   "type": "mosha",
-  "instruction": "お手本を模写し、違うところに自分でタップして印をつけたあと、1か所だけ自由に改変してみましょう。"
+  "instruction": "お手本を選んで、もう一度模写しましょう。描き終えたらお手本と並べて見比べ、違うところをタップして印をつけます。最後に1か所だけ自由に変えて、もう1枚描きます。",
+  "refId": "s3-mannequin-lineart"
 }
 ```
+
+- 画面の流れは「お手本を選ぶ → 模写（描き直し）→ 違いに印 → 1か所変えて描き直す」。instruction もこの順で書く。
+- `refId`（任意）: 内蔵のお手本（線画 `*-lineart`）。無ければ、同じレッスンの copy のお手本か、取り込んだ画像から選ぶ。
 
 ### critique（卒業課題の B 提出）
 
@@ -240,6 +254,10 @@ Curriculum
 }
 ```
 
+- `source`（任意）: `canvas`（既定・アプリ内キャンバス）/ `import`（外部アプリで描いた画像を取り込む）。
+  instruction が「外部アプリで」から始まる工程は `import` にする。
+- `save`（任意）: `before`（ステージ0の最初の1枚）/ `after`（最終課題の完成画像）。教材全体で 1 か所ずつ。
+
 ## Rubric
 
 ```json
@@ -270,6 +288,13 @@ Curriculum
 - 強調は `#7BB661`（アクセントの緑）を少なめに。
 - 日本語ラベルを入れてよい（`<text fill="currentColor" stroke="none">`）。ただしお手本の
   線画（`*-lineart`）とクイズの選択肢の図（`quiz-*`）には、ラベルや答えの手がかりを入れない。
+
+## 検査と機械修正のスクリプト
+
+- `node tools/check-content.mjs`（`--summary` で集計も）: 図解・テンプレート・ルーブリック・refId・quiz.answer・
+  counter・params の未知キー・所要時間（15 分を超える回は summary に「休日向け」）を検査する。0 件で通す。
+- `node tools/patch-review-2026-09.mjs`: 2026-09 の教材レビューの修正（冪等。`--check` で確認のみ）。
+- `node tools/gen-review-figures.mjs`: そのレビューで作り直した図解・線画（`*-lineart`）・部屋の角のテンプレート。
 
 ## 本文のトーン
 

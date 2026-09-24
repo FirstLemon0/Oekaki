@@ -1,19 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
-  <rect x="80" y="40" width="640" height="400" rx="4" stroke-width="2.5"/>
-  <line x1="80" y1="200" x2="720" y2="200" stroke="#7BB661" stroke-dasharray="6 6"/>
-  <text x="710" y="190" font-size="16" fill="#7BB661" stroke="none" text-anchor="end">アイレベル</text>
-  <circle cx="400" cy="200" r="6" fill="#7BB661" stroke="none"/>
-  <text x="430" y="225" font-size="16" fill="#7BB661" stroke="none" text-anchor="start">消失点</text>
-  <line x1="400" y1="40" x2="400" y2="360" stroke-width="3"/>
-  <line x1="400" y1="360" x2="80" y2="440"/>
-  <line x1="400" y1="360" x2="720" y2="440"/>
-  <line x1="400" y1="200" x2="130" y2="440" opacity="0.3" stroke-dasharray="4 6"/>
-  <line x1="400" y1="200" x2="670" y2="440" opacity="0.3" stroke-dasharray="4 6"/>
-  <rect x="470" y="90" width="120" height="110" rx="2"/>
-  <line x1="530" y1="90" x2="530" y2="200"/>
-  <line x1="470" y1="145" x2="590" y2="145"/>
-  <text x="530" y="80" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">窓</text>
-  <path d="M150,410 L150,320 L260,320 L260,395"/>
-  <text x="205" y="310" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">机</text>
-  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">部屋の角1本＋床と壁の境目2本。奥へ向かう線は消失点へ</text>
+  <rect x="40" y="30" width="720" height="430" rx="4"/>
+  <line x1="40" y1="200" x2="760" y2="200" stroke="#7BB661" stroke-dasharray="6 6"/>
+  <text x="750" y="188" font-size="16" fill="#7BB661" stroke="none" text-anchor="end">アイレベル</text>
+  <circle cx="60" cy="200" r="6" fill="#7BB661" stroke="none"/>
+  <circle cx="740" cy="200" r="6" fill="#7BB661" stroke="none"/>
+  <text x="66" y="228" font-size="16" fill="#7BB661" stroke="none" text-anchor="start">消失点 1</text>
+  <text x="734" y="228" font-size="16" fill="#7BB661" stroke="none" text-anchor="end">消失点 2</text>
+  <line x1="360" y1="40" x2="360" y2="330" stroke-width="3"/>
+  <line x1="360" y1="330" x2="40" y2="439.5"/>
+  <line x1="360" y1="330" x2="660" y2="460"/>
+  <line x1="360" y1="330" x2="740" y2="200" opacity="0.35" stroke-dasharray="4 6"/>
+  <line x1="360" y1="330" x2="60" y2="200" opacity="0.35" stroke-dasharray="4 6"/>
+  <path d="M480,110 L600,84.3 L600,232.1 L480,225 Z"/>
+  <line x1="540" y1="97.1" x2="540" y2="228.6"/>
+  <line x1="480" y1="167.5" x2="600" y2="158.2"/>
+  <line x1="600" y1="84.3" x2="60" y2="200" opacity="0.35" stroke-dasharray="4 6"/>
+  <text x="540" y="90" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">窓</text>
+  <text x="400" y="488" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">2点透視：角の縦線1本＋床と壁の境目2本。境目はそれぞれ反対側の消失点へ</text>
 </svg>

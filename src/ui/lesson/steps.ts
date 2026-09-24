@@ -6,7 +6,7 @@
  * - 小さな対応表（カウンター種別、保存時の絵の種別）
  */
 import { normalizePressureProfile, type Counter, type Lesson, type PressureProfile, type Step } from '@/content/schema';
-import type { DrillStep } from '@/content/schema';
+import type { DrillStep, TraceStep } from '@/content/schema';
 import type { PathNode } from '@/content';
 import type { CounterKind, DrawingKind, Progress } from '@/data/types';
 import type { DueReview } from '@/data/review';
@@ -216,6 +216,27 @@ export function warmupCount(steps: readonly PlayStep[]): number {
 }
 
 /**
+ * いま再生する位置（session.steps の添字）。
+ * URL にはレッスン本来の番号だけを載せ、復習は「表示上の前置き」として扱う:
+ * 済ませた復習の数が先頭の復習数に満たないうちは復習を、終えたらレッスン本来の番号のステップを出す。
+ */
+export function playIndexOf(steps: readonly PlayStep[], warmupsDone: number, lessonIndex: number): number {
+  const w = warmupCount(steps);
+  if (warmupsDone < w) return Math.max(0, warmupsDone);
+  return w + clampStep(lessonIndex, steps.length - w);
+}
+
+/** ステップを終えたあとの行き先 */
+export type AfterStep = { kind: 'warmup'; warmupsDone: number } | { kind: 'step'; lessonIndex: number } | { kind: 'finish' };
+
+export function afterStep(steps: readonly PlayStep[], warmupsDone: number, lessonIndex: number): AfterStep {
+  const w = warmupCount(steps);
+  if (warmupsDone < w) return { kind: 'warmup', warmupsDone: warmupsDone + 1 };
+  const n = clampStep(lessonIndex, steps.length - w);
+  return n + 1 < steps.length - w ? { kind: 'step', lessonIndex: n + 1 } : { kind: 'finish' };
+}
+
+/**
  * 再生中の番号（復習を含む）→ レッスン本来のステップ番号。
  * 途中再開の保存はこちらで行う（再開時は復習を差し込まないので、番号がずれない）。
  */
@@ -247,4 +268,86 @@ export function nextAfterSkip(path: readonly PathNode[], completedIds: ReadonlyS
   const at = path.findIndex((n) => n.lesson.id === skippedId);
   const open = (n: PathNode) => n.lesson.id !== skippedId && !completedIds.has(n.lesson.id);
   return path.slice(at + 1).find(open) ?? path.find(open);
+}
+
+// ---------------------------------------------------------------------------
+// 所要時間・描いていた時間
+// ---------------------------------------------------------------------------
+
+/** 完了モーダルに出す所要分の上限（開きっぱなしで 300 分等にならないように） */
+export const ELAPSED_MIN_CAP = 60;
+
+/** 所要分（1..ELAPSED_MIN_CAP）。capped は上限で丸めたか */
+export function elapsedMinutes(startedAt: number, now: number): { min: number; capped: boolean } {
+  const raw = Math.round(Math.max(0, now - startedAt) / 60000);
+  if (raw > ELAPSED_MIN_CAP) return { min: ELAPSED_MIN_CAP, capped: true };
+  return { min: Math.max(1, raw), capped: false };
+}
+
+/** ストロークとストロークの間は、これより長い空きを「描いていない」とみなす */
+export const MAX_IDLE_GAP_MS = 60 * 1000;
+
+/**
+ * 実際に描いていた時間（ms）。各ストロークの長さ＋ストローク間の空き（1 回 MAX_IDLE_GAP_MS まで）。
+ * spans は描いた順の { start, end }（ms）。
+ */
+export function activeDrawingMs(spans: readonly { start: number; end: number }[], maxGap = MAX_IDLE_GAP_MS): number {
+  let total = 0;
+  let prevEnd: number | null = null;
+  for (const sp of spans) {
+    const start = Math.min(sp.start, sp.end);
+    const end = Math.max(sp.start, sp.end);
+    total += end - start;
+    if (prevEnd !== null) total += Math.min(maxGap, Math.max(0, start - prevEnd));
+    prevEnd = end;
+  }
+  return total;
+}
+
+// ---------------------------------------------------------------------------
+// クイズ（選択肢のシャッフル）
+// ---------------------------------------------------------------------------
+
+/** 0..n-1 の並べ替え（rnd は 0..1）。order[i] = 表示 i 番目に出す元の選択肢の番号 */
+export function shuffledOrder(n: number, rnd: () => number = Math.random): number[] {
+  const order = Array.from({ length: Math.max(0, n) }, (_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [order[i], order[j]] = [order[j]!, order[i]!];
+  }
+  return order;
+}
+
+// ---------------------------------------------------------------------------
+// 箱の追加ドリル（250 箱チャレンジの加算経路）
+// ---------------------------------------------------------------------------
+
+/** 復習・追加ドリルのルート名（#/review/box） */
+export const BOX_REVIEW = 'box';
+
+/** 箱を描く: 1 点透視 2 回 → 2 点透視 3 回のなぞり（1 回ごとに boxes +1） */
+export function boxReviewSteps(): TraceStep[] {
+  return [
+    {
+      type: 'trace',
+      template: 'cube-1pt',
+      count: 2,
+      counter: 'boxes',
+      instruction: '箱を描く: 1点透視の箱を2回なぞりましょう。奥へ向かう線は消失点へそろえます。',
+    },
+    {
+      type: 'trace',
+      template: 'cube-2pt',
+      count: 3,
+      counter: 'boxes',
+      instruction: '箱を描く: 2点透視の箱を3回なぞりましょう。縦の辺はまっすぐ立てます。',
+    },
+  ];
+}
+
+/** ステージ 2（形と立体）以降の学習者か（次にやるレッスンのステージで見る。全部終えていれば true） */
+export function reachedBoxStage(path: readonly PathNode[], completedIds: ReadonlySet<string>): boolean {
+  const next = path.find((n) => !completedIds.has(n.lesson.id));
+  if (!next) return path.length > 0;
+  return next.stage.order >= 2;
 }

@@ -1,11 +1,15 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { openDb } from './db';
+import { todayLocalDate } from './date';
 import {
   bumpCounter,
   completeLesson,
   getCounters,
   getCritique,
+  getTodayCritiqueAttempts,
+  getProgress,
+  recordCritiqueAttempt,
   getDrillStats,
   getProfile,
   getSettings,
@@ -220,5 +224,59 @@ describe('streak / saveStreak・applyFreezeToday', () => {
     expect(await applyFreezeToday('2026-01-09')).toBeNull(); // フリーズ 0
     expect(await applyFreezeToday('2026-01-08')).toBeNull(); // 今日すでに活動
     expect(await getStreak()).toEqual(before);
+  });
+});
+
+describe('AI 批評の試行回数', () => {
+  it('recordCritiqueAttempt はその日の回数を +1 して返し、getTodayCritiqueAttempts で読める', async () => {
+    expect(await getTodayCritiqueAttempts()).toBe(0);
+    expect(await recordCritiqueAttempt()).toBe(1);
+    expect(await recordCritiqueAttempt()).toBe(2);
+    expect(await getTodayCritiqueAttempts()).toBe(2);
+    expect((await getProfile()).critiqueAttemptsByDay).toEqual({ [todayLocalDate()]: 2 });
+  });
+
+  it('同時に呼ばれても取りこぼさない', async () => {
+    const results = await Promise.all([1, 2, 3, 4, 5].map(() => recordCritiqueAttempt('2026-03-01')));
+    expect([...results].sort()).toEqual([1, 2, 3, 4, 5]);
+    expect(await getTodayCritiqueAttempts('2026-03-01')).toBe(5);
+  });
+
+  it('直近 14 日分だけ残す', async () => {
+    await recordCritiqueAttempt('2026-03-01');
+    await recordCritiqueAttempt('2026-03-14');
+    await recordCritiqueAttempt('2026-03-15');
+    expect(Object.keys((await getProfile()).critiqueAttemptsByDay).sort()).toEqual(['2026-03-14', '2026-03-15']);
+  });
+
+  it('既存の profile の他の項目は保たれる', async () => {
+    await updateProfile({ beforeDrawingId: 'd1' });
+    await recordCritiqueAttempt('2026-03-01');
+    expect((await getProfile()).beforeDrawingId).toBe('d1');
+  });
+
+  it('項目が無い古い profile でも 0 として扱う', async () => {
+    const db = await openDb();
+    const { critiqueAttemptsByDay: _omit, ...old } = await getProfile();
+    await db.put('profile', old as never, 'singleton');
+    expect(await getTodayCritiqueAttempts()).toBe(0);
+    expect(await recordCritiqueAttempt()).toBe(1);
+  });
+});
+
+describe('completeLesson の skipped', () => {
+  it('きちんと完了済みのレッスンを後から skipped: true で呼んでも飛ばし扱いにしない', async () => {
+    await completeLesson('l-a', { score: 70 });
+    const r = await completeLesson('l-a', { skipped: true });
+    expect(r.skipped).toBe(false);
+    expect(r.attempts).toBe(2);
+    expect((await getProgress('l-a'))?.skipped).toBe(false);
+  });
+
+  it('飛ばしたレッスンを後で完了すれば skipped は false になる', async () => {
+    await completeLesson('l-b', { skipped: true });
+    expect((await getProgress('l-b'))?.skipped).toBe(true);
+    const r = await completeLesson('l-b', { score: 80 });
+    expect(r.skipped).toBe(false);
   });
 });

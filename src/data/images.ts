@@ -13,13 +13,57 @@ export async function blobToBytes(blob: Blob): Promise<Uint8Array> {
   return new Uint8Array(buffer);
 }
 
-/** バイト列から Blob を復元する（バックアップ復元用）。 */
-export function bytesToBlob(bytes: Uint8Array, type = 'image/webp'): Blob {
-  // Uint8Array をそのまま Blob に渡すと、渡した TypedArray の
-  // 元になっている ArrayBuffer 全体が参照されてしまう場合があるため、
-  // 範囲を明示したコピーを作ってから渡す。
-  const copy = bytes.slice();
-  return new Blob([copy], { type });
+export type SniffedImageType = 'image/webp' | 'image/png' | 'image/jpeg' | 'image/gif';
+
+/**
+ * 先頭バイト（マジックナンバー）から画像の型を判定する。分からなければ null。
+ * 12 バイトあれば判定できる。
+ */
+export function sniffImageType(bytes: Uint8Array): SniffedImageType | null {
+  const b = bytes;
+  // RIFF....WEBP
+  if (
+    b.length >= 12 &&
+    b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+    b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50
+  ) {
+    return 'image/webp';
+  }
+  // \x89PNG\r\n\x1a\n
+  if (
+    b.length >= 8 &&
+    b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 &&
+    b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a
+  ) {
+    return 'image/png';
+  }
+  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
+  // GIF87a / GIF89a
+  if (b.length >= 4 && b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return 'image/gif';
+  return null;
+}
+
+/** 画像の型に対応する拡張子（ドットなし）。 */
+export function imageExtension(type: SniffedImageType): 'webp' | 'png' | 'jpg' | 'gif' {
+  switch (type) {
+    case 'image/png':
+      return 'png';
+    case 'image/jpeg':
+      return 'jpg';
+    case 'image/gif':
+      return 'gif';
+    default:
+      return 'webp';
+  }
+}
+
+/**
+ * バイト列から Blob を復元する（バックアップ復元用）。
+ * `type` を省略すると先頭バイトから判定し、分からなければ `image/webp` とする。
+ * （Blob は渡したビューの範囲だけをコピーするので、ここで `slice` し直す必要はない）
+ */
+export function bytesToBlob(bytes: Uint8Array, type?: string): Blob {
+  return new Blob([bytes as Uint8Array<ArrayBuffer>], { type: type ?? sniffImageType(bytes) ?? 'image/webp' });
 }
 
 export interface DownscaleOptions {

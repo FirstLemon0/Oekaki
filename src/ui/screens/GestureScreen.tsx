@@ -5,6 +5,8 @@
  * 描いている間は人形を動かさない（ユーザーがドラッグしたときだけ回る）。
  * WebGL が使えない／読み込めないときは、同じ関節角から作った 2D 棒人形にフォールバックする。
  * 時間切れ（または「先に終える」）で見比べ画面（並べる／重ねる）→「次のポーズ」で count まで。
+ * ペンを置いたまま時間切れになったときは、描きかけの線を確定してから止める（最後の線を消さない）。
+ * 「次のポーズ」は保存待ちの間に 2 回押しても 1 回だけ記録する。
  */
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { GestureStep } from '@/content/schema';
@@ -17,7 +19,7 @@ import { roundView } from '@/mannequin/camera';
 import type { CompareSnapshot, MannequinViewApi, ViewState } from '@/mannequin/view';
 import { Button, Segment } from '../components';
 import { CanvasScreen } from './CanvasScreen';
-import { ReferencePicker, useBlobUrl, useCountdown, useEngine } from '../lesson/common';
+import { ReferencePicker, useBlobUrl, useBusy, useCountdown, useEngine } from '../lesson/common';
 import { POSE_VIEWBOX, poseBounds, stickPoseFor, type MannequinPose } from '../lesson/mannequin-poses';
 import { bump, saveStrokes, type LessonSession } from '../lesson/stateBridge';
 
@@ -99,6 +101,35 @@ export interface GestureScreenProps {
 
 type GlState = 'loading' | 'ready' | 'unsupported';
 
+/** 描いている最中のポインター（時間切れで確定させるため） */
+interface LivePointer {
+  target: EventTarget;
+  pointerId: number;
+  pointerType: string;
+  clientX: number;
+  clientY: number;
+  pressure: number;
+}
+
+/**
+ * 描きかけの線を確定させる: キャンバスへ同じ pointerId の pointerup を送る
+ * （エンジンは pointerup で線を確定する。本物の pointerup は後で来ても無視される）。
+ */
+export function commitLivePointer(p: LivePointer | null): void {
+  if (!p || typeof PointerEvent === 'undefined') return;
+  p.target.dispatchEvent(
+    new PointerEvent('pointerup', {
+      bubbles: true,
+      pointerId: p.pointerId,
+      pointerType: p.pointerType,
+      clientX: p.clientX,
+      clientY: p.clientY,
+      pressure: p.pressure,
+      button: 0,
+    }),
+  );
+}
+
 export function GestureScreen({ step, session, lessonId, onFinish, onExit }: GestureScreenProps) {
   const engine = useEngine();
   const [i, setI] = useState(0);
@@ -108,6 +139,10 @@ export function GestureScreen({ step, session, lessonId, onFinish, onExit }: Ges
   const [strokes, setStrokes] = useState<Drawing>([]);
   const [refs, setRefs] = useState<ReferenceImage[] | null>(step.source === 'user' ? null : []);
   const [picked, setPicked] = useState(false);
+  const { busy, error, run } = useBusy();
+  /** この体の記録の進み具合（失敗して押し直したときに二重にしない） */
+  const rec = useRef({ bumped: false, saved: false });
+  const livePointer = useRef<LivePointer | null>(null);
 
   // ポーズ人形: 出題順は 1 回のレッスンの中で固定
   const [seed] = useState(() => (Math.random() * 2 ** 32) >>> 0);
@@ -144,6 +179,9 @@ export function GestureScreen({ step, session, lessonId, onFinish, onExit }: Ges
   }, [waitingForModel, roundKey]);
 
   const endDraw = () => {
+    // ペンを置いたままなら、描きかけの線を確定してから止める
+    commitLivePointer(livePointer.current);
+    livePointer.current = null;
     setStrokes(engine.getStrokes());
     const api = apiRef.current;
     if (api && useMannequin) {
@@ -194,23 +232,33 @@ export function GestureScreen({ step, session, lessonId, onFinish, onExit }: Ges
   const initialView: Partial<ViewState> =
     savedView.current && savedView.current.i === i ? savedView.current.state : roundView(seed, i);
 
-  const nextPose = async () => {
-    const drawn = strokes;
-    void bump('gesture', 1, session);
-    if (drawn.length > 0) await saveStrokes(drawn, 'lesson', lessonId, session);
-    engine.loadStrokes([]);
-    if (i + 1 >= step.count) {
-      onFinish();
-      return;
-    }
-    savedView.current = null;
-    setSnap(null);
-    setI(i + 1);
-    setMode('side');
-    setPhase('draw');
-  };
+  const nextPose = () =>
+    run(async () => {
+      const drawn = strokes;
+      const r = rec.current;
+      if (!r.saved && drawn.length > 0) {
+        await saveStrokes(drawn, 'lesson', lessonId, session);
+      }
+      r.saved = true;
+      if (!r.bumped) {
+        await bump('gesture', 1, session);
+        r.bumped = true;
+      }
+      rec.current = { bumped: false, saved: false };
+      engine.loadStrokes([]);
+      if (i + 1 >= step.count) {
+        onFinish();
+        return;
+      }
+      savedView.current = null;
+      setSnap(null);
+      setI(i + 1);
+      setMode('side');
+      setPhase('draw');
+    });
 
   const sameAgain = () => {
+    if (busy) return;
     engine.loadStrokes([]);
     setSnap(null);
     setRound(round + 1);
@@ -277,13 +325,19 @@ export function GestureScreen({ step, session, lessonId, onFinish, onExit }: Ges
           </div>
         )}
         <footer class="ls-compare__foot">
-          <p class="ls-muted">細部より、体の傾きと流れが似ているかを見ましょう。</p>
+          {error ? (
+            <p class="ls-warn" role="alert">
+              {error}
+            </p>
+          ) : (
+            <p class="ls-muted">細部より、体の傾きと流れが似ているかを見ましょう。</p>
+          )}
           <div class="ls-compare__actions">
-            <Button variant="secondary" onClick={sameAgain}>
+            <Button variant="secondary" disabled={busy} onClick={sameAgain}>
               もう一度同じポーズ
             </Button>
-            <Button variant="primary" onClick={() => void nextPose()}>
-              {i + 1 >= step.count ? '終える' : '次のポーズ'}
+            <Button variant="primary" disabled={busy} onClick={() => void nextPose()}>
+              {busy ? '保存しています…' : i + 1 >= step.count ? '終える' : '次のポーズ'}
             </Button>
           </div>
         </footer>
@@ -340,7 +394,31 @@ export function GestureScreen({ step, session, lessonId, onFinish, onExit }: Ges
     </div>
   );
 
+  const track = (e: PointerEvent) => {
+    if (!(e.target instanceof HTMLCanvasElement)) return;
+    livePointer.current = {
+      target: e.target,
+      pointerId: e.pointerId,
+      pointerType: e.pointerType,
+      clientX: e.clientX,
+      clientY: e.clientY,
+      pressure: e.pressure,
+    };
+  };
+  const untrack = (e: PointerEvent) => {
+    if (livePointer.current && livePointer.current.pointerId === e.pointerId) livePointer.current = null;
+  };
+
   return (
+    <div
+      class="ls-gesture-track"
+      onPointerDownCapture={track}
+      onPointerMoveCapture={(e) => {
+        if (livePointer.current && livePointer.current.pointerId === e.pointerId) track(e);
+      }}
+      onPointerUpCapture={untrack}
+      onPointerCancelCapture={untrack}
+    >
     <CanvasScreen
       engine={engine}
       task={step.instruction}
@@ -363,5 +441,6 @@ export function GestureScreen({ step, session, lessonId, onFinish, onExit }: Ges
         </Button>
       }
     />
+    </div>
   );
 }

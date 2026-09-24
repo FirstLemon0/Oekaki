@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M60,250 L140,250 L135,340 L65,340 Z"/>
+  <line x1="74.5" y1="246.9" x2="45.1" y2="170.3"/>
+  <line x1="57.5" y1="253.1" x2="30.8" y2="175.6"/>
+  <ellipse cx="66" cy="250" rx="3.6" ry="9" transform="rotate(-110 66 250)"/>
+  <ellipse cx="38" cy="172.9" rx="3.1" ry="7.7" transform="rotate(-110 38 172.9)"/>
+  <line x1="99" y1="249.2" x2="89.6" y2="157.7"/>
+  <line x1="81" y1="250.8" x2="74.4" y2="159"/>
+  <ellipse cx="90" cy="250" rx="3.6" ry="9" transform="rotate(-95 90 250)"/>
+  <ellipse cx="82" cy="158.4" rx="3.1" ry="7.7" transform="rotate(-95 82 158.4)"/>
+  <line x1="121.9" y1="251.1" x2="131.3" y2="163.6"/>
+  <line x1="104.1" y1="248.9" x2="116.1" y2="161.7"/>
+  <ellipse cx="113" cy="250" rx="3.6" ry="9" transform="rotate(-83 113 250)"/>
+  <ellipse cx="123.7" cy="162.7" rx="3.1" ry="7.7" transform="rotate(-83 123.7 162.7)"/>
+  <line x1="143.4" y1="253" x2="167" y2="191.4"/>
+  <line x1="128.6" y1="247" x2="154.4" y2="186.3"/>
+  <ellipse cx="136" cy="250" rx="3.2" ry="8" transform="rotate(-68 136 250)"/>
+  <ellipse cx="160.7" cy="188.8" rx="2.7" ry="6.8" transform="rotate(-68 160.7 188.8)"/>
+  <line x1="67" y1="291.3" x2="16" y2="263.6"/>
+  <line x1="57" y1="308.7" x2="7.5" y2="278.4"/>
+  <ellipse cx="62" cy="300" rx="4" ry="10" transform="rotate(-150 62 300)"/>
+  <ellipse cx="11.8" cy="271" rx="3.4" ry="8.5" transform="rotate(-150 11.8 271)"/>
+  <path d="M255,250 L345,250 L340,340 L260,340 Z"/>
+  <path d="M255,250 Q266.25,234 277.5,250 Q288.75,234 300,250 Q311.25,234 322.5,250 Q333.75,234 345,250"/>
+  <path d="M258,262 L342,262 L342,295 L258,295 Z"/>
+  <line x1="280" y1="262" x2="280" y2="295"/>
+  <line x1="302" y1="262" x2="302" y2="295"/>
+  <line x1="324" y1="262" x2="324" y2="295"/>
+  <line x1="263.2" y1="331.7" x2="322.7" y2="298.8"/>
+  <line x1="252.8" y1="312.3" x2="313.3" y2="281.2"/>
+  <ellipse cx="258" cy="322" rx="4.4" ry="11" transform="rotate(-28.1 258 322)"/>
+  <ellipse cx="318" cy="290" rx="4" ry="10" transform="rotate(-28.1 318 290)"/>
+  <path d="M455,250 L545,250 L540,340 L460,340 Z"/>
+  <path d="M478,250 Q489.25,234 500.5,250 Q511.75,234 523,250 Q534.25,234 545.5,250"/>
+  <path d="M478,262 L545,262 L545,295 L478,295 Z"/>
+  <line x1="500" y1="262" x2="500" y2="295"/>
+  <line x1="522" y1="262" x2="522" y2="295"/>
+  <line x1="476.5" y1="250" x2="475.1" y2="150"/>
+  <line x1="457.5" y1="250" x2="458.9" y2="150"/>
+  <ellipse cx="467" cy="250" rx="3.8" ry="9.5" transform="rotate(-90 467 250)"/>
+  <ellipse cx="467" cy="150" rx="3.2" ry="8.1" transform="rotate(-90 467 150)"/>
+  <line x1="463.1" y1="331.7" x2="519.7" y2="300.8"/>
+  <line x1="452.9" y1="312.3" x2="510.3" y2="283.2"/>
+  <ellipse cx="458" cy="322" rx="4.4" ry="11" transform="rotate(-27.8 458 322)"/>
+  <ellipse cx="515" cy="292" rx="4" ry="10" transform="rotate(-27.8 515 292)"/>
+  <path d="M665,250 L745,250 L740,340 L670,340 Z"/>
+  <line x1="701.9" y1="251.6" x2="710.1" y2="197.2"/>
+  <line x1="684.1" y1="248.4" x2="695" y2="194.5"/>
+  <ellipse cx="693" cy="250" rx="3.6" ry="9" transform="rotate(-80 693 250)"/>
+  <ellipse cx="702.6" cy="195.8" rx="3.1" ry="7.7" transform="rotate(-80 702.6 195.8)"/>
+  <line x1="724.3" y1="253.4" x2="742.6" y2="204.7"/>
+  <line x1="707.7" y1="246.6" x2="728.4" y2="198.9"/>
+  <ellipse cx="716" cy="250" rx="3.6" ry="9" transform="rotate(-68 716 250)"/>
+  <ellipse cx="735.5" cy="201.8" rx="3.1" ry="7.7" transform="rotate(-68 735.5 201.8)"/>
+  <line x1="745.6" y1="254.6" x2="768.7" y2="219.5"/>
+  <line x1="732.4" y1="245.4" x2="757.5" y2="211.7"/>
+  <ellipse cx="739" cy="250" rx="3.2" ry="8" transform="rotate(-55 739 250)"/>
+  <ellipse cx="763.1" cy="215.6" rx="2.7" ry="6.8" transform="rotate(-55 763.1 215.6)"/>
+  <line x1="678" y1="244.9" x2="653.6" y2="207.2"/>
+  <line x1="662" y1="255.1" x2="638.4" y2="216.8"/>
+  <ellipse cx="670" cy="250" rx="3.8" ry="9.5" transform="rotate(-122.3 670 250)"/>
+  <ellipse cx="646" cy="212" rx="3.6" ry="9" transform="rotate(-122.3 646 212)"/>
+  <line x1="653.9" y1="207.7" x2="639" y2="182.2"/>
+  <line x1="638.1" y1="216.3" x2="625" y2="189.8"/>
+  <ellipse cx="646" cy="212" rx="3.6" ry="9" transform="rotate(-118.3 646 212)"/>
+  <ellipse cx="632" cy="186" rx="3.2" ry="8" transform="rotate(-118.3 632 186)"/>
+  <line x1="672.6" y1="297" x2="634.9" y2="262.7"/>
+  <line x1="657.4" y1="313" x2="621.1" y2="277.3"/>
+  <ellipse cx="665" cy="305" rx="4.4" ry="11" transform="rotate(-136.6 665 305)"/>
+  <ellipse cx="628" cy="270" rx="4" ry="10" transform="rotate(-136.6 628 270)"/>
+  <line x1="637.9" y1="268.9" x2="630.9" y2="213"/>
+  <line x1="618.1" y1="271.1" x2="613.1" y2="215"/>
+  <ellipse cx="628" cy="270" rx="4" ry="10" transform="rotate(-96.1 628 270)"/>
+  <ellipse cx="622" cy="214" rx="3.6" ry="9" transform="rotate(-96.1 622 214)"/>
+</svg>

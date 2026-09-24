@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M100,80 L100,250 Q100,337 178,340 L250,340" stroke-width="2"/>
+  <path d="M160,80 L160,265 Q160,280 175,280 L250,280" stroke-width="2"/>
+  <path d="M360,80 L360,250 Q360,340 440,340 L510,340" stroke-width="2.5"/>
+  <path d="M420,80 L420,265 Q420,280 435,280 L510,280" stroke-width="2.5"/>
+  <path d="M620,80 L620,250 Q620,355 710,340 L770,340" stroke-width="5"/>
+  <path d="M680,80 L680,265 Q680,280 695,280 L770,280" stroke-width="5"/>
+  <path d="M155,254 Q154.5,285.5 186,285" stroke-width="1.5"/>
+  <path d="M150,246 Q149,291 194,290" stroke-width="1.5"/>
+  <path d="M145,238 Q143.5,296.5 202,295" stroke-width="1.5"/>
+  <path d="M140,230 Q138,302 210,300" stroke-width="1.5"/>
+  <path d="M135,222 Q132.5,307.5 218,305" stroke-width="1.5"/>
+  <path d="M130,214 Q127,313 226,310" stroke-width="1.5"/>
+  <path d="M412,244 Q411.2,288.8 456,288" stroke-width="2.5"/>
+  <path d="M402,228 Q400.2,299.8 472,298" stroke-width="2.5"/>
+  <path d="M392,214 Q389.2,310.8 486,308" stroke-width="2.5"/>
+  <path d="M666,230 Q664.6,295.4 730,294" stroke-width="5"/>
+  <path d="M648,204 Q644.8,315.2 756,312" stroke-width="5"/>
+</svg>

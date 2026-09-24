@@ -7,7 +7,7 @@ import { calibrate, type CalibrationSamples, type Stroke } from '@/scoring';
 import { Button, Icon } from '../components';
 import { href, navigate } from '../router';
 import { CanvasScreen } from './CanvasScreen';
-import { useEngine } from '../lesson/common';
+import { useBusy, useEngine } from '../lesson/common';
 import { CALIBRATION_PLAN } from '../lesson/limits';
 import { saveCalibrationBaseline } from '../lesson/stateBridge';
 
@@ -17,7 +17,7 @@ export function Calibrate() {
   const [n, setN] = useState(0);
   const [samples, setSamples] = useState<CalibrationSamples>({});
   const [done, setDone] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const { busy, error, run } = useBusy();
 
   useEffect(() => engine.on('change', () => setN(engine.getStrokes().filter((s) => s.length >= 3).length)), [engine]);
 
@@ -30,19 +30,17 @@ export function Calibrate() {
     const strokes: Stroke[] = engine.getStrokes().filter((s) => s.length >= 3);
     const merged: CalibrationSamples = { ...samples, [plan.key]: strokes };
     setSamples(merged);
-    engine.loadStrokes([]);
-    setN(0);
     if (phase + 1 < CALIBRATION_PLAN.length) {
+      engine.loadStrokes([]);
+      setN(0);
       setPhase(phase + 1);
       return;
     }
-    setBusy(true);
-    try {
+    // 最後の組は保存できるまで線を残す（失敗しても押し直せる）
+    const ok = await run(async () => {
       await saveCalibrationBaseline(calibrate(merged));
-      setDone(true);
-    } finally {
-      setBusy(false);
-    }
+    });
+    if (ok) setDone(true);
   };
 
   if (done) {
@@ -81,6 +79,7 @@ export function Calibrate() {
         onDone={() => void next()}
         doneLabel={phase + 1 < CALIBRATION_PLAN.length ? '次へ' : '基準を作る'}
         doneDisabled={n < plan.count || busy}
+        error={error}
       />
     </div>
   );

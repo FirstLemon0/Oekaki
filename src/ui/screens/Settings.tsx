@@ -11,7 +11,7 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { version as APP_VERSION } from '../../../package.json';
 import { estimateCostJpy, testConnection, type CriticErrorKind } from '@/critic';
-import { exportBackup, importBackup } from '@/data/backup';
+import { exportBackupBlob, importBackup } from '@/data/backup';
 import type { CritiqueEffort, FontScale, Strictness, Theme } from '@/data/types';
 import { Button, Icon, ListRow, Modal, Segment, Stepper, TextField, Toggle, showToast } from '../components';
 import { formatBytes, yyyymmdd } from '../format';
@@ -106,13 +106,16 @@ const MODEL_PRESETS = [
 function connectionReason(kind: CriticErrorKind, key: string): string {
   switch (kind) {
     case 'no_api_key':
-      return key.trim() === '' ? 'API キーが未設定です' : 'キーが違います（貼り付け直してください）';
+      return key.trim() === '' ? 'API キーが未設定です' : 'キーが違います（貼り付け直しましょう）';
     case 'daily_limit':
-      return '利用上限に達しています（しばらく待つか、上限を確認してください）';
+      return '利用上限に達しています（しばらく待つか、上限を確かめましょう）';
     case 'network':
-      return '通信できませんでした（ネットワークを確認してください）';
+      return '通信できませんでした（ネットワークを確かめましょう）';
     case 'model_unavailable':
-      return 'このモデルは使えません（モデル ID を確認してください）';
+      return 'このモデルは使えません（モデル ID を確かめましょう）';
+    case 'rate_limited':
+      return '混み合っています（少し待ってからもう一度試しましょう）';
+    case 'truncated':
     case 'refused':
     case 'bad_response':
       return '応答を確認できませんでした';
@@ -321,7 +324,7 @@ function PracticeGroup() {
 function DataGroup({ storage, refreshStorage }: { storage: StorageInfo; refreshStorage: () => void }) {
   const prefs = uiPrefs.value;
   const fileRef = useRef<HTMLInputElement>(null);
-  const [pending, setPending] = useState<Uint8Array | null>(null);
+  const [pending, setPending] = useState<Blob | null>(null);
   const [busy, setBusy] = useState(false);
 
   const since = prefs.lastBackupAt ? daysSince(prefs.lastBackupAt) : null;
@@ -330,9 +333,15 @@ function DataGroup({ storage, refreshStorage }: { storage: StorageInfo; refreshS
 
   const doExport = async () => {
     setBusy(true);
+    // 先に最終バックアップ日時を記録してから書き出す（zip の中の設定にも新しい値が入る）。
+    // 書き出しに失敗したら元の値に戻す。
+    const previous = settings.value?.lastBackupAt ?? null;
+    let recorded = false;
     try {
-      const bytes = await exportBackup();
-      const blob = new Blob([bytes.slice()], { type: 'application/zip' });
+      await saveSettings({ lastBackupAt: new Date().toISOString() });
+      recorded = true;
+      // Blob 版は画像を 1 枚ずつ流すので、全体を一度にメモリへ載せない
+      const blob = await exportBackupBlob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -341,9 +350,9 @@ function DataGroup({ storage, refreshStorage }: { storage: StorageInfo; refreshS
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      await saveSettings({ lastBackupAt: new Date().toISOString() });
       showToast('バックアップを書き出しました');
     } catch (e) {
+      if (recorded) await saveSettings({ lastBackupAt: previous }).catch(() => undefined);
       showToast(`書き出せませんでした: ${e instanceof Error ? e.message : String(e)}`, 'danger', 4000);
     } finally {
       setBusy(false);
@@ -355,7 +364,8 @@ function DataGroup({ storage, refreshStorage }: { storage: StorageInfo; refreshS
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
-    setPending(new Uint8Array(await file.arrayBuffer()));
+    // File（Blob）をそのまま保持し、読み込み時に逐次展開する
+    setPending(file);
   };
 
   const doImport = async () => {

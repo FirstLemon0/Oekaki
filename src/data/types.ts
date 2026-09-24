@@ -38,6 +38,11 @@ export interface Profile {
   calibration: CalibrationResult | null;
   /** 直近で Before/After の月次描き直し通知を出した日（YYYY-MM-DD）。 */
   lastMonthlyPromptAt: string | null;
+  /**
+   * AI 批評の試行回数（端末ローカル日 YYYY-MM-DD → 回数）。失敗した呼び出しも数える。
+   * 1 日の上限判定用。直近 14 日分だけ保持する（`recordCritiqueAttempt` が古い日を捨てる）。
+   */
+  critiqueAttemptsByDay: Record<string, number>;
   updatedAt: string;
 }
 

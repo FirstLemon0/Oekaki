@@ -54,7 +54,11 @@ export type CriticErrorKind =
   | 'network'
   | 'model_unavailable'
   | 'refused'
-  | 'bad_response';
+  | 'bad_response'
+  /** 429: API 側のレート制限（アプリの 1 日上限 daily_limit とは別） */
+  | 'rate_limited'
+  /** stop_reason === 'max_tokens'（思考と本文で上限に達し、応答が途中で切れた） */
+  | 'truncated';
 
 export class CriticError extends Error {
   readonly kind: CriticErrorKind;

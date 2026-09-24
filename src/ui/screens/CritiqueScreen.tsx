@@ -1,18 +1,21 @@
 /**
  * 批評画面（DESIGN_SYSTEM §3 批評）: 送信前確認 → 待機 → 結果。
- * 上限（今日の件数 ≥ dailyCritiqueLimit）とキー未設定はここで止め、critic は呼ばない。
+ * 上限（今日の「試行回数」≥ dailyCritiqueLimit。失敗した送信も数える）とキー未設定はここで止め、critic は呼ばない。
+ * 送る直前に recordCritiqueAttempt() で試行を 1 回数える。
+ * 「履歴」ボタンはレッスンの外（#/critique/:id）だけ。レッスン中に出すと離脱して絵が宙に浮くため。
  */
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { critique as runCritique, CriticError, estimateCostJpy, type CritiqueResult } from '@/critic';
 import { downscaleToWebp } from '@/data/images';
-import { getCritique, getDrawing } from '@/data/repo';
+import { getCritique, getDrawing, getTodayCritiqueAttempts, recordCritiqueAttempt } from '@/data/repo';
 import type { Critique, Drawing } from '@/data/types';
 import type { Rubric } from '@/content/schema';
 import { Button, Icon } from '../components';
 import { href, navigate } from '../router';
-import { critiques, curriculum, path, settings, today } from '../state';
+import { curriculum, path, settings } from '../state';
 import { useBlobUrl } from '../lesson/common';
-import { critiqueGate, critiquesToday } from '../lesson/limits';
+import { critiqueGate } from '../lesson/limits';
+import { ERROR_TEXT } from '../lesson/critiqueText';
 import { storeCritique } from '../lesson/stateBridge';
 import { markerPlacement, type MarkerPos as Pos } from '../lesson/critiqueMarkers';
 
@@ -39,33 +42,6 @@ function fromResult(r: CritiqueResult): View {
   return { good: r.good, issues: r.issues, next_one: r.next_one, encourage: r.encourage, model: r.model };
 }
 
-const ERROR_TEXT: Record<CriticError['kind'], { title: string; body: string }> = {
-  no_api_key: {
-    title: 'API キーを確認してください',
-    body: 'キーが未設定か、使えないキーでした。設定の「AI 批評」でキーを入れ直してから、もう一度送ってください。',
-  },
-  daily_limit: {
-    title: '今は混み合っています',
-    body: 'API の利用上限に達しました。少し時間をおくか、明日また送ってください。絵は保存してあります。',
-  },
-  network: {
-    title: '通信できませんでした',
-    body: 'インターネットにつながっているか確かめて、もう一度送ってください。絵は保存してあります。',
-  },
-  model_unavailable: {
-    title: 'モデルが使えませんでした',
-    body: '指定のモデルが使えなかったため、代わりのモデル（claude-opus-5）でも試しましたが、どちらも使えませんでした。設定でモデル ID を確かめてください。',
-  },
-  refused: {
-    title: '今回は見てもらえませんでした',
-    body: 'この絵には返事ができないと言われました。別の絵で試すか、少し描き足してから送ってください。',
-  },
-  bad_response: {
-    title: '返事を受け取れませんでした',
-    body: '返事の形が崩れていました。もう一度送ると、たいてい直ります。',
-  },
-};
-
 export interface CritiqueScreenProps {
   drawingId: string;
   image: Blob;
@@ -81,6 +57,8 @@ export interface CritiqueScreenProps {
   onBack?: () => void;
   /** 保存済みの批評（履歴の再表示） */
   saved?: Critique | null;
+  /** 結果に「履歴」ボタンを出す（レッスンの外だけ。レッスン中は完了後にギャラリーで見られる） */
+  showHistory?: boolean;
 }
 
 type Phase = { k: 'confirm' } | { k: 'waiting' } | { k: 'result'; view: View; fallback: boolean } | { k: 'error'; kind: CriticError['kind'] };
@@ -88,21 +66,45 @@ type Phase = { k: 'confirm' } | { k: 'waiting' } | { k: 'result'; view: View; fa
 export function CritiqueScreen(props: CritiqueScreenProps) {
   const [phase, setPhase] = useState<Phase>(() => (props.saved ? { k: 'result', view: fromSaved(props.saved), fallback: false } : { k: 'confirm' }));
   const abortRef = useRef<AbortController | null>(null);
+  const sendingRef = useRef(false);
   const imgUrl = useBlobUrl(props.image);
   const s = settings.value;
   const model = s?.modelId ?? 'claude-opus-5-5';
   const limit = s?.dailyCritiqueLimit ?? 3;
-  const used = critiquesToday(critiques.value, today.value);
-  const gate = critiqueGate(s?.apiKey, limit, used);
+  /** 今日の試行回数（失敗も含む）。読み込むまでは null で送れない */
+  const [used, setUsed] = useState<number | null>(null);
+  const gate = critiqueGate(s?.apiKey, limit, used ?? 0);
 
-  useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(() => {
+    let alive = true;
+    void getTodayCritiqueAttempts().then(
+      (n) => {
+        if (alive) setUsed(n);
+      },
+      () => {
+        if (alive) setUsed(0);
+      },
+    );
+    return () => {
+      alive = false;
+      abortRef.current?.abort();
+    };
+  }, []);
 
   const send = async () => {
-    if (!gate.ok || !props.rubric || !s?.apiKey) return;
+    if (sendingRef.current || used === null || !gate.ok || !props.rubric || !s?.apiKey) return;
+    sendingRef.current = true;
     const ac = new AbortController();
     abortRef.current = ac;
     setPhase({ k: 'waiting' });
     try {
+      // 送る前に試行を数える（失敗・キャンセルでも 1 回。上限はこの回数で見る）
+      const n = await recordCritiqueAttempt();
+      setUsed(n);
+      if (n > Math.max(0, Math.floor(limit))) {
+        setPhase({ k: 'error', kind: 'daily_limit' });
+        return;
+      }
       let image: Blob = props.image;
       try {
         image = await downscaleToWebp(props.image, { maxEdge: 1024 });
@@ -123,12 +125,13 @@ export function CritiqueScreen(props: CritiqueScreenProps) {
       setPhase({ k: 'error', kind: e instanceof CriticError ? e.kind : 'network' });
     } finally {
       abortRef.current = null;
+      sendingRef.current = false;
     }
   };
 
   const cancel = () => abortRef.current?.abort();
 
-  const remaining = Math.max(0, limit - used);
+  const remaining = Math.max(0, limit - (used ?? 0));
 
   return (
     <div class="ls-critique">
@@ -170,7 +173,7 @@ export function CritiqueScreen(props: CritiqueScreenProps) {
               </li>
               <li class="is-no">
                 <span class="ls-sendlist__no" aria-hidden="true">
-                  ✕
+                  <Icon name="close" size={18} />
                 </span>
                 お手本は送りません
               </li>
@@ -182,7 +185,7 @@ export function CritiqueScreen(props: CritiqueScreenProps) {
             )}
             {!gate.ok && gate.reason === 'no_api_key' && (
               <p class="ls-warn" role="status">
-                API キーがまだ設定されていません。設定の「AI 批評」で入れてください。
+                API キーがまだ設定されていません。設定の「AI 批評」で入れましょう。
               </p>
             )}
             {!props.rubric && (
@@ -203,7 +206,7 @@ export function CritiqueScreen(props: CritiqueScreenProps) {
                   設定へ
                 </Button>
               ) : (
-                <Button variant="primary" disabled={!gate.ok || !props.rubric} onClick={() => void send()}>
+                <Button variant="primary" disabled={used === null || !gate.ok || !props.rubric} onClick={() => void send()}>
                   送る
                 </Button>
               )}
@@ -323,9 +326,11 @@ export function CritiqueScreen(props: CritiqueScreenProps) {
             <div class="ls-cfoot">
               <p class="ls-quote">『{phase.view.encourage}』</p>
               <div class="ls-cconfirm__actions">
-                <Button variant="secondary" onClick={() => navigate(href.galleryDetail(props.drawingId))}>
-                  履歴
-                </Button>
+                {props.showHistory && (
+                  <Button variant="secondary" onClick={() => navigate(href.galleryDetail(props.drawingId))}>
+                    履歴
+                  </Button>
+                )}
                 <Button variant="primary" onClick={props.onFinish}>
                   {props.finishLabel ?? 'レッスンを終える'}
                 </Button>

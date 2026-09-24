@@ -80,7 +80,8 @@ function patchS10() {
       log.push(`${lesson.id}: optional: true`);
     }
     const first = lesson.steps.find((s) => s.type === 'read');
-    if (!first || !first.body.startsWith('この技法を選ばない場合は次のユニットへ進んで OK')) {
+    // 冒頭の案内文（2026-09 のレビューで「ヘッダの『この技法は飛ばす』」の案内に書き換え済み）
+    if (!first || !first.body.startsWith('この技法をやらない場合は、ヘッダの「この技法は飛ばす」で')) {
       throw new Error(`${lesson.id}: 最初の read の冒頭文が想定と違います（手で確認してください）`);
     }
   }

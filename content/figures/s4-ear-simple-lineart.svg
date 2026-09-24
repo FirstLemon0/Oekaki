@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M110,130 C220,90 230,330 120,320" stroke-width="3.5"/>
+  <path d="M320,130 C430,90 440,330 330,320" stroke-width="3.5"/>
+  <path d="M340,165 C400,150 405,265 350,270" stroke="currentColor" stroke-width="3"/>
+  <path d="M352,200 Q372,210 360,235" stroke="currentColor" stroke-width="2"/>
+  <path d="M533,150 Q520,210 519,270 L529,280 Q535,330 570,350 Q620,350 630,280"/>
+  <path d="M630,214 C668,200 665,282 632,272" stroke-width="3"/>
+</svg>

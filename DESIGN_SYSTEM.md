@@ -19,11 +19,12 @@
 | `--color-ink-inverse` | #FAF8F3 | 墨地の上の文字 |
 | `--color-accent` | #7BB661 | 若葉。主ボタン地・完了ノード・進捗・トグル ON |
 | `--color-accent-press` | #68A34F | 主ボタン押下 |
-| `--color-accent-text` | #4F8A33 | 若葉の文字（紙の上で 4.5:1 以上） |
+| `--color-accent-text` | #3F7329 | 若葉の文字（紙の上で 4.5:1 以上）。**実装で調整**: 原本 #4F8A33 は紙 3.65:1 だったため、紙 4.95:1・accent-soft 4.78:1 の値へ |
 | `--color-accent-soft` | #E4EFD9 | 選択面・今日達成ピル・ナビ選択 |
 | `--color-accent-on-dark` | #A7D48C | 墨地の上の若葉文字・アイコン |
 | `--color-danger` | #C8553D | 炎アイコン・危険ボタン・警告文字 |
 | `--color-danger-soft` | #F6E3DE | ストリーク危機ピル地 |
+| `--color-danger-text` | #A8452F | **実装で追加**: 小さい危険文字（危機ピル・危険ボタン・警告・点数の下がり）。danger #C8553D は紙 3.79:1 で足りないため。紙 5.14:1・danger-soft 4.77:1。炎アイコン・枠は danger のまま。ダークは #E88A73（surface 4.99:1・danger-soft 4.76:1） |
 | `--color-locked` | #E3DFD5 | ロックノード・門（未開放）・次ステージバナー |
 | `--color-chip` | #F2EFE8 | カード内チップの地（累計・セグメント地） |
 | `--color-mannequin-bg` | #E6E2D8 | ジェスチャーのポーズ人形パネル |
@@ -44,7 +45,7 @@ paper #2A2926 / surface #35332F / canvas #3A3833 / line #4A473F / ink #EDE9E0 / 
 ### 文字
 - `--font-body`: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic', sans-serif（400 / 500 / 700）。見出しも同じ書体。
 - `--font-mono`: 'Azeret Mono', ui-monospace, monospace（400 / 500 / 600）。**数字・カウンター・点数・タイマー・日付・モデルID・API キー・「2/7」などの進捗表記**はすべて mono。
-- Google Fonts: `family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Azeret+Mono:wght@400;500;600&display=swap`
+- 書体ファイルは `public/fonts/` に同梱（オフライン対応、**実装で調整**）。Google Fonts css2（`family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Azeret+Mono:wght@400;500;600&display=swap`）の unicode-range 分割 woff2 をそのまま保存し、`theme.css` 末尾の `@font-face` で読む。OFL 表記は `public/fonts/LICENSE.txt`
 - スケール:
   - `--text-display` 96 / 1.0 mono 500（タイマー）、点数は 120 / 1.0 mono 500（採点シート）、72（部品見本）
   - `--text-num-lg` 40 / 1.0 mono 500、ドリル目標 48 mono 500、モーダル統計 32 mono
@@ -173,3 +174,7 @@ paper #2A2926 / surface #35332F / canvas #3A3833 / line #4A473F / ink #EDE9E0 / 
 - 主ボタンの文字は ink（白にしない）
 - 良い点カードの色は score-good 系（青緑）で、若葉とは分ける
 - ダークでも今回は「描く紙」を暗くする（原本の指定）。将来切替設定を足してもよい
+
+## 実装で調整したこと（レビュー反映 2026-09-24）
+- コントラスト: `--color-accent-text` を #3F7329 に、小さい危険文字用に `--color-danger-text` を追加（§1 表）。12〜14px の注記・補助文字（点数の注記、自己ベスト、カウンター単位、行の説明、XP、枚数・容量、接続テスト、ストレージ注記、批評の注記など）は ink-3 から ink-2 へ。ink-3 はロック状態・アイコン・無効表示にだけ使う。
+- 指の当たり判定 48: 見た目はそのまま、`::after`（または `::before`）で当たり判定を広げる。セグメント 40/36、フィルタピル 40、小ボタン 40（「別の角度」「正面に戻す」など）は上下に、ステッパー 44 は周囲 2px、トグル 56×32 は周囲 8px。スライダーは要素の高さ 48（溝 6 のまま）。

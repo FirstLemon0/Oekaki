@@ -107,7 +107,7 @@
 }
 
 /* 図解（currentColor が効くよう色は color で） */
-.ls-figure { color: var(--color-ink); display: grid; place-items: center; width: 100%; height: 100%; }
+.ls-figure { color: var(--color-ink); display: grid; place-items: center; width: 100%; height: 100%; min-height: 0; overflow: hidden; }
 .ls-figure svg { width: 100%; height: 100%; max-height: 100%; display: block; }
 .ls-figure.is-empty { min-height: 120px; }
 
@@ -265,12 +265,39 @@
   cursor: pointer;
 }
 
-/* カウンター（右上） */
-.ls-counter {
+/* カウンター（右上）。ドリルでは左に点数チップが並ぶ */
+.ls-counterbox {
   position: absolute;
   top: 16px;
   right: 16px;
   z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* 1 本ごとの点数（静かな小表示。タップで採点シート） */
+.ls-scorechip {
+  height: 40px;
+  min-width: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-glass);
+  background: var(--glass);
+  color: var(--color-ink-2);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.ls-scorechip.is-good { box-shadow: inset 0 -3px 0 var(--score-good); }
+.ls-scorechip.is-mid { box-shadow: inset 0 -3px 0 var(--score-mid); }
+/* 採点済みの線のヒート色（描いた線の上に重ねる） */
+.ls-guide__heat line { stroke-width: 3.5; stroke-linecap: round; }
+.ls-guide__heat .is-good { stroke: var(--score-good); }
+.ls-guide__heat .is-mid { stroke: var(--score-mid); }
+.ls-guide__heat .is-bad { stroke: var(--score-bad); }
+.ls-counter {
   height: 40px;
   display: grid;
   place-items: center;
@@ -294,11 +321,14 @@
   transform: translateY(-50%);
   z-index: 4;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 6px;
 }
-.is-left .ls-toolbar-wrap { left: auto; right: 16px; }
+.is-left .ls-toolbar-wrap { left: auto; right: 16px; flex-direction: row-reverse; }
+/* 取っ手（右横 36×48）とその下のグリッド */
+.ls-toolbar__aside { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.is-left .ls-toolbar__aside { align-items: flex-end; }
 .ls-toolbar {
   display: flex;
   flex-direction: column;
@@ -324,8 +354,8 @@
 .ls-tool.is-selected { background: var(--color-accent-soft); border-color: var(--color-accent); }
 .ls-tool:disabled { color: var(--color-dash); cursor: default; }
 .ls-toolbar__handle {
-  width: 48px;
-  height: 36px;
+  width: 36px;
+  height: 48px;
   display: grid;
   place-items: center;
   background: var(--glass);
@@ -333,7 +363,7 @@
   border-radius: 10px;
   cursor: pointer;
 }
-.ls-toolbar__grip { width: 20px; height: 4px; border-radius: 2px; background: var(--color-ink-3); }
+.ls-toolbar__grip { width: 4px; height: 20px; border-radius: 2px; background: var(--color-ink-3); }
 .ls-toolbar__pop-host { position: relative; }
 .ls-pop {
   position: absolute;
@@ -355,9 +385,9 @@
 .ls-gridseg {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 2px;
-  padding: 3px;
+  padding: 4px;
   background: var(--glass);
   border: 1px solid var(--glass-line);
   border-radius: 10px;
@@ -374,7 +404,8 @@
   font-size: 13px;
   cursor: pointer;
 }
-.ls-gridseg__item.is-selected { background: var(--color-ink); color: var(--color-ink-inverse); }
+.ls-gridseg__item.is-selected { background: var(--color-ink); color: var(--color-ink-inverse); font-weight: 500; }
+.ls-gridseg__label { font-size: 10px; color: var(--color-ink-3); text-align: center; padding: 4px 0 2px; }
 
 /* ペンのみ（左下） */
 .ls-penonly {
@@ -393,6 +424,10 @@
   pointer-events: none;
 }
 :root[data-theme="dark"] .ls-penonly { background: var(--glass); }
+/* 「端末に合わせる」（data-theme なし）で OS がダークのときも同じ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ls-penonly { background: var(--glass); }
+}
 .is-left .ls-penonly { left: auto; right: 16px; }
 
 /* 完了（右下。左利きは左下） */
@@ -406,6 +441,21 @@
   gap: var(--sp-3);
 }
 .is-left .ls-canvas__actions { right: auto; left: 16px; flex-direction: row-reverse; }
+/* 保存の失敗など（完了ボタンの横。描画中はトーストを出さない） */
+.ls-canvas__error {
+  margin: 0;
+  max-width: 360px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.ls-sheet__error { margin: 0 auto 0 0; color: var(--color-danger); font-size: 13px; line-height: 1.6; max-width: 520px; }
+/* ジェスチャー: ポインターを追うだけの枠（レイアウトには影響させない） */
+.ls-gesture-track { display: contents; }
 .ls-donebtn {
   height: 56px;
   display: inline-flex;
@@ -695,6 +745,21 @@
 .ls-scrim { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: var(--scrim); }
 .ls-scrim--deep { background: var(--scrim-strong); }
 .ls-scrim--clear { background: transparent; z-index: 60; }
+/* 完了の記録に失敗したとき */
+.ls-finerr {
+  max-width: 520px;
+  padding: var(--sp-5) var(--sp-6);
+  border-radius: 16px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.ls-finerr__text { margin: 0; font-size: 15px; line-height: 1.8; color: var(--color-ink); }
+.ls-finerr__actions { display: flex; gap: var(--sp-3); justify-content: flex-end; flex-wrap: wrap; }
+/* 完了モーダル: 追加ドリルの選択 */
+.ls-morechoice { display: flex; gap: var(--sp-3); justify-content: flex-start; flex-wrap: wrap; margin-top: var(--sp-3); }
 .ls-modal {
   background: var(--color-surface);
   border-radius: var(--radius-modal);
@@ -729,6 +794,7 @@
 .ls-done__title { font-size: 28px; font-weight: 700; margin: 0; }
 .ls-done__meta { font-size: 16px; color: var(--color-ink-2); margin: var(--sp-2) 0 var(--sp-5); }
 .ls-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3); }
+.ls-stats.is-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .ls-stat { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; background: var(--color-chip); border: 1px solid transparent; border-radius: 12px; }
 .ls-stat.is-up { background: var(--color-accent-soft); border-color: var(--color-accent); }
 .ls-stat__label { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; color: var(--color-ink-2); }
@@ -826,10 +892,9 @@
   }
   .ls-toolbar { flex-direction: row; }
   .ls-toolbar__sep { width: 1px; height: auto; margin: 6px 4px; }
-  .ls-toolbar__handle { width: 36px; height: 48px; }
-  .ls-toolbar__grip { width: 4px; height: 20px; }
-  .ls-gridseg { flex-direction: row; }
-  .ls-gridseg__item { min-width: 44px; }
+  /* 取っ手は右横、グリッドはその下に縦（横に並べるとカウンターに重なる） */
+  .ls-toolbar__aside, .is-left .ls-toolbar__aside { flex-direction: column; align-items: flex-start; }
+  .ls-gridseg__item { min-width: 56px; height: 32px; }
   .ls-pop, .is-left .ls-pop { top: calc(100% + 12px); left: 0; right: auto; }
   .ls-task { top: 92px; max-width: calc(100% - 32px); }
   .ls-canvas__center { top: 84px; }

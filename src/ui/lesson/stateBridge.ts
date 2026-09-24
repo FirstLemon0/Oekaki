@@ -23,7 +23,8 @@ import type { Lesson } from '@/content/schema';
 import { completedIds, counters, critiques, drillStats, nextNode, path, profile, progress, reloadData, saveProfile, streak, uiPrefs } from '../state';
 import { baselineToRecord, scorersFor } from './limits';
 import type { Baseline } from '@/scoring';
-import { buildPlaySteps, nextAfterSkip, stepCounterBump, type PlayStep } from './steps';
+import { buildPlaySteps, elapsedMinutes, nextAfterSkip, stepCounterBump, type PlayStep } from './steps';
+import { todayLocalDate } from '@/data/date';
 import type { Step } from '@/content/schema';
 import type { DueReview } from '@/data/review';
 
@@ -53,25 +54,47 @@ export interface LessonSession {
   drawingIds: string[];
   /** 何かの採点（なぞり等）の点数。レッスンの lastScore に使う */
   otherScores: number[];
+  /** 済ませた復習（先頭に差し込んだウォームアップ）の数。URL の番号には含めない */
+  warmupsDone: number;
+  /** 完了の記録の進み具合（失敗して押し直したときに二重に記録しないため） */
+  finish: { streakBefore: number | null; lessonDone: boolean; streakAfter: number | null; completedBumped: boolean };
 }
 
 const sessions = new Map<string, LessonSession>();
 
-/** レッスンのセッションを取る。無ければ作る（ステップ 0 から始めるときだけ復習を差し込む） */
-export function getLessonSession(lesson: Lesson, due: readonly DueReview[], startingAt: number): LessonSession {
-  const found = sessions.get(lesson.id);
-  if (found) return found;
-  const s: LessonSession = {
+function newSession(lesson: Lesson, due: readonly DueReview[], withWarmup: boolean): LessonSession {
+  return {
     lessonId: lesson.id,
-    steps: buildPlaySteps(lesson, due, startingAt === 0),
+    steps: buildPlaySteps(lesson, due, withWarmup),
     startedAt: Date.now(),
     drillScores: [],
     counterDelta: {},
     drawingIds: [],
     otherScores: [],
+    warmupsDone: 0,
+    finish: { streakBefore: null, lessonDone: false, streakAfter: null, completedBumped: false },
   };
+}
+
+/** レッスンのセッションを取る。無ければ作る（ステップ 0 から始めるときだけ復習を差し込む） */
+export function getLessonSession(lesson: Lesson, due: readonly DueReview[], startingAt: number): LessonSession {
+  const found = sessions.get(lesson.id);
+  if (found) return found;
+  const s = newSession(lesson, due, startingAt === 0);
   sessions.set(lesson.id, s);
   return s;
+}
+
+/** セッションを必ず作り直す（「最初から」「続きから」。前回の点数・絵・開始時刻を持ち越さない） */
+export function resetLessonSession(lesson: Lesson, due: readonly DueReview[], withWarmup: boolean): LessonSession {
+  const s = newSession(lesson, due, withWarmup);
+  sessions.set(lesson.id, s);
+  return s;
+}
+
+/** 今あるセッション（テスト・確認用） */
+export function peekLessonSession(lessonId: string): LessonSession | undefined {
+  return sessions.get(lessonId);
 }
 
 export function endLessonSession(lessonId: string): void {
@@ -85,6 +108,17 @@ export function endLessonSession(lessonId: string): void {
 export async function recordDrillScore(drillType: string, score: number): Promise<void> {
   const next = await recordDrill(drillType, score);
   drillStats.value = [...drillStats.value.filter((d) => d.drillType !== drillType), next];
+}
+
+/**
+ * ドリルを終えたときに、確定した点数だけを履歴へ入れる（「もう一回」でやり直した点数は入れない）。
+ * progress.done は記録済みの数。途中で失敗して押し直したとき、同じ点数を二重に入れない。
+ */
+export async function recordDrillScores(drillType: string, scores: readonly number[], progress: { done: number }): Promise<void> {
+  while (progress.done < scores.length) {
+    await recordDrillScore(drillType, scores[progress.done]!);
+    progress.done += 1;
+  }
 }
 
 export async function bump(kind: CounterKind, n = 1, session?: LessonSession): Promise<void> {
@@ -146,6 +180,20 @@ export async function storeCritique(drawingId: string, r: CritiqueResult): Promi
     createdAt: r.at,
   });
   critiques.value = await listCritiques();
+}
+
+/**
+ * Before / After の絵として記録する（profile の beforeDrawingId / afterDrawingId）。
+ * 月次の描き直しも 'after' で同じ経路を通る。
+ */
+export async function markBeforeAfter(drawingId: string, save: 'before' | 'after'): Promise<void> {
+  if (save === 'before') await saveProfile({ beforeDrawingId: drawingId, beforeCreatedAt: todayLocalDate() });
+  else await saveProfile({ afterDrawingId: drawingId });
+}
+
+/** 自由ステップ・自由お絵描きの保存の種別 */
+export function freeDrawingKind(save: 'before' | 'after' | undefined): DrawingKind {
+  return save ?? 'free';
 }
 
 /** 自由お絵描き: 5 分以上ならストリークに数える */
@@ -214,43 +262,58 @@ export interface LessonSummary {
   /** 卒業課題の絵（ステージ修了モーダル用） */
   lastDrawingId: string | null;
   elapsedMin: number;
+  /** 所要分を上限で丸めた（「60分以上」と出す） */
+  elapsedCapped: boolean;
 }
 
 export async function finishLesson(lesson: Lesson, session: LessonSession): Promise<LessonSummary> {
-  const before = streak.value?.current ?? 0;
+  const f = session.finish;
+  if (f.streakBefore === null) f.streakBefore = streak.value?.current ?? 0;
   const scored = [...session.drillScores, ...session.otherScores];
   const avg = scored.length > 0 ? Math.round(scored.reduce((a, b) => a + b, 0) / scored.length) : undefined;
   await pendingStepSave.catch(() => undefined);
-  await completeLesson(lesson.id, avg !== undefined ? { score: avg } : {});
-  const st = await recordActivity();
-  if (session.drawingIds.length > 0 && lesson.kind !== 'lesson') {
+  // 途中で失敗して押し直しても、済んだ記録は繰り返さない（completeLesson の attempts が重ならないように）
+  if (!f.lessonDone) {
+    await completeLesson(lesson.id, avg !== undefined ? { score: avg } : {});
+    f.lessonDone = true;
+  }
+  if (f.streakAfter === null) {
+    const st = await recordActivity();
+    streak.value = st;
+    f.streakAfter = st.current;
+  }
+  if (!f.completedBumped && session.drawingIds.length > 0 && lesson.kind !== 'lesson') {
     await bump('completed', 1, session);
   }
+  f.completedBumped = true;
   await reloadData();
   drillStats.value = await listDrillStats();
 
+  // XP は実際に増えた分（state.totalXp の数え方と同じ: レッスン 1 回＋記録したドリルの点数ぶん）
   const xp =
     xpForEvent(lesson.kind === 'checkpoint' ? 'checkpoint' : lesson.kind === 'graduation' ? 'graduation' : 'lesson') +
     session.drillScores.reduce((a, s) => a + xpForDrillScore(s), 0);
 
   let counter: LessonSummary['counter'] = null;
   for (const [k, n] of Object.entries(session.counterDelta) as [CounterKind, number][]) {
-    if (k === 'completed') continue;
+    if (k === 'completed' || !(n > 0)) continue;
     if (!counter || n > counter.n) counter = { kind: k, n, total: counters.value?.[k] ?? n };
   }
 
   const nx = nextNode.value;
+  const el = elapsedMinutes(session.startedAt, Date.now());
   const summary: LessonSummary = {
     lessonId: lesson.id,
     xp,
-    streakBefore: before,
-    streakAfter: st.current,
+    streakBefore: f.streakBefore,
+    streakAfter: f.streakAfter,
     counter,
     nextTitle: nx ? nx.lesson.title : null,
     nextLessonId: nx ? nx.lesson.id : null,
     graduation: lesson.kind === 'graduation',
     lastDrawingId: session.drawingIds[session.drawingIds.length - 1] ?? null,
-    elapsedMin: Math.max(1, Math.round((Date.now() - session.startedAt) / 60000)),
+    elapsedMin: el.min,
+    elapsedCapped: el.capped,
   };
   endLessonSession(lesson.id);
   return summary;

@@ -1,7 +1,9 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { strToU8, zipSync } from 'fflate';
-import { BACKUP_VERSION, exportBackup, importBackup } from './backup';
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
+import { BACKUP_VERSION, exportBackup, exportBackupBlob, importBackup } from './backup';
+import { sniffImageType } from './images';
+import { todayLocalDate } from './date';
 import { openDb, SINGLETON_KEY } from './db';
 import {
   bumpCounter,
@@ -12,6 +14,8 @@ import {
   saveDrawing,
   saveReference,
   setLessonStep,
+  getSettings,
+  recordCritiqueAttempt,
   updateProfile,
   updateSettings,
 } from './repo';
@@ -152,7 +156,9 @@ describe('backup export/import(replace)', () => {
     expect(critiquesAfter).toEqual(critiquesBefore);
     expect(streakAfter).toEqual(streakBefore);
     expect(countersAfter).toEqual(countersBefore);
-    expect(settingsAfter).toEqual(settingsBefore);
+    // API キーは zip に入らないので、空の端末に復元すると null になる（それ以外は一致）
+    expect(settingsBefore?.apiKey).toBe('sk-test');
+    expect(settingsAfter).toEqual({ ...settingsBefore, apiKey: null });
 
     // drawings / references は Blob を含むので、メタデータと画像内容を分けて比較
     const compareWithImages = async <T extends { id: string; image: Blob }>(
@@ -272,7 +278,7 @@ describe('backup import(merge)', () => {
   });
 
   it('バックアップ側が新しければバックアップの内容が勝つ', async () => {
-    await updateSettings({ apiKey: 'old-key' });
+    await updateSettings({ dailyCritiqueLimit: 7 });
     await new Promise((r) => setTimeout(r, 2));
     const bytesNewer = await exportBackup();
 
@@ -283,6 +289,198 @@ describe('backup import(merge)', () => {
 
     const db = await openDb();
     const settings = await db.get('settings', SINGLETON_KEY);
-    expect(settings?.apiKey).toBe('old-key');
+    expect(settings?.dailyCritiqueLimit).toBe(7);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// API キー・lastBackupAt・試行回数
+// ---------------------------------------------------------------------------
+
+/** zip の JSON を書き換えた zip を作る（テスト用） */
+function patchZipJson(bytes: Uint8Array, path: string, patch: Record<string, unknown>): Uint8Array {
+  const files = unzipSync(bytes);
+  const v = JSON.parse(strFromU8(files[path]!)) as Record<string, unknown>;
+  files[path] = strToU8(JSON.stringify({ ...v, ...patch }));
+  return zipSync(files);
+}
+
+describe('backup: API キーは zip に入れず、読み込みでは端末側を残す', () => {
+  it('書き出した settings.json の apiKey は null', async () => {
+    await updateSettings({ apiKey: 'sk-secret' });
+    const files = unzipSync(await exportBackup());
+    const settings = JSON.parse(strFromU8(files['data/settings.json']!)) as { apiKey: unknown };
+    expect(settings.apiKey).toBeNull();
+    expect(strFromU8(files['data/settings.json']!)).not.toContain('sk-secret');
+  });
+
+  it('replace: zip に（旧形式で）キーが入っていても、端末側のキーを残す', async () => {
+    const zip = patchZipJson(await exportBackup(), 'data/settings.json', { apiKey: 'sk-from-zip' });
+    await updateSettings({ apiKey: 'sk-device' });
+    await importBackup(zip, 'replace');
+    expect((await getSettings()).apiKey).toBe('sk-device');
+  });
+
+  it('replace: 端末にキーが無ければ null（zip のキーは使わない）', async () => {
+    const zip = patchZipJson(await exportBackup(), 'data/settings.json', { apiKey: 'sk-from-zip' });
+    await clearAllStores();
+    await importBackup(zip, 'replace');
+    expect((await getSettings()).apiKey).toBeNull();
+  });
+
+  it('merge: zip 側の設定が新しくても、端末側のキーを残す', async () => {
+    await updateSettings({ apiKey: 'sk-device', dailyCritiqueLimit: 1 });
+    const zip = patchZipJson(await exportBackup(), 'data/settings.json', {
+      apiKey: 'sk-from-zip',
+      dailyCritiqueLimit: 9,
+      updatedAt: '2999-01-01T00:00:00.000Z',
+    });
+    await importBackup(zip, 'merge');
+    const s = await getSettings();
+    expect(s.dailyCritiqueLimit).toBe(9);
+    expect(s.apiKey).toBe('sk-device');
+  });
+});
+
+describe('backup: lastBackupAt', () => {
+  it('端末側の方が新しければ端末側を残す（replace / merge）', async () => {
+    for (const mode of ['replace', 'merge'] as const) {
+      await clearAllStores();
+      await updateSettings({ lastBackupAt: '2026-01-01T00:00:00.000Z' });
+      const zip = await exportBackup();
+      await updateSettings({ lastBackupAt: '2026-02-01T00:00:00.000Z' });
+      await importBackup(patchZipJson(zip, 'data/settings.json', { updatedAt: '2999-01-01T00:00:00.000Z' }), mode);
+      expect((await getSettings()).lastBackupAt).toBe('2026-02-01T00:00:00.000Z');
+    }
+  });
+
+  it('zip 側の方が新しければ zip 側', async () => {
+    await updateSettings({ lastBackupAt: '2026-03-01T00:00:00.000Z' });
+    const zip = await exportBackup();
+    await updateSettings({ lastBackupAt: '2026-01-01T00:00:00.000Z' });
+    await importBackup(zip, 'replace');
+    expect((await getSettings()).lastBackupAt).toBe('2026-03-01T00:00:00.000Z');
+  });
+});
+
+describe('backup: AI 批評の試行回数', () => {
+  it('往復で残り、読み込みでは日ごとに多い方を残す', async () => {
+    const day = todayLocalDate();
+    await recordCritiqueAttempt(day);
+    const zip = await exportBackup(); // 今日 1 回
+    await recordCritiqueAttempt(day);
+    await recordCritiqueAttempt(day); // 端末は今日 3 回
+    await importBackup(zip, 'replace');
+    const db = await openDb();
+    expect((await db.get('profile', SINGLETON_KEY))?.critiqueAttemptsByDay[day]).toBe(3);
+
+    await clearAllStores();
+    await importBackup(zip, 'replace');
+    expect((await db.get('profile', SINGLETON_KEY))?.critiqueAttemptsByDay[day]).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 画像の型
+// ---------------------------------------------------------------------------
+
+const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 1, 2, 3]);
+const WEBP_BYTES = new Uint8Array([0x52, 0x49, 0x46, 0x46, 8, 0, 0, 0, 0x57, 0x45, 0x42, 0x50, 9, 9]);
+
+describe('sniffImageType', () => {
+  it('先頭バイトで判定する', () => {
+    expect(sniffImageType(PNG_BYTES)).toBe('image/png');
+    expect(sniffImageType(WEBP_BYTES)).toBe('image/webp');
+    expect(sniffImageType(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))).toBe('image/jpeg');
+    expect(sniffImageType(strToU8('GIF89a...'))).toBe('image/gif');
+    expect(sniffImageType(strToU8('RIFF....WAVE'))).toBeNull();
+    expect(sniffImageType(new Uint8Array([0x89, 0x50]))).toBeNull();
+    expect(sniffImageType(new Uint8Array())).toBeNull();
+  });
+});
+
+describe('backup: 画像の型', () => {
+  it('PNG にフォールバックした絵は .png で書き出し、image/png で戻す（type が webp と誤っていても）', async () => {
+    await saveDrawing({ id: 'png-1', kind: 'free', image: new Blob([PNG_BYTES], { type: 'image/webp' }) });
+    await saveDrawing({ id: 'webp-1', kind: 'free', image: new Blob([WEBP_BYTES], { type: 'image/webp' }) });
+    const zip = await exportBackup();
+    const names = Object.keys(unzipSync(zip));
+    expect(names).toContain('images/drawing/png-1.png');
+    expect(names).toContain('images/drawing/webp-1.webp');
+
+    await clearAllStores();
+    await importBackup(zip, 'replace');
+    const db = await openDb();
+    const png = await db.get('drawings', 'png-1');
+    const webpImg = await db.get('drawings', 'webp-1');
+    expect(png?.image.type).toBe('image/png');
+    expect(new Uint8Array(await png!.image.arrayBuffer())).toEqual(PNG_BYTES);
+    expect(webpImg?.image.type).toBe('image/webp');
+    expect(new Uint8Array(await webpImg!.image.arrayBuffer())).toEqual(WEBP_BYTES);
+  });
+
+  it('旧 zip（PNG の中身でも .webp 名・deflate 圧縮）も読め、型は中身で決める', async () => {
+    await saveDrawing({ id: 'old-png', kind: 'free', image: new Blob([PNG_BYTES], { type: 'image/png' }) });
+    await saveReference({ id: 'old-ref', image: new Blob([WEBP_BYTES], { type: 'image/webp' }) });
+    const files = unzipSync(await exportBackup());
+    const legacy: Record<string, Uint8Array> = {};
+    for (const [name, data] of Object.entries(files)) {
+      legacy[name.replace(/\.(png|webp)$/, '.webp')] = data; // 旧形式は全部 .webp
+    }
+    expect(Object.keys(legacy)).toContain('images/drawing/old-png.webp');
+    const zip = zipSync(legacy); // 旧形式と同じく全エントリ deflate
+
+    await clearAllStores();
+    await importBackup(zip, 'replace');
+    const db = await openDb();
+    const d = await db.get('drawings', 'old-png');
+    expect(d?.image.type).toBe('image/png');
+    expect(new Uint8Array(await d!.image.arrayBuffer())).toEqual(PNG_BYTES);
+    expect((await db.get('references', 'old-ref'))?.image.type).toBe('image/webp');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ストリーミング（多数の画像）
+// ---------------------------------------------------------------------------
+
+describe('backup: 多数の画像を往復できる', () => {
+  it('200 枚の小画像を Blob で書き出し、Blob（File 相当）から読み戻せる', async () => {
+    const N = 200;
+    const imgBytes = (i: number) => {
+      const b = new Uint8Array(64 + (i % 17));
+      b.set(i % 2 === 0 ? WEBP_BYTES : PNG_BYTES);
+      for (let k = 16; k < b.length; k++) b[k] = (i * 31 + k) & 0xff;
+      return b;
+    };
+    for (let i = 0; i < N; i++) {
+      await saveDrawing({ id: `d-${i}`, kind: 'drill', image: new Blob([imgBytes(i)], { type: 'image/webp' }) });
+    }
+    for (let i = 0; i < 5; i++) {
+      await saveReference({ id: `r-${i}`, image: new Blob([imgBytes(i + 1)], { type: 'image/png' }) });
+    }
+
+    const zipBlob = await exportBackupBlob();
+    expect(zipBlob.type).toBe('application/zip');
+    // 一般的な zip としても読める（中央ディレクトリ・データディスクリプタが正しい）
+    const names = Object.keys(unzipSync(new Uint8Array(await zipBlob.arrayBuffer())));
+    expect(names.filter((n) => n.startsWith('images/drawing/'))).toHaveLength(N);
+
+    await clearAllStores();
+    await importBackup(zipBlob, 'replace');
+
+    const db = await openDb();
+    const drawings = await db.getAll('drawings');
+    expect(drawings).toHaveLength(N);
+    for (let i = 0; i < N; i++) {
+      const d = drawings.find((x) => x.id === `d-${i}`)!;
+      expect(d.image.type).toBe(i % 2 === 0 ? 'image/webp' : 'image/png');
+      expect(new Uint8Array(await d.image.arrayBuffer())).toEqual(imgBytes(i));
+    }
+    expect(await db.getAll('references')).toHaveLength(5);
+  });
+
+  it('zip でないものは分かる言葉で失敗する', async () => {
+    await expect(importBackup(strToU8('not a zip at all, definitely not'), 'replace')).rejects.toThrow(/zip/);
   });
 });

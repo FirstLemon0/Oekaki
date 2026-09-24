@@ -69,9 +69,38 @@ describe('dueReviews', () => {
   it('両方の条件を満たせば両方の理由が入る', () => {
     const s = stat({
       bestScore: 100,
-      history: [{ at: '2026-01-01T00:00:00.000Z', score: 50 }],
+      history: [
+        { at: '2025-12-30T03:00:00.000Z', score: 50 },
+        { at: '2025-12-31T03:00:00.000Z', score: 50 },
+        { at: '2026-01-01T03:00:00.000Z', score: 50 },
+      ],
     });
     const result = dueReviews([s], '2026-01-20');
     expect(result[0]?.reasons.sort()).toEqual(['scoreDrop', 'stale']);
+  });
+
+  it('履歴が 3 件未満なら scoreDrop は判定しない', () => {
+    const s = stat({
+      bestScore: 100,
+      history: [
+        { at: '2026-01-10T03:00:00.000Z', score: 100 },
+        { at: '2026-01-11T03:00:00.000Z', score: 20 },
+      ],
+    });
+    expect(dueReviews([s], '2026-01-12')).toEqual([]);
+    // 3 件目がそろえば判定する（(100+20+30)/3 = 50 < 80）
+    const s3 = stat({ ...s, history: [...s.history, { at: '2026-01-12T03:00:00.000Z', score: 30 }] });
+    expect(dueReviews([s3], '2026-01-12')[0]?.reasons).toEqual(['scoreDrop']);
+  });
+
+  it('最終実施日は UTC ではなく端末ローカルの暦日で数える', () => {
+    // 端末ローカルで 1/2 00:30 に記録（UTC より東のタイムゾーンでは ISO の先頭が 1/1 になる）
+    const at = new Date(2026, 0, 2, 0, 30).toISOString();
+    const s = stat({ bestScore: 50, history: [{ at, score: 50 }] });
+    // ローカル 1/2 → 1/16 はちょうど 14 日
+    const r = dueReviews([s], '2026-01-16');
+    expect(r[0]?.daysSinceLast).toBe(14);
+    // 1/15 なら 13 日で、まだ stale ではない
+    expect(dueReviews([s], '2026-01-15')).toEqual([]);
   });
 });

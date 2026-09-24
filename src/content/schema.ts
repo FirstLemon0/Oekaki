@@ -165,6 +165,8 @@ const QuizStepSchema = z
 const MoshaStepSchema = z.object({
   type: z.literal('mosha'),
   instruction: z.string().min(1),
+  /** 内蔵お手本（content/figures/<id>.svg）。無ければユーザーの取込画像を使う */
+  refId: z.string().min(1).optional(),
 });
 
 const CritiqueStepSchema = z.object({
@@ -185,6 +187,13 @@ const SubmitStepSchema = z.object({
 const FreeStepSchema = z.object({
   type: z.literal('free'),
   instruction: z.string().min(1).optional(),
+  /** 'canvas'（既定）はアプリ内キャンバスで描く。'import' は外部アプリで描いた画像を取り込む */
+  source: z.enum(['canvas', 'import']).optional(),
+  /**
+   * 保存の扱い。'before' は最初の 1 枚（profile.beforeDrawingId）、'after' は描き直し（月次/最終）。
+   * 未指定は通常の自由お絵描き（kind 'free'）として保存する
+   */
+  save: z.enum(['before', 'after']).optional(),
 });
 
 export const StepSchema = z.discriminatedUnion('type', [

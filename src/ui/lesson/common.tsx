@@ -12,6 +12,48 @@ import { useObjectUrls } from '../useObjectUrl';
 import { loadFigure } from './figures';
 import { LsIcon } from './LsIcon';
 
+/** 保存に失敗したときの既定の案内（描画中はトーストを出さないので、画面の中に出す） */
+export const SAVE_FAILED = '保存できませんでした。端末の空き容量を確かめて、もう一度押してみましょう。';
+
+/**
+ * 保存などの処理中フラグ。入口を ref で止めるので、保存待ちの間に 2 回押されても 1 回しか走らない。
+ * 失敗したら error に案内を入れ、押し直せるように戻す。run は成功したら true。
+ */
+export function useBusy(): {
+  busy: boolean;
+  error: string | null;
+  run: (fn: () => Promise<void>, failText?: string) => Promise<boolean>;
+  clearError: () => void;
+} {
+  const ref = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const alive = useRef(true);
+  useEffect(
+    () => () => {
+      alive.current = false;
+    },
+    [],
+  );
+  const run = async (fn: () => Promise<void>, failText = SAVE_FAILED): Promise<boolean> => {
+    if (ref.current) return false;
+    ref.current = true;
+    setBusy(true);
+    setError(null);
+    try {
+      await fn();
+      return true;
+    } catch {
+      if (alive.current) setError(failText);
+      return false;
+    } finally {
+      ref.current = false;
+      if (alive.current) setBusy(false);
+    }
+  };
+  return { busy, error, run, clearError: () => setError(null) };
+}
+
 /** 画面ごとに 1 つのエンジン（アンマウントで detach は CanvasView が行う） */
 export function useEngine(): CanvasEngine {
   return useMemo(() => createCanvasEngine(), []);
@@ -107,6 +149,7 @@ export function ReferencePicker({ onPick, title = 'お手本を選ぶ' }: { onPi
     void listReferences().then((r) => setRefs([...r].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))));
   }, []);
   const urls = useObjectUrls(refs ?? []);
+  const [failed, setFailed] = useState(false);
   return (
     <div class="ls-refpick">
       <h3 class="ls-refpick__title">{title}</h3>
@@ -123,10 +166,16 @@ export function ReferencePicker({ onPick, title = 'お手本を選ぶ' }: { onPi
           ))}
         </ul>
       )}
+      {failed && (
+        <p class="ls-warn" role="alert">
+          取り込めませんでした。別の画像で試しましょう。
+        </p>
+      )}
       <ImportButton
         variant={refs && refs.length > 0 ? 'secondary' : 'primary'}
         onFile={(f) => {
-          void importReference(f).then(onPick);
+          setFailed(false);
+          void importReference(f).then(onPick, () => setFailed(true));
         }}
       />
     </div>

@@ -35,6 +35,27 @@ describe('streak', () => {
     expect(s.longest).toBe(2); // 最長記録は保持される
   });
 
+  it('リセットすると次のフリーズ獲得の閾値（nextFreezeAt）も 7 に戻る', () => {
+    let s = createInitialStreak(T);
+    // 14 日連続でフリーズ 2 個獲得（nextFreezeAt は 21 へ）
+    for (let d = 1; d <= 14; d++) s = applyActivity(s, `2026-01-${String(d).padStart(2, '0')}`);
+    expect(s.freezes).toBe(2);
+    expect(s.nextFreezeAt).toBe(21);
+    // 2 回飛ばしてフリーズを使い切る
+    s = applyActivity(s, '2026-01-16');
+    s = applyActivity(s, '2026-01-18');
+    expect(s.freezes).toBe(0);
+    // 3 回目の空白でリセット
+    s = applyActivity(s, '2026-01-20');
+    expect(s.current).toBe(1);
+    expect(s.nextFreezeAt).toBe(7);
+    // 7 日続ければまた 1 個もらえる
+    for (let d = 21; d <= 26; d++) s = applyActivity(s, `2026-01-${d}`);
+    expect(s.current).toBe(7);
+    expect(s.freezes).toBe(1);
+    expect(s.nextFreezeAt).toBe(14);
+  });
+
   it('フリーズを持っていれば2日以上飛んでも継続し、フリーズを1個消費する', () => {
     let s = createInitialStreak(T);
     // 7日連続でフリーズを1個獲得させる

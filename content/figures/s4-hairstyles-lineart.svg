@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M35.16,190 Q40.599999999999994,275 95,300 Q149.4,275 154.84,190" stroke-width="1.5"/>
+  <path d="M19,205 Q9,97 95,91 Q181,97 171,205" stroke-width="3"/>
+  <path d="M35,170 L52,145 L65,180 L80,140 L100,183 L115,140 L135,177 L143,143 L155,170" stroke-width="2.5"/>
+  <path d="M215.16,190 Q220.6,275 275,300 Q329.4,275 334.84000000000003,190" stroke-width="1.5"/>
+  <path d="M189,280 Q182,97 275,91 Q368,97 361,280 Q333,293 321,270 M189,280 Q217,293 229,270" stroke-width="3"/>
+  <path d="M215,170 L232,145 L245,180 L260,140 L280,183 L295,140 L315,177 L323,143 L335,170" stroke-width="2.5"/>
+  <path d="M410.15999999999997,190 Q415.6,275 470,300 Q524.4,275 529.84,190" stroke-width="1.5"/>
+  <path d="M382,420 Q377,97 470,91 Q563,97 558,420 M382,420 Q407,405 417,285 M558,420 Q533,405 523,285" stroke-width="3"/>
+  <path d="M410,170 L427,145 L440,180 L455,140 L475,183 L490,140 L510,177 L518,143 L530,170" stroke-width="2.5"/>
+  <path d="M595.16,190 Q600.6,275 655,300 Q709.4,275 714.84,190" stroke-width="1.5"/>
+  <path d="M581,205 Q575,99 655,95 Q735,99 729,205" stroke-width="3"/>
+  <path d="M718,135 Q753,115 758,155 Q773,265 738,375 Q733,265 718,155" stroke-width="3" stroke="currentColor"/>
+  <ellipse cx="735" cy="137" rx="9" ry="12" transform="rotate(20 735 137)" stroke-width="2"/>
+  <path d="M595,170 L612,145 L625,180 L640,140 L660,183 L675,140 L695,177 L703,143 L715,170" stroke-width="2.5"/>
+</svg>
