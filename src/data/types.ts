@@ -112,6 +112,8 @@ export interface CritiqueIssue {
   what: string;
   /** どう直す */
   how: string;
+  /** 絵の上での位置（左上原点、0..1）。批評モデルが返した場合のみ。 */
+  pos?: { x: number; y: number };
 }
 
 /** DESIGN.md §5.2 の B（AI画像批評）応答スキーマ。数値スコアは含めない。 */

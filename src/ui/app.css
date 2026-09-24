@@ -139,12 +139,21 @@
 .path-unit {
   position: absolute;
   left: 0;
-  max-width: 120px;
+  max-width: 132px;
   font-size: var(--text-label);
   font-weight: 500;
   letter-spacing: 0.04em;
   line-height: 1.5;
   color: var(--color-ink-2);
+}
+
+.path-unit__note {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--color-ink-3);
 }
 
 /* ノードの列（幅 120、ノード中心がパスの点に来る） */
@@ -201,6 +210,23 @@
   border: var(--border-node) solid var(--color-accent);
   animation: stPulse 1.8s ease-out infinite;
   pointer-events: none;
+}
+/* 飛ばした（選択式を「飛ばす」で完了扱い）: 完了と同じ位置づけ、塗りは accent-soft。タップで再挑戦 */
+.node--done.node--skipped { background: var(--color-accent-soft); border: 2px solid var(--color-accent); color: var(--color-accent-text); }
+/* 任意（選択式）: 薄い枠 */
+.node--optional:not(.node--done) { box-shadow: 0 0 0 2px var(--color-paper), 0 0 0 3.5px var(--color-dash); }
+.node--optional.node--today { box-shadow: none; border-style: dashed; }
+.node--optional.node--today::before { border-style: dashed; }
+.pnode__optional {
+  margin-left: 4px;
+  padding: 0 5px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--color-ink-2);
+  vertical-align: 1px;
 }
 /* ロック 64 ／ 明日（今日の分は済んだ） */
 .node--locked, .node--tomorrow { background: var(--color-locked); color: var(--color-ink-3); cursor: default; }
@@ -317,6 +343,9 @@
 .today__actions--risk > .btn { min-height: 56px; }
 .today__actions--risk > .btn--primary { flex: 2; }
 .btn--secondary.btn--on-ink { background: transparent; color: var(--color-on-sumi); border-color: var(--on-ink-line); }
+.btn--secondary.btn--on-ink:disabled,
+.btn--secondary.btn--on-ink[aria-disabled="true"] { background: transparent; color: var(--color-on-sumi); border-color: var(--on-ink-track); opacity: 0.45; }
+.today__reason { margin-top: var(--sp-2); font-size: var(--text-label); line-height: 1.4; text-align: right; opacity: 0.7; }
 
 .free-btn {
   display: flex;
@@ -385,6 +414,7 @@
   .today__meta { margin-top: 4px; font-size: 0.8125rem; }
   .today__meta--body { display: none; }
   .today__actions > .btn { flex: none; }
+  .today > .today__reason { grid-column: 2; grid-row: 4; margin-top: 6px; }
 
   /* 累計: 横スクロールのチップ（56 高 min-width 128） */
   .counters-card { background: none; border: 0; padding: 0; }
@@ -593,7 +623,22 @@
   max-height: 72vh;
   min-height: 50vh;
 }
+.detail__image { position: relative; }
+.detail__frame { position: relative; max-width: 100%; }
 .detail__image img { max-width: 100%; max-height: 72vh; object-fit: contain; display: block; }
+/* 再生面: 画像の表示範囲にぴったり重ねる。入力は受けない */
+.replay { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.replay__host { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.detail__replaying {
+  position: absolute;
+  right: var(--sp-3);
+  bottom: var(--sp-3);
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--tile-chip);
+  color: var(--color-on-sumi);
+  font-size: var(--text-label);
+}
 .detail__hint { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--text-small); color: var(--color-ink-3); }
 
 .critique { display: flex; flex-direction: column; gap: var(--sp-3); }

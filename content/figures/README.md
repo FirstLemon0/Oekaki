@@ -4,6 +4,13 @@
 `figure`、`copy`（`reference: "builtin"`）の `refId` は、この `content/figures/`
 配下の SVG ファイルの **id**（拡張子抜きのファイル名）を指定する。
 
+## 登録
+
+登録作業は不要。`src/ui/lesson/figures.ts` が `import.meta.glob`（`?raw`・遅延読み込み）で
+`content/figures/*.svg` をすべてビルドに同梱する。ファイルを置くだけで id で引ける。
+教材から参照した id のファイルが無いと、画面では図の枠だけが出る（`npx vitest run` の
+教材テストで参照切れを検出する）。
+
 ## ルール（現在の実態）
 
 - ファイル名 = id。例: `figure: "cube-2pt"` なら `content/figures/cube-2pt.svg`。
@@ -12,10 +19,11 @@
 - ルート要素に共通の属性をまとめて付ける:
   `fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif"`
 - **線の色は `currentColor`**。表示側の文字色を継承するので、ダークモードでも
-  そのまま読める。黒・白・グレーの直書きはしない。
+  そのまま読める。黒・白・グレーの直書きはしない。`copy` のお手本をキャンバスに
+  重ねるときは、`currentColor` を重ね用の実色に置き換えて描く。
 - **強調線は `#7BB661`**（アプリのアクセントの緑）。お手本の「ここを見る」線、
   消失点、番号の強調などに使う。1枚の中で強調は少なめに。
-  （ステージ1・1.5 の初期の図には旧色 `#45702A` が残っている。新規は `#7BB661`。）
+  （旧色 `#45702A` は使わない。現在の図にはもう残っていない。）
 - 塗り（陰・落ち影など）は `fill="currentColor"` ＋ `fill-opacity`（0.15〜0.45 程度）
   で濃淡を表す。明・中・暗の3値なら、白（塗りなし）・薄い・濃いで描き分ける。
 - アタリ線（構築線）・見えない辺は `stroke-dasharray="8 8" opacity="0.6"` の点線、

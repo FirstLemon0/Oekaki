@@ -37,6 +37,20 @@ function hasBrowserCanvasApis(): boolean {
 }
 
 /**
+ * EXIF の向きを反映してデコードする。
+ * 一部の端末（古い WebView 等）は既定で EXIF 回転を無視するため `imageOrientation: 'from-image'` を明示する。
+ * その値を知らない実装はオプションを無視するか TypeError を投げるので、投げた場合だけオプションなしで読み直す。
+ */
+async function decodeUpright(blob: Blob): Promise<ImageBitmap> {
+  try {
+    return await createImageBitmap(blob, { imageOrientation: 'from-image' });
+  } catch (e) {
+    if (e instanceof TypeError) return createImageBitmap(blob);
+    throw e;
+  }
+}
+
+/**
  * 画像 Blob を長辺 `maxEdge` px 以内に縮小し、WebP に変換する。
  * DOM（Canvas 系 API）が無い環境（Node/vitest）では例外を投げる。テスト対象外。
  */
@@ -48,7 +62,7 @@ export async function downscaleToWebp(blob: Blob, options: DownscaleOptions = {}
   const maxEdge = options.maxEdge ?? 1024;
   const quality = options.quality ?? 0.85;
 
-  const bitmap = await createImageBitmap(blob);
+  const bitmap = await decodeUpright(blob);
   const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
   const width = Math.max(1, Math.round(bitmap.width * scale));
   const height = Math.max(1, Math.round(bitmap.height * scale));
@@ -71,6 +85,7 @@ export async function downscaleToWebp(blob: Blob, options: DownscaleOptions = {}
     throw new Error('Canvas 2D コンテキストを取得できませんでした。');
   }
   ctx.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close?.();
 
   if (canvas instanceof OffscreenCanvas) {
     return canvas.convertToBlob({ type: 'image/webp', quality });

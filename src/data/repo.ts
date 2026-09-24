@@ -9,7 +9,7 @@
 import { nowIso, todayLocalDate } from './date';
 import { genId } from './id';
 import { openDb, SINGLETON_KEY } from './db';
-import { applyActivity, createInitialStreak } from './streak';
+import { applyActivity, createInitialStreak, useFreezeToday } from './streak';
 import type {
   CalibrationResult,
   CounterKind,
@@ -275,6 +275,25 @@ async function putStreak(streak: Streak): Promise<Streak> {
   const db = await openDb();
   await db.put('streak', streak, SINGLETON_KEY);
   return streak;
+}
+
+/**
+ * ストリークをそのまま保存する（`updatedAt` は保存時刻に更新）。
+ * 通常の活動記録は recordActivity、フリーズの手動使用は applyFreezeToday を使う。
+ */
+export async function saveStreak(streak: Streak): Promise<Streak> {
+  return putStreak({ ...streak, updatedAt: nowIso() });
+}
+
+/**
+ * 「今日はフリーズを使って休む」: 読む → useFreezeToday → 保存 → 返す。
+ * 使えない場合（フリーズ 0、今日すでに活動済み、活動履歴なし）は保存せず null。
+ */
+export async function applyFreezeToday(today: string = todayLocalDate()): Promise<Streak | null> {
+  const current = await getStreak();
+  const next = useFreezeToday(current, today, nowIso());
+  if (!next) return null;
+  return putStreak(next);
 }
 
 /** 今日（既定: 端末ローカルの今日）の活動をストリークに反映して保存する。 */

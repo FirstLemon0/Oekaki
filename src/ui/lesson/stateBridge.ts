@@ -12,18 +12,19 @@ import {
   recordDrill,
   saveCritique,
   saveDrawing,
+  setLessonStep,
 } from '@/data/repo';
-import { openDb } from '@/data/db';
 import { downscaleToWebp } from '@/data/images';
 import { xpForDrillScore, xpForEvent } from '@/data/xp';
-import type { CounterKind, Drawing, DrawingKind, StrokeDrawing } from '@/data/types';
+import type { CounterKind, Drawing, DrawingKind, Progress, StrokeDrawing } from '@/data/types';
 import type { CritiqueResult } from '@/critic';
 import { createCanvasEngine } from '@/canvas';
 import type { Lesson } from '@/content/schema';
-import { counters, critiques, drillStats, nextNode, profile, reloadData, saveProfile, streak, uiPrefs } from '../state';
+import { completedIds, counters, critiques, drillStats, nextNode, path, profile, progress, reloadData, saveProfile, streak, uiPrefs } from '../state';
 import { baselineToRecord, scorersFor } from './limits';
 import type { Baseline } from '@/scoring';
-import { buildPlaySteps, type PlayStep } from './steps';
+import { buildPlaySteps, nextAfterSkip, stepCounterBump, type PlayStep } from './steps';
+import type { Step } from '@/content/schema';
 import type { DueReview } from '@/data/review';
 
 // ---------------------------------------------------------------------------
@@ -122,16 +123,13 @@ export async function saveImported(file: Blob, kind: DrawingKind, lessonId: stri
 }
 
 /**
- * 絵に付加情報（模写の差分マーカー等）を足す。
- * data/types の Drawing に meta 欄は無いので、レコードに `meta` を追加して put する
- * （IndexedDB には残る。backup の zod は未知キーを落とすので往復では消える）。
+ * 絵に付加情報（模写の差分マーカー等）を足す。既存の meta とはキー単位でマージする。
+ * Drawing の正式な `meta` 欄に saveDrawing 経由で書くので、バックアップの往復でも残る。
  */
 export async function saveDrawingMeta(drawingId: string, meta: Record<string, unknown>): Promise<void> {
   const d = await getDrawing(drawingId);
   if (!d) return;
-  const db = await openDb();
-  const withMeta = { ...d, meta, updatedAt: new Date().toISOString() } as Drawing & { meta: Record<string, unknown> };
-  await db.put('drawings', withMeta);
+  await saveDrawing({ ...d, meta: { ...(d.meta ?? {}), ...meta } });
 }
 
 export async function storeCritique(drawingId: string, r: CritiqueResult): Promise<void> {
@@ -139,7 +137,8 @@ export async function storeCritique(drawingId: string, r: CritiqueResult): Promi
     drawingId,
     response: {
       good: r.good,
-      issues: r.issues.map((i) => ({ where: i.where, what: i.what, how: i.fix })),
+      // pos は「保存した（切り詰め後の）絵の左上原点 0..1」。番号マーカーの位置に使う
+      issues: r.issues.map((i) => ({ where: i.where, what: i.what, how: i.fix, ...(i.pos ? { pos: { x: i.pos.x, y: i.pos.y } } : {}) })),
       next_one: r.next_one,
       encourage: r.encourage,
     },
@@ -156,6 +155,46 @@ export async function recordFreeActivity(elapsedMs: number): Promise<boolean> {
   if (elapsedMs < FREE_MIN_MS) return false;
   streak.value = await recordActivity();
   return true;
+}
+
+/** trace / construct の counter を累計へ（trace は 1 回ぶん、construct は count ぶん） */
+export async function bumpForStep(step: Step, session?: LessonSession): Promise<void> {
+  const b = stepCounterBump(step);
+  if (b) await bump(b.kind, b.n, session);
+}
+
+// ---------------------------------------------------------------------------
+// 途中再開・選択式
+// ---------------------------------------------------------------------------
+
+/** 直近の途中保存（完了・飛ばしの前に待つ。順番が入れ替わって lastStep が残らないように） */
+let pendingStepSave: Promise<unknown> = Promise.resolve();
+
+function upsertProgress(p: Progress): void {
+  progress.value = [...progress.value.filter((x) => x.lessonId !== p.lessonId), p];
+}
+
+/** 「次に開くステップ番号」（レッスン本来の番号）を保存する */
+export function saveLessonStep(lessonId: string, step: number): Promise<void> {
+  const run = pendingStepSave
+    .catch(() => undefined)
+    .then(() => setLessonStep(lessonId, step))
+    .then(upsertProgress);
+  pendingStepSave = run;
+  return run.catch(() => undefined);
+}
+
+/**
+ * 選択式のレッスンを飛ばす（完了扱い・skipped）。ストリーク・活動には数えない。
+ * 次に開くレッスン（無ければ null）を返す。
+ */
+export async function skipLesson(lesson: Lesson): Promise<string | null> {
+  await pendingStepSave.catch(() => undefined);
+  const p = await completeLesson(lesson.id, { skipped: true });
+  upsertProgress(p);
+  endLessonSession(lesson.id);
+  const nx = nextAfterSkip(path.value, completedIds.value, lesson.id);
+  return nx ? nx.lesson.id : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -181,6 +220,7 @@ export async function finishLesson(lesson: Lesson, session: LessonSession): Prom
   const before = streak.value?.current ?? 0;
   const scored = [...session.drillScores, ...session.otherScores];
   const avg = scored.length > 0 ? Math.round(scored.reduce((a, b) => a + b, 0) / scored.length) : undefined;
+  await pendingStepSave.catch(() => undefined);
   await completeLesson(lesson.id, avg !== undefined ? { score: avg } : {});
   const st = await recordActivity();
   if (session.drawingIds.length > 0 && lesson.kind !== 'lesson') {

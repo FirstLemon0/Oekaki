@@ -4,8 +4,10 @@ import {
   CriticError,
   FALLBACK_MODEL,
   SYSTEM_PROMPT,
+  TEST_MAX_TOKENS,
   critique,
   estimateCostJpy,
+  testConnection,
   type CritiqueRequest,
 } from './index';
 
@@ -236,6 +238,97 @@ describe('critique', () => {
     const r = await critique(makeReq(), { fetchImpl });
     expect(r.good).toHaveLength(3);
     expect(r.issues).toHaveLength(3);
+  });
+});
+
+describe('critique: 指摘の位置 pos', () => {
+  const base = { where: '左目', what: 'x', fix: 'y' };
+  const run = async (issues: unknown[]) => {
+    const { fetchImpl } = mockFetch(() => json(200, messageBody({ text: JSON.stringify({ ...GOOD_BODY, issues }) })));
+    return (await critique(makeReq(), { fetchImpl })).issues;
+  };
+
+  it('pos があればそのまま受け取る', async () => {
+    const issues = await run([{ ...base, pos: { x: 0.25, y: 0.75 } }]);
+    expect(issues[0]!.pos).toEqual({ x: 0.25, y: 0.75 });
+  });
+
+  it('pos が無ければキーごと省略', async () => {
+    const issues = await run([base]);
+    expect(issues[0]).toEqual(base);
+    expect(issues[0]).not.toHaveProperty('pos');
+  });
+
+  it('範囲外はクランプ、不正な値は省略（批評自体は失敗しない）', async () => {
+    const issues = await run([
+      { ...base, pos: { x: -0.5, y: 1.8 } },
+      { ...base, pos: { x: 'left', y: 0.5 } },
+      { ...base, pos: { x: 0.5 } },
+      { ...base, pos: null },
+    ]);
+    expect(issues).toHaveLength(3);
+    expect(issues[0]!.pos).toEqual({ x: 0, y: 1 });
+    expect(issues[1]).not.toHaveProperty('pos');
+    expect(issues[2]).not.toHaveProperty('pos');
+  });
+
+  it('JSON Schema とプロンプトに pos がある（任意項目）', () => {
+    const item = (CRITIQUE_JSON_SCHEMA as { properties: { issues: { items: { properties: Record<string, unknown>; required: string[] } } } })
+      .properties.issues.items;
+    expect(Object.keys(item.properties)).toContain('pos');
+    expect(item.required).not.toContain('pos');
+    expect(SYSTEM_PROMPT).toContain('pos');
+  });
+});
+
+describe('testConnection', () => {
+  const settings = { apiKey: 'sk-test', model: 'claude-opus-5-5', effort: 'high' as const };
+
+  it('成功なら ok と使ったモデル。最小呼び出し（max_tokens 8・画像なし）', async () => {
+    const { fetchImpl, calls } = mockFetch(() => json(200, messageBody({ text: 'ok', stop_reason: 'max_tokens' })));
+    const r = await testConnection(settings, { fetchImpl });
+    expect(r).toEqual({ ok: true, model: 'claude-opus-5-5' });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.body.max_tokens).toBe(TEST_MAX_TOKENS);
+    expect(TEST_MAX_TOKENS).toBeLessThanOrEqual(16);
+    expect(JSON.stringify(calls[0]!.body)).not.toContain('"image"');
+  });
+
+  it('404 なら claude-opus-5 にフォールバックして ok', async () => {
+    const { fetchImpl, calls } = mockFetch(
+      () => apiError(404, 'not_found_error'),
+      () => json(200, messageBody({ text: 'ok', model: 'claude-opus-5' })),
+    );
+    const r = await testConnection(settings, { fetchImpl });
+    expect(r).toEqual({ ok: true, model: FALLBACK_MODEL });
+    expect(calls[1]!.body.model).toBe(FALLBACK_MODEL);
+  });
+
+  it('失敗は例外でなく kind 付きで返す', async () => {
+    const r401 = await testConnection(settings, mockFetch(() => apiError(401, 'authentication_error')));
+    expect(r401.ok).toBe(false);
+    expect(r401.ok === false && r401.kind).toBe('no_api_key');
+
+    const r404 = await testConnection(settings, mockFetch(() => apiError(404, 'not_found_error'), () => apiError(404, 'not_found_error')));
+    expect(r404.ok === false && r404.kind).toBe('model_unavailable');
+
+    const r429 = await testConnection(settings, mockFetch(() => apiError(429, 'rate_limit_error')));
+    expect(r429.ok === false && r429.kind).toBe('daily_limit');
+
+    const net = await testConnection(settings, {
+      fetchImpl: (async () => {
+        throw new TypeError('Failed to fetch');
+      }) as typeof fetch,
+    });
+    expect(net.ok === false && net.kind).toBe('network');
+    expect(net.ok === false && typeof net.message).toBe('string');
+  });
+
+  it('キーが空なら呼ばずに no_api_key', async () => {
+    const { fetchImpl, calls } = mockFetch();
+    const r = await testConnection({ ...settings, apiKey: '' }, { fetchImpl });
+    expect(r.ok === false && r.kind).toBe('no_api_key');
+    expect(calls).toHaveLength(0);
   });
 });
 

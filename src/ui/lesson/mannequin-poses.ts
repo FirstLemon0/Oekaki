@@ -1,7 +1,10 @@
 /**
- * ジェスチャー用の棒人形 8 種（three.js を使わない暫定版）。
- * 座標は viewBox 0 0 360 520。頭は円、体は関節を結ぶ折れ線。
+ * ジェスチャーの 2D フォールバック（WebGL が使えないとき／three.js の読み込み中）。
+ * three.js のポーズ人形と同じ関節角の表（src/mannequin/poses.ts）から前進運動学で関節位置を求め、
+ * 少し斜め上から正射影した棒人形にする。座標は viewBox 0 0 360 520。
  */
+import { POSES, POSE_IDS, resolvePose, type PoseId } from '@/mannequin/poses';
+import { HEAD_RADIUS, type PointName, type Vec3 } from '@/mannequin/skeleton';
 
 export interface Pt {
   x: number;
@@ -17,135 +20,79 @@ export interface MannequinPose {
   lines: Pt[][];
 }
 
-const p = (x: number, y: number): Pt => ({ x, y });
-
-export const MANNEQUIN_POSES: MannequinPose[] = [
-  {
-    id: 'front',
-    label: '正面',
-    head: p(180, 70),
-    headR: 32,
-    lines: [
-      [p(180, 102), p(180, 150), p(180, 270)],
-      [p(130, 150), p(230, 150)],
-      [p(145, 270), p(215, 270)],
-      [p(130, 150), p(112, 220), p(104, 290)],
-      [p(230, 150), p(248, 220), p(256, 290)],
-      [p(150, 270), p(146, 370), p(142, 470)],
-      [p(210, 270), p(214, 370), p(218, 470)],
-    ],
-  },
-  {
-    id: 'three-quarter',
-    label: '斜め',
-    head: p(196, 72),
-    headR: 30,
-    lines: [
-      [p(190, 102), p(186, 150), p(176, 272)],
-      [p(150, 146), p(222, 154)],
-      [p(152, 268), p(202, 276)],
-      [p(150, 146), p(138, 218), p(142, 286)],
-      [p(222, 154), p(238, 222), p(236, 292)],
-      [p(158, 272), p(160, 372), p(150, 470)],
-      [p(198, 276), p(212, 374), p(214, 468)],
-    ],
-  },
-  {
-    id: 'walk',
-    label: '歩き',
-    head: p(188, 68),
-    headR: 30,
-    lines: [
-      [p(186, 98), p(182, 148), p(178, 268)],
-      [p(146, 148), p(216, 150)],
-      [p(152, 266), p(204, 270)],
-      [p(146, 148), p(170, 214), p(200, 262)],
-      [p(216, 150), p(196, 218), p(166, 262)],
-      [p(160, 268), p(122, 360), p(96, 452)],
-      [p(198, 270), p(224, 366), p(262, 454)],
-    ],
-  },
-  {
-    id: 'run',
-    label: '走り',
-    head: p(214, 74),
-    headR: 29,
-    lines: [
-      [p(206, 102), p(192, 150), p(166, 262)],
-      [p(166, 146), p(226, 156)],
-      [p(146, 258), p(190, 268)],
-      [p(166, 146), p(134, 196), p(156, 238)],
-      [p(226, 156), p(270, 196), p(296, 166)],
-      [p(152, 262), p(92, 318), p(52, 296)],
-      [p(186, 268), p(236, 350), p(214, 452)],
-    ],
-  },
-  {
-    id: 'sit',
-    label: '座り',
-    head: p(150, 128),
-    headR: 30,
-    lines: [
-      [p(152, 158), p(154, 204), p(160, 318)],
-      [p(118, 202), p(190, 206)],
-      [p(136, 316), p(186, 320)],
-      [p(118, 202), p(122, 270), p(172, 300)],
-      [p(190, 206), p(208, 270), p(232, 306)],
-      [p(146, 318), p(250, 330), p(254, 456)],
-      [p(178, 320), p(276, 340), p(290, 462)],
-    ],
-  },
-  {
-    id: 'reach',
-    label: '手を上げる',
-    head: p(180, 110),
-    headR: 30,
-    lines: [
-      [p(180, 140), p(180, 186), p(182, 300)],
-      [p(140, 186), p(220, 186)],
-      [p(150, 298), p(214, 300)],
-      [p(140, 186), p(118, 118), p(104, 42)],
-      [p(220, 186), p(246, 250), p(262, 312)],
-      [p(156, 300), p(150, 390), p(148, 480)],
-      [p(208, 300), p(216, 390), p(222, 480)],
-    ],
-  },
-  {
-    id: 'crouch',
-    label: 'かがむ',
-    head: p(226, 170),
-    headR: 29,
-    lines: [
-      [p(214, 196), p(190, 236), p(138, 308)],
-      [p(170, 224), p(226, 250)],
-      [p(122, 300), p(158, 316)],
-      [p(170, 224), p(196, 300), p(236, 356)],
-      [p(226, 250), p(250, 316), p(268, 372)],
-      [p(130, 306), p(214, 360), p(172, 452)],
-      [p(152, 314), p(250, 392), p(232, 462)],
-    ],
-  },
-  {
-    id: 'look-back',
-    label: '振り返り',
-    head: p(166, 70),
-    headR: 30,
-    lines: [
-      [p(172, 100), p(180, 150), p(186, 270)],
-      [p(142, 156), p(214, 146)],
-      [p(158, 272), p(212, 268)],
-      [p(142, 156), p(128, 222), p(140, 286)],
-      [p(214, 146), p(240, 206), p(226, 270)],
-      [p(166, 272), p(160, 372), p(162, 470)],
-      [p(206, 268), p(222, 366), p(232, 466)],
-    ],
-  },
-];
-
 export const POSE_VIEWBOX = { width: 360, height: 520 };
 
+/** 棒人形を見る角度（度）。3D の「斜め」プリセットに近い */
+const VIEW_AZIMUTH = 25;
+const VIEW_ELEVATION = 8;
+const MARGIN = 36;
+/** 立ち姿の身長がこの px 程度になる倍率（寝そべり等は枠に収まるよう縮める） */
+const BASE_SCALE = (POSE_VIEWBOX.height - MARGIN * 2) / 1.95;
+
+const STICK_LINES: PointName[][] = [
+  ['pelvis', 'chest', 'neck', 'head'],
+  ['shoulderL', 'shoulderR'],
+  ['hipL', 'hipR'],
+  ['shoulderL', 'elbowL', 'wristL', 'handL'],
+  ['shoulderR', 'elbowR', 'wristR', 'handR'],
+  ['hipL', 'kneeL', 'ankleL', 'toeL'],
+  ['hipR', 'kneeR', 'ankleR', 'toeR'],
+];
+
+/** 世界座標 → 画面座標（右 +x、上 +y の正射影） */
+export function projectPoint(p: Vec3, azimuthDeg = VIEW_AZIMUTH, elevationDeg = VIEW_ELEVATION): Pt {
+  const az = (azimuthDeg * Math.PI) / 180;
+  const el = (elevationDeg * Math.PI) / 180;
+  const right: Vec3 = [Math.cos(az), 0, -Math.sin(az)];
+  const up: Vec3 = [-Math.sin(el) * Math.sin(az), Math.cos(el), -Math.sin(el) * Math.cos(az)];
+  return { x: p[0] * right[0] + p[2] * right[2], y: p[0] * up[0] + p[1] * up[1] + p[2] * up[2] };
+}
+
+const cache = new Map<PoseId, MannequinPose>();
+
+/** 3D ポーズ定義から棒人形を作る */
+export function stickPoseFor(id: PoseId): MannequinPose {
+  const hit = cache.get(id);
+  if (hit) return hit;
+  const { def, fk } = resolvePose(id);
+  const proj = (n: PointName): Pt => projectPoint(fk.points[n]);
+  const head = proj('headCenter');
+  const raw = STICK_LINES.map((l) => l.map(proj));
+  const all = [...raw.flat(), { x: head.x - HEAD_RADIUS, y: head.y + HEAD_RADIUS }, { x: head.x + HEAD_RADIUS, y: head.y - HEAD_RADIUS }];
+  let x0 = Infinity;
+  let x1 = -Infinity;
+  let y0 = Infinity;
+  let y1 = -Infinity;
+  for (const q of all) {
+    x0 = Math.min(x0, q.x);
+    x1 = Math.max(x1, q.x);
+    y0 = Math.min(y0, q.y);
+    y1 = Math.max(y1, q.y);
+  }
+  const k = Math.min(BASE_SCALE, (POSE_VIEWBOX.width - MARGIN * 2) / Math.max(1e-6, x1 - x0), (POSE_VIEWBOX.height - MARGIN * 2) / Math.max(1e-6, y1 - y0));
+  const cx = (x0 + x1) / 2;
+  // 足元（最下点）を枠の下余白にそろえる。y は画面下向きに反転
+  const toView = (q: Pt): Pt => ({
+    x: Math.round((POSE_VIEWBOX.width / 2 + (q.x - cx) * k) * 10) / 10,
+    y: Math.round((POSE_VIEWBOX.height - MARGIN - (q.y - y0) * k) * 10) / 10,
+  });
+  const pose: MannequinPose = {
+    id: def.id,
+    label: def.label,
+    head: toView(head),
+    headR: Math.round(HEAD_RADIUS * k * 10) / 10,
+    lines: raw.map((l) => l.map(toView)),
+  };
+  cache.set(id, pose);
+  return pose;
+}
+
+/** 全 16 種の棒人形（定義順） */
+export const MANNEQUIN_POSES: MannequinPose[] = POSES.map((p) => stickPoseFor(p.id));
+
 export function poseAt(i: number): MannequinPose {
-  return MANNEQUIN_POSES[((i % MANNEQUIN_POSES.length) + MANNEQUIN_POSES.length) % MANNEQUIN_POSES.length]!;
+  const n = POSE_IDS.length;
+  return stickPoseFor(POSE_IDS[((i % n) + n) % n]!);
 }
 
 /** ポーズの外接矩形（見比べの「重ねる」で自分の線を合わせる基準） */

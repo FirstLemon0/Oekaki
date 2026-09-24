@@ -8,6 +8,7 @@
 import { batch, computed, effect, signal } from '@preact/signals';
 import { flattenPath, loadCurriculum, type Curriculum, type PathNode } from '@/content';
 import {
+  applyFreezeToday,
   getCounters,
   getProfile,
   getSettings,
@@ -20,6 +21,7 @@ import {
 } from '@/data/repo';
 import { requestPersistentStorage } from '@/data/db';
 import { todayLocalDate } from '@/data/date';
+import { useFreezeToday as applyFreeze } from '@/data/streak';
 import { dueReviews, type DueReview } from '@/data/review';
 import { levelForXp, xpForDrillScore, xpForEvent } from '@/data/xp';
 import type { Counters, Critique, DrillStats, Profile, Progress, Settings, Streak } from '@/data/types';
@@ -90,6 +92,11 @@ export const path = computed<PathNode[]>(() => (curriculum.value ? flattenPath(c
 
 export const completedIds = computed(
   () => new Set(progress.value.filter((p) => p.completedAt !== null).map((p) => p.lessonId)),
+);
+
+/** 選択式レッスンを「飛ばす」で完了扱いにしたもの（completedIds にも含まれる） */
+export const skippedIds = computed(
+  () => new Set(progress.value.filter((p) => p.completedAt !== null && p.skipped === true).map((p) => p.lessonId)),
 );
 
 /** ISO 文字列を端末ローカルの YYYY-MM-DD に */
@@ -214,6 +221,27 @@ export async function saveUiPrefs(patch: Partial<UiPrefs>): Promise<void> {
   await saveSettings(patch);
 }
 
+/** 今日フリーズを使えるか。使えないときは理由（小さく添える文言）を返す */
+export const freezeAvailability = computed<{ ok: true } | { ok: false; reason: string }>(() => {
+  const s = streak.value;
+  if (!s) return { ok: false, reason: '読み込み中です' };
+  if (s.freezes <= 0) return { ok: false, reason: 'フリーズが残っていません' };
+  if (s.lastActiveDay === today.value) return { ok: false, reason: '今日はもう記録があります' };
+  if (applyFreeze(s, today.value) === null) return { ok: false, reason: '続いているストリークがありません' };
+  return { ok: true };
+});
+
+/**
+ * 今日フリーズを使って休む（ストリーク継続・フリーズ −1）。保存して streak を更新する。
+ * 使えなかったときは false。
+ */
+export async function freezeToday(): Promise<boolean> {
+  const next = await applyFreezeToday(today.value);
+  if (!next) return false;
+  streak.value = next;
+  return true;
+}
+
 export async function saveProfile(patch: Partial<Omit<Profile, 'updatedAt'>>): Promise<void> {
   profile.value = await updateProfile(patch);
 }
@@ -221,6 +249,9 @@ export async function saveProfile(patch: Partial<Omit<Profile, 'updatedAt'>>): P
 // ---------------------------------------------------------------------------
 // 外観の反映（テーマ・文字サイズ）
 // ---------------------------------------------------------------------------
+
+/** index.html の theme-color と同じ値（DESIGN_SYSTEM §1 の paper） */
+const THEME_COLOR = { light: '#F2EFE8', dark: '#2A2926' } as const;
 
 effect(() => {
   if (typeof document === 'undefined') return;
@@ -233,9 +264,13 @@ effect(() => {
   if (scale === 'large') root.setAttribute('data-font-scale', 'large');
   else root.removeAttribute('data-font-scale');
 
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) {
-    const bg = getComputedStyle(root).getPropertyValue('--color-paper').trim();
-    if (bg) meta.setAttribute('content', bg);
-  }
+  // theme-color は index.html にライト/ダークの 2 本（media 付き）。
+  // 「システムに合わせる」なら既定値のまま、明示指定なら両方を今の紙色にそろえる。
+  const metas = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
+  metas.forEach((meta) => {
+    const media = meta.getAttribute('media') ?? '';
+    const fallback = media.includes('dark') ? THEME_COLOR.dark : THEME_COLOR.light;
+    if (theme === 'system') meta.setAttribute('content', fallback);
+    else meta.setAttribute('content', THEME_COLOR[theme]);
+  });
 });

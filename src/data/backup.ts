@@ -100,7 +100,13 @@ const drawingMetaSchema = z.object({
 });
 type DrawingMeta = z.infer<typeof drawingMetaSchema>;
 
-const critiqueIssueSchema = z.object({ where: z.string(), what: z.string(), how: z.string() });
+const critiqueIssueSchema = z.object({
+  where: z.string(),
+  what: z.string(),
+  how: z.string(),
+  // 後から追加した任意項目（古いバックアップには無い）
+  pos: z.object({ x: z.number(), y: z.number() }).optional(),
+});
 const critiqueResponseSchema = z.object({
   good: z.array(z.string()),
   issues: z.array(critiqueIssueSchema),

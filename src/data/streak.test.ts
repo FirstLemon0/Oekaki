@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyActivity, createInitialStreak, earnFreeze, freezeCheck } from './streak';
+import { applyActivity, createInitialStreak, earnFreeze, freezeCheck, useFreezeToday } from './streak';
 
 const T = '2026-01-01T00:00:00.000Z';
 
@@ -100,6 +100,50 @@ describe('streak', () => {
       const result = freezeCheck(s, '2026-01-01');
       expect(result.atRisk).toBe(false);
       expect(result.daysSinceActive).toBe(0);
+    });
+  });
+
+  describe('useFreezeToday', () => {
+    const active = (over: Partial<ReturnType<typeof createInitialStreak>> = {}) => ({
+      ...createInitialStreak(T),
+      current: 5,
+      longest: 5,
+      freezes: 1,
+      lastActiveDay: '2026-01-05',
+      ...over,
+    });
+
+    it('使える: フリーズを 1 個消費し、今日を活動日にする（current は増やさない）', () => {
+      const s = active();
+      const r = useFreezeToday(s, '2026-01-06', '2026-01-06T12:00:00.000Z')!;
+      expect(r).not.toBeNull();
+      expect(r.freezes).toBe(0);
+      expect(r.lastActiveDay).toBe('2026-01-06');
+      expect(r.current).toBe(5);
+      expect(r.longest).toBe(5);
+      expect(r.updatedAt).toBe('2026-01-06T12:00:00.000Z');
+      expect(s.freezes).toBe(1); // 元は変更しない
+      // 翌日に活動すれば連続として続く
+      expect(applyActivity(r, '2026-01-07').current).toBe(6);
+      // 同日にあとから活動しても二重には数えない
+      expect(applyActivity(r, '2026-01-06')).toBe(r);
+    });
+
+    it('フリーズ 0 なら null', () => {
+      expect(useFreezeToday(active({ freezes: 0 }), '2026-01-06')).toBeNull();
+    });
+
+    it('今日すでに活動していれば null', () => {
+      expect(useFreezeToday(active({ lastActiveDay: '2026-01-06' }), '2026-01-06')).toBeNull();
+    });
+
+    it('活動履歴なし（初期状態・current 0）なら null', () => {
+      expect(useFreezeToday({ ...createInitialStreak(T), freezes: 2 }, '2026-01-06')).toBeNull();
+      expect(useFreezeToday(active({ current: 0 }), '2026-01-06')).toBeNull();
+    });
+
+    it('今日より後の日付が最終活動日（時計のずれ）なら null', () => {
+      expect(useFreezeToday(active({ lastActiveDay: '2026-01-10' }), '2026-01-06')).toBeNull();
     });
   });
 });

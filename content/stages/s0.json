@@ -74,7 +74,7 @@
               "drill": "pressure",
               "count": 10,
               "instruction": "横に線を引きながら、筆圧を弱い状態から強い状態へゆっくり変えていきましょう。線が細い状態から太い状態へ変わっていけば大丈夫です。",
-              "params": { "profile": "increasing" }
+              "params": { "profile": "ramp-up" }
             }
           ]
         },

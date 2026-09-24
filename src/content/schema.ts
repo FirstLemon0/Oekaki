@@ -26,6 +26,36 @@ const LESSON_ID_RE = /^s(?:0|[1-9]\d*)(?:_5)?-u[1-9]\d*-l[1-9]\d*$/;
 const RUBRIC_ID_RE = /^[a-z][a-z0-9_-]*$/;
 
 /* ------------------------------------------------------------------ */
+/* 共通の値                                                              */
+/* ------------------------------------------------------------------ */
+
+/** 累計カウンター（ホームの「累計」・250箱チャレンジ等）の種別 */
+export const COUNTER_KINDS = ['lines', 'ellipses', 'circles', 'boxes'] as const;
+const CounterSchema = z.enum(COUNTER_KINDS);
+export type Counter = z.infer<typeof CounterSchema>;
+
+/** 筆圧ドリル（drill: 'pressure'）の params.profile の正式な値 */
+export const PRESSURE_PROFILES = ['ramp-up', 'ramp-down', 'flat'] as const;
+export type PressureProfile = (typeof PRESSURE_PROFILES)[number];
+
+/** 教材で使われてきた別名 → 正式な値 */
+const PRESSURE_PROFILE_ALIASES: Record<string, PressureProfile> = {
+  increasing: 'ramp-up',
+  decreasing: 'ramp-down',
+  constant: 'flat',
+};
+
+/**
+ * 筆圧プロファイル名を正式な値にそろえる。別名（increasing 等）も受ける。
+ * 知らない値・未指定は null。
+ */
+export function normalizePressureProfile(v: unknown): PressureProfile | null {
+  if (typeof v !== 'string') return null;
+  if ((PRESSURE_PROFILES as readonly string[]).includes(v)) return v as PressureProfile;
+  return PRESSURE_PROFILE_ALIASES[v] ?? null;
+}
+
+/* ------------------------------------------------------------------ */
 /* Step（判別共用体）                                                    */
 /* ------------------------------------------------------------------ */
 
@@ -38,23 +68,44 @@ const ReadStepSchema = z.object({
   figure: z.string().min(1).optional(),
 });
 
-const DrillStepSchema = z.object({
-  type: z.literal('drill'),
-  drill: z.enum(['line', 'curve', 'circle', 'ellipse', 'pressure', 'hatching']),
-  count: z.number().int().positive(),
-  instruction: z.string().min(1),
-  /** 例: ellipse の degree, axisAngleDeg */
-  params: z.record(z.string(), z.union([z.number(), z.string()])).optional(),
-  /** 累計カウンターに加算する種別 */
-  counter: z.enum(['lines', 'ellipses', 'circles', 'boxes']).optional(),
-});
+const DrillStepSchema = z
+  .object({
+    type: z.literal('drill'),
+    drill: z.enum(['line', 'curve', 'circle', 'ellipse', 'pressure', 'hatching']),
+    count: z.number().int().positive(),
+    instruction: z.string().min(1),
+    /** 例: ellipse の degree, axisAngleDeg ／ pressure の profile（ramp-up・ramp-down・flat） */
+    params: z.record(z.string(), z.union([z.number(), z.string()])).optional(),
+    /** 累計カウンターに加算する種別 */
+    counter: CounterSchema.optional(),
+  })
+  .superRefine((step, ctx) => {
+    const profile = step.params?.['profile'];
+    if (step.drill === 'pressure' && profile !== undefined && normalizePressureProfile(profile) === null) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `筆圧の params.profile "${String(profile)}" は使えません（${PRESSURE_PROFILES.join(' / ')} のいずれか）`,
+        path: ['params', 'profile'],
+      });
+    }
+  })
+  // 別名（increasing 等）は読み込み時に正式な値へそろえる。画面側は正式な値だけを見ればよい
+  .transform((step) => {
+    const profile = step.params?.['profile'];
+    if (step.drill !== 'pressure' || profile === undefined) return step;
+    const normalized = normalizePressureProfile(profile);
+    return normalized === profile || normalized === null ? step : { ...step, params: { ...step.params, profile: normalized } };
+  });
 
 const TraceStepSchema = z.object({
   type: z.literal('trace'),
   /** content/templates/<id>.json の id */
   template: z.string().min(1),
   instruction: z.string().min(1),
+  /** なぞる回数（既定 1） */
   count: z.number().int().positive().optional(),
+  /** 累計カウンターに加算する種別。1回なぞるごとに 1 加算する */
+  counter: CounterSchema.optional(),
 });
 
 const CopyStepSchema = z.object({
@@ -74,6 +125,10 @@ const ConstructStepSchema = z.object({
   type: z.literal('construct'),
   instruction: z.string().min(1),
   stages: z.array(ConstructStageItemSchema).min(1),
+  /** 累計カウンターに加算する種別。描き終えたときに count だけ加算する */
+  counter: CounterSchema.optional(),
+  /** このステップで描く個数（counter への加算数。既定 1） */
+  count: z.number().int().positive().optional(),
 });
 
 const GestureStepSchema = z.object({
@@ -157,6 +212,11 @@ export const LessonSchema = z.object({
   kind: z.enum(['lesson', 'checkpoint', 'graduation']),
   /** ホームの「今日のカード」に出す1〜2文 */
   summary: z.string().min(1),
+  /**
+   * 選択式のレッスン（例: 塗り技法から1つ以上を選ぶ U10-2）。
+   * true ならパス上で「飛ばす」ことができる（飛ばしても完了扱い。あとで戻れる）。
+   */
+  optional: z.boolean().optional(),
   steps: z.array(StepSchema).min(1),
 });
 

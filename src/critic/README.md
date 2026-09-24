@@ -23,6 +23,23 @@ try {
 - `image` は長辺 1024px 以下に縮小した WebP または PNG の Blob です。`Blob.type` を media_type に使います。jpeg と gif も通りますが、それ以外の形式は `TypeError` になります。
 - 送るものは、ユーザー自身の絵 1 枚、課題文、ステージ名、ルーブリック（`title` / `points` / `focus`）だけです。お手本は送りません。
 - `deps.fetchImpl` を指定すると、SDK の `fetch` オプションに渡します（テスト用）。
+- `r.issues[i].pos`（任意）は、その指摘が絵のどのあたりかを表す `{ x, y }` です（左上 0,0・右下 1,1）。番号マーカーを置く目安に使えます。モデルが省略した指摘には付きません。
+
+### 接続テスト（`testConnection`）
+
+```ts
+import { testConnection } from '@/critic';
+
+const r = await testConnection({ apiKey, model: 'claude-opus-5-5', effort: 'high' }, { signal });
+if (r.ok) show(`接続できました（${r.model}）`);
+else show(r.kind, r.message); // kind は critique と同じ CriticErrorKind
+```
+
+- 設定画面の「接続テスト」用です。画像なし・`max_tokens: 8`（`TEST_MAX_TOKENS`）の最小呼び出しを 1 回だけ行います。費用はほぼかかりません。
+- 例外は投げず、`{ ok: true, model }` か `{ ok: false, kind, message }` を返します。
+- フォールバック（404 なら `claude-opus-5` で 1 回再送、`model` は実際に使ったモデル）とエラー分類は `critique` と同じです。キーが空なら API を呼ばずに `no_api_key` です。
+- 応答本文は見ません。`refusal` や `max_tokens` での打ち切りでも、応答が届けば成功とみなします。
+- `effort` は送りません（接続確認には不要なので、引数の `effort` は省略可）。
 
 ## 採った経路
 
@@ -49,10 +66,12 @@ try {
 
 ### 応答スキーマ（数値スコアなし）
 
-`good[]`、`issues[{where, what, fix}]`、`next_one`、`encourage` の 4 項目だけです。JSON Schema に `score` はなく、`additionalProperties: false` です。万一 `score` などの余計なキーが返ってきても、zod が捨てます。構造化出力は `minItems` と `maxItems` の対応が限られるので、件数は次のように扱います。
+`good[]`、`issues[{where, what, fix, pos?}]`、`next_one`、`encourage` の 4 項目だけです。JSON Schema に `score` はなく、`additionalProperties: false` です。万一 `score` などの余計なキーが返ってきても、zod が捨てます。構造化出力は `minItems` と `maxItems` の対応が限られるので、件数は次のように扱います。
 
 - `good` は 1 件以上を必須とし、4 件以上なら先頭 3 件だけ残します。
 - `issues` は 4 件以上なら先頭 3 件だけ残します。
+- `issues[].pos` は任意です（JSON Schema でも `required` に入れていません）。プロンプトで「絵のどのあたりかを x,y（左上 0,0・右下 1,1）で返す。分からなければ省略」と指示しています。範囲外の数値は 0..1 にクランプし、数値でない・x か y が欠けているなどの不正な値は捨てて省略扱いにします（それを理由に批評全体を `bad_response` にはしません）。判定は `normalizePos` で、export しています。
+- データ層（`src/data`）の `CritiqueIssue` にも任意の `pos` があり、バックアップでも往復します。保存時に `pos` をそのまま渡してください。
 
 ## 費用の前提（`estimateCostJpy`）
 
@@ -79,3 +98,5 @@ npx vitest run src/critic
 - ペイロードの中身（画像の base64、課題文、観点、構造化出力、effort、thinking を指定していないこと）
 - 404 からのフォールバック
 - 401 と 403、キー空、429、通信断、refusal、壊れた JSON、スキーマ不正、score キーの除去、件数の切り詰め、費用表
+- `pos` あり／なし／範囲外（クランプ）／不正値（省略）
+- `testConnection` の成功（最小ペイロード）、404 フォールバック、401・404×2・429・通信断の kind、キー空

@@ -10,7 +10,14 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { Base64ImageSource, Message, MessageCreateParamsNonStreaming } from '@anthropic-ai/sdk/resources/messages';
 import { SYSTEM_PROMPT, buildUserText } from './prompt';
 import { CRITIQUE_JSON_SCHEMA, CritiqueBodySchema, type CritiqueBody } from './schema';
-import { CriticError, type CritiqueDeps, type CritiqueRequest, type CritiqueResult } from './types';
+import {
+  CriticError,
+  type CriticErrorKind,
+  type CritiqueDeps,
+  type CritiqueRequest,
+  type CritiqueResult,
+  type CritiqueSettings,
+} from './types';
 
 export const FALLBACK_MODEL = 'claude-opus-5';
 export const MAX_TOKENS = 2048;
@@ -83,17 +90,74 @@ function parseMessage(msg: Message): CritiqueBody {
   return parsed.data;
 }
 
-export async function critique(req: CritiqueRequest, deps?: CritiqueDeps): Promise<CritiqueResult> {
-  const { apiKey, model, effort } = req.settings;
-  if (!apiKey.trim()) throw new CriticError('no_api_key', 'API キーが設定されていません');
-
-  const client = new Anthropic({
+function makeClient(apiKey: string, deps?: CritiqueDeps): Anthropic {
+  return new Anthropic({
     apiKey,
     dangerouslyAllowBrowser: true,
     // 再送は UI の「再送」ボタンに任せる（待ち時間と費用を読みやすくするため）
     maxRetries: 0,
     ...(deps?.fetchImpl ? { fetch: deps.fetchImpl } : {}),
   });
+}
+
+/**
+ * 指定モデルで送り、404（モデル未提供）なら FALLBACK_MODEL で 1 回だけ再送する。
+ * 失敗は CriticError に丸めて投げる。
+ */
+async function sendWithFallback(
+  model: string,
+  send: (m: string) => Promise<Message>,
+): Promise<{ msg: Message; used: string }> {
+  try {
+    return { msg: await send(model), used: model };
+  } catch (e) {
+    if (!isModelUnavailable(e) || model === FALLBACK_MODEL) throw classify(e);
+    try {
+      return { msg: await send(FALLBACK_MODEL), used: FALLBACK_MODEL };
+    } catch (e2) {
+      throw classify(e2);
+    }
+  }
+}
+
+export const TEST_MAX_TOKENS = 8;
+
+export type TestConnectionResult =
+  | { ok: true; model: string }
+  | { ok: false; kind: CriticErrorKind; message: string };
+
+/**
+ * 設定画面の「接続テスト」用。画像なしの最小呼び出し（max_tokens 8）を 1 回だけ行う。
+ * フォールバック・エラー分類は critique と同じ規則。例外は投げず結果で返す。
+ * 応答本文は見ない（refusal や max_tokens 打ち切りでも、届いた時点で接続は成功とみなす）。
+ */
+export async function testConnection(
+  settings: Pick<CritiqueSettings, 'apiKey' | 'model'> & Partial<CritiqueSettings>,
+  deps?: CritiqueDeps,
+): Promise<TestConnectionResult> {
+  if (!settings.apiKey.trim()) {
+    return { ok: false, kind: 'no_api_key', message: 'API キーが設定されていません' };
+  }
+  const client = makeClient(settings.apiKey, deps);
+  const send = (m: string) =>
+    client.messages.create(
+      { model: m, max_tokens: TEST_MAX_TOKENS, messages: [{ role: 'user', content: 'ping' }] },
+      deps?.signal ? { signal: deps.signal } : undefined,
+    );
+  try {
+    const { used } = await sendWithFallback(settings.model, send);
+    return { ok: true, model: used };
+  } catch (e) {
+    const ce = classify(e);
+    return { ok: false, kind: ce.kind, message: ce.message };
+  }
+}
+
+export async function critique(req: CritiqueRequest, deps?: CritiqueDeps): Promise<CritiqueResult> {
+  const { apiKey, model, effort } = req.settings;
+  if (!apiKey.trim()) throw new CriticError('no_api_key', 'API キーが設定されていません');
+
+  const client = makeClient(apiKey, deps);
 
   const data = await blobToBase64(req.image);
   const mediaType = toMediaType(req.image.type);
@@ -120,19 +184,7 @@ export async function critique(req: CritiqueRequest, deps?: CritiqueDeps): Promi
   const send = (m: string) =>
     client.messages.create(build(m), deps?.signal ? { signal: deps.signal } : undefined);
 
-  let used = model;
-  let msg: Message;
-  try {
-    msg = await send(model);
-  } catch (e) {
-    if (!isModelUnavailable(e) || model === FALLBACK_MODEL) throw classify(e);
-    used = FALLBACK_MODEL;
-    try {
-      msg = await send(FALLBACK_MODEL);
-    } catch (e2) {
-      throw classify(e2);
-    }
-  }
+  const { msg, used } = await sendWithFallback(model, send);
 
   const body = parseMessage(msg);
   return {

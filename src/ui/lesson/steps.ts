@@ -5,8 +5,10 @@
  * - drill 進行: 1 本（1 セット）ごとの採点 → 「もう一回」「次へ」→ count で完了
  * - 小さな対応表（カウンター種別、保存時の絵の種別）
  */
-import type { DrillStep, Lesson, Step } from '@/content/schema';
-import type { CounterKind, DrawingKind } from '@/data/types';
+import { normalizePressureProfile, type Counter, type Lesson, type PressureProfile, type Step } from '@/content/schema';
+import type { DrillStep } from '@/content/schema';
+import type { PathNode } from '@/content';
+import type { CounterKind, DrawingKind, Progress } from '@/data/types';
 import type { DueReview } from '@/data/review';
 
 export type DrillType = DrillStep['drill'];
@@ -44,8 +46,8 @@ const REVIEW_PARAMS: Record<DrillType, Record<string, number | string>> = {
   hatching: { spacing: 14, angleDeg: 45 },
 };
 
-/** drill の counter（教材の語）→ data の CounterKind */
-export function counterKindOf(counter: DrillStep['counter']): CounterKind | null {
+/** drill / trace / construct の counter（教材の語）→ data の CounterKind */
+export function counterKindOf(counter: Counter | undefined): CounterKind | null {
   switch (counter) {
     case 'lines':
       return 'line';
@@ -112,11 +114,25 @@ export function isSetDrill(drill: DrillType): boolean {
   return drill === 'hatching';
 }
 
-/** 教材の筆圧プロファイル名を採点側の名前へ（'increasing' 等の別名も受ける） */
-export function pressureProfileOf(v: unknown): 'ramp-up' | 'ramp-down' | 'flat' {
-  if (v === 'ramp-down' || v === 'decreasing') return 'ramp-down';
-  if (v === 'flat' || v === 'constant') return 'flat';
-  return 'ramp-up';
+/**
+ * 筆圧プロファイル（採点側の名前）。教材の別名（increasing 等）は読み込み時に
+ * スキーマが正式な値へそろえるので、ここは未指定・想定外のときの既定（ramp-up）を足すだけ。
+ */
+export function pressureProfileOf(v: unknown): PressureProfile {
+  return normalizePressureProfile(v) ?? 'ramp-up';
+}
+
+/**
+ * trace / construct の累計への加算。
+ * - trace: 1 回なぞるごとに n（=1）
+ * - construct: 描き終えたときに n（= step.count、既定 1）
+ * counter が無いステップは null。
+ */
+export function stepCounterBump(step: Step): { kind: CounterKind; n: number } | null {
+  if (step.type !== 'trace' && step.type !== 'construct') return null;
+  const kind = counterKindOf(step.counter);
+  if (!kind) return null;
+  return { kind, n: step.type === 'construct' ? (step.count ?? 1) : 1 };
 }
 
 // ---------------------------------------------------------------------------
@@ -186,4 +202,49 @@ export function nextStepIndex(n: number, total: number): number | null {
 /** ヘッダの進捗セグメント */
 export function progressSegments(current: number, total: number): ('done' | 'current' | 'todo')[] {
   return Array.from({ length: total }, (_, i) => (i < current ? 'done' : i === current ? 'current' : 'todo'));
+}
+
+// ---------------------------------------------------------------------------
+// 途中再開・選択式
+// ---------------------------------------------------------------------------
+
+/** 先頭に差し込んだ復習の数 */
+export function warmupCount(steps: readonly PlayStep[]): number {
+  let n = 0;
+  while (n < steps.length && steps[n]!.warmup) n += 1;
+  return n;
+}
+
+/**
+ * 再生中の番号（復習を含む）→ レッスン本来のステップ番号。
+ * 途中再開の保存はこちらで行う（再開時は復習を差し込まないので、番号がずれない）。
+ */
+export function lessonStepIndex(steps: readonly PlayStep[], playIndex: number): number {
+  return Math.max(0, playIndex - warmupCount(steps));
+}
+
+/**
+ * 「続きから」を出すステップ番号。記録が無い・先頭・範囲外なら null。
+ * （completeLesson は lastStep を null に戻すので、完了済みで途中記録が無ければ null）
+ */
+export function resumeStepOf(p: Pick<Progress, 'lastStep'> | undefined, totalSteps: number): number | null {
+  const k = p?.lastStep;
+  if (typeof k !== 'number' || !Number.isInteger(k)) return null;
+  if (k <= 0 || k >= totalSteps) return null;
+  return k;
+}
+
+/** 選択式のレッスンか（飛ばせる） */
+export function isSkippable(lesson: Pick<Lesson, 'optional'>): boolean {
+  return lesson.optional === true;
+}
+
+/**
+ * 飛ばしたあとに開くレッスン。パス上で飛ばしたものより後ろの未完了の最初。
+ * 後ろが全部終わっていれば、前に残っている未完了の最初（飛ばしたもの自身は除く）。
+ */
+export function nextAfterSkip(path: readonly PathNode[], completedIds: ReadonlySet<string>, skippedId: string): PathNode | undefined {
+  const at = path.findIndex((n) => n.lesson.id === skippedId);
+  const open = (n: PathNode) => n.lesson.id !== skippedId && !completedIds.has(n.lesson.id);
+  return path.slice(at + 1).find(open) ?? path.find(open);
 }

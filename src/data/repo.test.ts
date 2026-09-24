@@ -10,6 +10,8 @@ import {
   getProfile,
   getSettings,
   getStreak,
+  applyFreezeToday,
+  saveStreak,
   listDrawings,
   listReferences,
   recordActivity,
@@ -190,5 +192,33 @@ describe('references', () => {
     await saveReference({ image: webp('ref-2') });
     const list = await listReferences();
     expect(list).toHaveLength(2);
+  });
+});
+
+describe('streak / saveStreak・applyFreezeToday', () => {
+  it('saveStreak はそのまま保存し updatedAt を進める', async () => {
+    const base = await getStreak();
+    const saved = await saveStreak({ ...base, current: 3, longest: 3, freezes: 2, lastActiveDay: '2026-01-03', updatedAt: '2000-01-01T00:00:00.000Z' });
+    expect(saved.updatedAt > '2000-01-01T00:00:00.000Z').toBe(true);
+    expect(await getStreak()).toEqual(saved);
+  });
+
+  it('使えれば消費して保存・返す', async () => {
+    const base = await getStreak();
+    await saveStreak({ ...base, current: 7, longest: 7, freezes: 1, lastActiveDay: '2026-01-07' });
+    const r = await applyFreezeToday('2026-01-08');
+    expect(r).not.toBeNull();
+    expect(r!.freezes).toBe(0);
+    expect(r!.lastActiveDay).toBe('2026-01-08');
+    expect(await getStreak()).toEqual(r);
+  });
+
+  it('使えなければ null で、保存内容は変わらない', async () => {
+    expect(await applyFreezeToday('2026-01-08')).toBeNull(); // 履歴なし
+    await recordActivity('2026-01-08');
+    const before = await getStreak();
+    expect(await applyFreezeToday('2026-01-09')).toBeNull(); // フリーズ 0
+    expect(await applyFreezeToday('2026-01-08')).toBeNull(); // 今日すでに活動
+    expect(await getStreak()).toEqual(before);
   });
 });

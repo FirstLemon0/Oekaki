@@ -80,6 +80,13 @@
 }
 .ls-head__close:hover { color: var(--color-ink); background: var(--color-chip); }
 .ls-head__count { font-size: 18px; font-weight: 500; color: var(--color-ink-2); min-width: 48px; text-align: right; }
+.ls-head__right { display: flex; align-items: center; gap: var(--sp-4); }
+.ls-head__skip { white-space: nowrap; }
+
+/* 途中再開のシート */
+.ls-resume { display: flex; flex-direction: column; gap: var(--sp-4); }
+.ls-resume__text { margin: 0; font-size: 16px; color: var(--color-ink-2); line-height: 1.8; }
+.ls-resume__actions { display: flex; gap: var(--sp-3); justify-content: flex-end; flex-wrap: wrap; }
 .ls-head__title { font-weight: 700; font-size: var(--text-h3); }
 .ls-progress { display: flex; gap: 6px; align-items: center; }
 .ls-progress__seg { flex: 1; height: 8px; border-radius: 4px; background: var(--color-line); }
@@ -646,6 +653,10 @@
 .ls-cpic--result { height: auto; min-height: 480px; flex-direction: column; }
 .ls-cpic--result figcaption { margin-top: var(--sp-3); }
 .ls-cpic__markers { position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; gap: 8px; }
+/* 絵の実寸に合わせた枠。pos のある番号マーカーはこの中に % で置く */
+.ls-cpic__frame { position: relative; display: inline-block; max-width: 100%; line-height: 0; }
+.ls-cpic--result .ls-cpic__frame img { display: block; max-width: 100%; max-height: min(560px, 60dvh); object-fit: contain; }
+.ls-cpic__pin { position: absolute; transform: translate(-50%, -50%); pointer-events: none; line-height: 1; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
 .ls-marker {
   width: 32px;
   height: 32px;
@@ -844,4 +855,11 @@
   .ls-stage__body { padding: var(--sp-6); }
   .ls-stage__title { font-size: 32px; }
   .ls-stats { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* 狭い画面: ヘッダの「飛ばす」を詰める */
+@media (max-width: 600px) {
+  .ls-head { gap: var(--sp-3); }
+  .ls-head__right { gap: var(--sp-2); }
+  .ls-head__skip { padding-inline: 12px; font-size: 13px; }
 }

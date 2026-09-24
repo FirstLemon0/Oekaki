@@ -81,6 +81,8 @@ export function App() {
           </div>
         )}
         {ready.value ? <FullscreenScreen r={r} /> : <div class="loading" aria-busy="true" />}
+        {/* レッスン中の短い知らせ（例: 選択式を飛ばした）。キャンバス上では呼び出し側が出さない */}
+        <ToastHost />
       </>
     );
   }

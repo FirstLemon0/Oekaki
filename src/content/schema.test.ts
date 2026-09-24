@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CurriculumSchema, LessonSchema, StageSchema, StepSchema, UnitSchema } from './schema';
+import { CurriculumSchema, LessonSchema, normalizePressureProfile, StageSchema, StepSchema, UnitSchema } from './schema';
 
 function minimalLesson(id: string, steps: unknown[] = [{ type: 'free' }]) {
   return {
@@ -296,5 +296,82 @@ describe('Curriculum', () => {
       rubrics: [],
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('選択式（optional）', () => {
+  it('optional: true / false / 省略のどれも通る', () => {
+    expect(LessonSchema.safeParse({ ...minimalLesson('s1-u1-l1'), optional: true }).success).toBe(true);
+    expect(LessonSchema.safeParse({ ...minimalLesson('s1-u1-l1'), optional: false }).success).toBe(true);
+    const r = LessonSchema.safeParse(minimalLesson('s1-u1-l1'));
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.optional).toBeUndefined();
+  });
+
+  it('optional が真偽値でなければ弾かれる', () => {
+    expect(LessonSchema.safeParse({ ...minimalLesson('s1-u1-l1'), optional: 'yes' }).success).toBe(false);
+    expect(LessonSchema.safeParse({ ...minimalLesson('s1-u1-l1'), optional: 1 }).success).toBe(false);
+  });
+});
+
+describe('trace / construct の counter', () => {
+  const construct = {
+    type: 'construct',
+    instruction: '箱を描きましょう。',
+    stages: [{ title: '箱', instruction: '箱を1つ描きます。' }],
+  };
+
+  it('trace に counter が付けられる', () => {
+    const r = StepSchema.safeParse({ type: 'trace', template: 'cube-2pt', instruction: 'なぞりましょう。', count: 3, counter: 'boxes' });
+    expect(r.success).toBe(true);
+  });
+
+  it('construct に counter と count が付けられる（count は省略可）', () => {
+    expect(StepSchema.safeParse({ ...construct, counter: 'boxes', count: 5 }).success).toBe(true);
+    expect(StepSchema.safeParse({ ...construct, counter: 'circles' }).success).toBe(true);
+    expect(StepSchema.safeParse(construct).success).toBe(true);
+  });
+
+  it('未知の counter は弾かれる', () => {
+    expect(StepSchema.safeParse({ type: 'trace', template: 't', instruction: 'x', counter: 'cubes' }).success).toBe(false);
+    expect(StepSchema.safeParse({ ...construct, counter: 'box' }).success).toBe(false);
+  });
+
+  it('construct の count は正の整数だけ', () => {
+    expect(StepSchema.safeParse({ ...construct, counter: 'boxes', count: 0 }).success).toBe(false);
+    expect(StepSchema.safeParse({ ...construct, counter: 'boxes', count: 1.5 }).success).toBe(false);
+    expect(StepSchema.safeParse({ ...construct, counter: 'boxes', count: '3' }).success).toBe(false);
+  });
+});
+
+describe('筆圧プロファイルの正規化', () => {
+  const pressure = (profile: unknown) => ({ type: 'drill', drill: 'pressure', count: 5, instruction: '線を引きましょう。', params: { profile } });
+
+  it('別名は読み込み時に正式な値へそろう', () => {
+    for (const [alias, canonical] of [
+      ['increasing', 'ramp-up'],
+      ['decreasing', 'ramp-down'],
+      ['constant', 'flat'],
+      ['ramp-up', 'ramp-up'],
+    ] as const) {
+      const r = StepSchema.parse(pressure(alias));
+      expect(r.type === 'drill' && r.params?.['profile']).toBe(canonical);
+    }
+  });
+
+  it('知らない値は弾かれる（筆圧ドリルのときだけ）', () => {
+    expect(StepSchema.safeParse(pressure('zigzag')).success).toBe(false);
+    expect(StepSchema.safeParse(pressure(3)).success).toBe(false);
+    // 他のドリルの profile は見ない
+    expect(StepSchema.safeParse({ type: 'drill', drill: 'line', count: 5, instruction: 'x', params: { profile: 'zigzag' } }).success).toBe(true);
+    // profile 省略は通る（画面側で ramp-up）
+    expect(StepSchema.safeParse({ type: 'drill', drill: 'pressure', count: 5, instruction: 'x' }).success).toBe(true);
+  });
+
+  it('normalizePressureProfile', () => {
+    expect(normalizePressureProfile('increasing')).toBe('ramp-up');
+    expect(normalizePressureProfile('flat')).toBe('flat');
+    expect(normalizePressureProfile('nope')).toBeNull();
+    expect(normalizePressureProfile(undefined)).toBeNull();
   });
 });

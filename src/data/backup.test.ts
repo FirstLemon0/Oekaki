@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { exportBackup, importBackup } from './backup';
+import { strToU8, zipSync } from 'fflate';
+import { BACKUP_VERSION, exportBackup, importBackup } from './backup';
 import { openDb, SINGLETON_KEY } from './db';
 import {
   bumpCounter,
@@ -10,6 +11,7 @@ import {
   saveCritique,
   saveDrawing,
   saveReference,
+  setLessonStep,
   updateProfile,
   updateSettings,
 } from './repo';
@@ -43,6 +45,8 @@ async function seed(): Promise<void> {
     calibration: { calibratedAt: '2026-01-01T00:00:00.000Z', baselines: { line: 40 } },
   });
   await completeLesson('u1-l1', { score: 80 });
+  await completeLesson('u1-l2', { skipped: true });
+  await setLessonStep('u1-l3', 2);
   await recordDrill('line', 60);
   await recordDrill('line', 90);
   await recordActivity('2026-01-01');
@@ -56,6 +60,7 @@ async function seed(): Promise<void> {
     lessonId: 'u1-l1',
     image: webp('drawing-a-bytes'),
     strokes: [[{ x: 0, y: 0, p: 0.5, t: 0 }, { x: 1, y: 1, p: 0.6, t: 10 }]],
+    meta: { marks: [{ x: 0.2, y: 0.4 }], note: '模写チェック' },
   });
   const drawingWithoutStrokes = await saveDrawing({
     id: 'drawing-before',
@@ -68,7 +73,10 @@ async function seed(): Promise<void> {
     model: 'claude-opus-5-5',
     response: {
       good: ['伸びやかな線'],
-      issues: [{ where: '輪郭', what: 'ゆがみがある', how: 'アタリを先に取る' }],
+      issues: [
+        { where: '輪郭', what: 'ゆがみがある', how: 'アタリを先に取る', pos: { x: 0.3, y: 0.6 } },
+        { where: '全体', what: '線が薄い', how: '筆圧を上げる' },
+      ],
       next_one: '円のドリルを増やす',
       encourage: 'よくがんばりました',
     },
@@ -165,6 +173,81 @@ describe('backup export/import(replace)', () => {
 
     await compareWithImages<Drawing>(drawingsBefore, drawingsAfter);
     await compareWithImages<ReferenceImage>(referencesBefore, referencesAfter);
+
+    // 後から追加した任意項目が往復で失われていないこと（toEqual だけだと両方欠落でも通るので明示）
+    const byLesson = new Map(progressAfter.map((p) => [p.lessonId, p]));
+    expect(byLesson.get('u1-l1')).toMatchObject({ skipped: false, lastStep: null });
+    expect(byLesson.get('u1-l2')).toMatchObject({ skipped: true, lastStep: null });
+    expect(byLesson.get('u1-l3')).toMatchObject({ completedAt: null, lastStep: 2 });
+    expect(drawingsAfter.find((d) => d.id === 'drawing-a')?.meta).toEqual({
+      marks: [{ x: 0.2, y: 0.4 }],
+      note: '模写チェック',
+    });
+    expect(drawingsAfter.find((d) => d.id === 'drawing-before')).not.toHaveProperty('meta');
+    const issues = critiquesAfter[0]!.response.issues;
+    expect(issues[0]!.pos).toEqual({ x: 0.3, y: 0.6 });
+    expect(issues[1]).not.toHaveProperty('pos');
+  });
+});
+
+describe('backup import(旧形式)', () => {
+  it('skipped / lastStep / meta / pos・新しい設定項目が無い zip も読める', async () => {
+    const T = '2026-01-01T00:00:00.000Z';
+    const json = (v: unknown) => strToU8(JSON.stringify(v));
+    const bytes = zipSync({
+      'manifest.json': json({ version: BACKUP_VERSION, exportedAt: T }),
+      'data/profile.json': json({
+        startedAt: '2026-01-01',
+        beforeDrawingId: null,
+        beforeCreatedAt: null,
+        afterDrawingId: null,
+        calibration: null,
+        lastMonthlyPromptAt: null,
+        updatedAt: T,
+      }),
+      'data/progress.json': json([{ lessonId: 'u1-l1', completedAt: T, attempts: 1, lastScore: 70, updatedAt: T }]),
+      'data/drillStats.json': json([]),
+      'data/drawings.json': json([
+        { id: 'd-old', lessonId: 'u1-l1', kind: 'lesson', createdAt: T, strokes: null, updatedAt: T },
+      ]),
+      'data/critiques.json': json([
+        {
+          drawingId: 'd-old',
+          response: { good: ['a'], issues: [{ where: 'w', what: 'x', how: 'y' }], next_one: 'n', encourage: 'e' },
+          model: 'claude-opus-5',
+          createdAt: T,
+          updatedAt: T,
+        },
+      ]),
+      'data/streak.json': json({ current: 2, longest: 2, freezes: 0, lastActiveDay: '2026-01-01', nextFreezeAt: 7, updatedAt: T }),
+      'data/counters.json': json({ line: 1, ellipse: 0, circle: 0, box: 0, gesture: 0, completed: 0, updatedAt: T }),
+      'data/settings.json': json({
+        apiKey: null,
+        modelId: 'claude-opus-5',
+        effort: 'high',
+        dailyCritiqueLimit: 3,
+        externalAppName: null,
+        theme: 'system',
+        updatedAt: T,
+      }),
+      'data/references.json': json([]),
+      'images/drawing/d-old.webp': strToU8('old-image'),
+    });
+
+    await importBackup(bytes, 'replace');
+
+    const db = await openDb();
+    const progress = await db.get('progress', 'u1-l1');
+    expect(progress).toMatchObject({ lessonId: 'u1-l1', attempts: 1, lastScore: 70 });
+    expect(progress?.skipped).toBeUndefined();
+    expect(progress?.lastStep).toBeUndefined();
+    const drawing = await db.get('drawings', 'd-old');
+    expect(drawing?.meta).toBeUndefined();
+    expect(await blobText(drawing!.image)).toBe('old-image');
+    const critique = await db.get('critiques', 'd-old');
+    expect(critique?.response.issues[0]).toEqual({ where: 'w', what: 'x', how: 'y' });
+    const settings = await db.get('settings', SINGLETON_KEY);
+    expect(settings).toMatchObject({ penOnly: true, strictness: 'normal', lastBackupAt: null });
   });
 });
 

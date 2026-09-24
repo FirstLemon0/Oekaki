@@ -17,8 +17,17 @@ Curriculum
 - 1ファイル = 1 Stage。`content/stages/<stageId>.json` に置く。
 - ルーブリックは `content/rubrics/<何か>.json` に置く（ファイル名は自由。中身の
   `id`/`stage` で紐付ける）。
-- 新しいファイルを追加したら `src/content/index.ts` の `RAW_STAGES` /
-  `RAW_RUBRICS` に import を追記する（`import.meta.glob` は使わない方針）。
+- なぞりのお手本は `content/templates/<id>.json`（ファイル名 = `trace.template` の id）。
+- 図解は `content/figures/<id>.svg`（書き方は `content/figures/README.md`）。
+- **登録作業は不要**。`src/content/index.ts` が `import.meta.glob` で
+  `content/stages/*.json`・`content/rubrics/*.json`・`content/templates/*.json` を
+  自動で読み込む。ファイルを置くだけでよい（並びはファイル名順。パス上の順番は
+  `stage.order` で決まる）。
+- 整形は 2 スペースインデント・末尾改行。選択肢や手順のような小さなオブジェクトは
+  `{ "text": "…" }` のように 1 行で書いてよい。
+- 既存の教材を機械的に直すときは `tools/patch-content.mjs` に手順を足して実行する
+  （`node tools/patch-content.mjs`。`--check` で書き込まずに確認）。1 行オブジェクトの
+  書き方は保たれる。
 
 ## ID の規約
 
@@ -64,6 +73,17 @@ Curriculum
 - `kind` は `lesson` / `checkpoint`（模写チェックポイント）/ `graduation`
   （卒業課題）のいずれか。
 - `summary` はホーム画面の「今日のカード」に出す1〜2文。
+- `optional: true` は **選択式のレッスン**（例: U10-2 の塗り技法。3つの技法から1つ以上）。
+  レッスンのヘッダに「この技法は飛ばす」が出て、押すと完了扱い（`skipped`）で次へ進む。
+  あとから開き直して取り組める。省略時は必修。選ばなくてよいことは、最初の `read` の
+  本文でも一言伝える。
+
+### 途中再開
+
+レッスンはステップを進めるたびに「次に開くステップ番号」を保存する。途中で閉じても、
+次に開いたとき「続きから／最初から」を選べる（複数日にまたがる最終課題もこれで続けられる）。
+教材側で特別な書き方は要らないが、長い課題は `read`／`submit` などのステップに分けておくと、
+区切りのよいところから再開できる。
 
 ## Step 型（11種）とサンプル
 
@@ -91,6 +111,12 @@ Curriculum
 }
 ```
 
+- `counter`（任意）: 累計カウンターの種別。`lines`（直線）/ `ellipses`（楕円）/
+  `circles`（円）/ `boxes`（箱。250箱チャレンジ）。1本（1個）描くごとに加算される。
+- 筆圧ドリル（`"drill": "pressure"`）の `params.profile` は `ramp-up`（弱→強）/
+  `ramp-down`（強→弱）/ `flat`（一定）。別名 `increasing` / `decreasing` / `constant` も
+  読み込み時に正式な値へそろえるが、新しく書くときは正式な値を使う。それ以外の値は検証エラー。
+
 ### trace（なぞり）
 
 ```json
@@ -101,6 +127,10 @@ Curriculum
   "count": 5
 }
 ```
+
+- `count`（任意・既定 1）: なぞる回数。
+- `counter`（任意）: 累計カウンターの種別（drill と同じ 4 種）。1回なぞるごとに 1 加算。
+  円・楕円・直線・箱そのものをなぞるときだけ付ける（例: 立方体のお手本 → `"boxes"`）。
 
 ### copy（模写・横に見て描く）
 
@@ -125,6 +155,22 @@ Curriculum
   ]
 }
 ```
+
+箱を描く構築手順なら、累計に加算できる:
+
+```json
+{
+  "type": "construct",
+  "instruction": "同じ箱を少しずつ回しながら、5個描きましょう。描き終えると、箱カウンターに5個加わります（250箱チャレンジ）。",
+  "stages": [ /* … */ ],
+  "counter": "boxes",
+  "count": 5
+}
+```
+
+- `counter`（任意）: 累計カウンターの種別（drill と同じ 4 種）。
+- `count`（任意・既定 1）: このステップで描く個数。描き終えたとき（何か描いてあれば）に
+  `counter` へこの数だけ加算する。instruction の「◯個加わります」と数をそろえる。
 
 ### gesture（時間制限ポーズ）
 
@@ -213,6 +259,17 @@ Curriculum
 `stage` は `stage.id` と同じ形式（`s0`, `s1`, `s1_5`, `s2` …）である必要がある。
 ただし、そのステージ本体（Stage JSON）がまだ無くてもエラーにはならない
 （卒業課題のルーブリックを、ステージ本体より先に用意できるようにするため）。
+
+## 図解（figures）
+
+`read.figure`・`quiz` の選択肢の `figure`・`construct` の各段階の `figure`・
+`copy`（`reference: "builtin"`）の `refId` は `content/figures/<id>.svg` の id。
+要点だけ（詳しくは `content/figures/README.md`）:
+
+- `viewBox="0 0 800 500"`。線は `currentColor`（ダークモードでも読める）。
+- 強調は `#7BB661`（アクセントの緑）を少なめに。
+- 日本語ラベルを入れてよい（`<text fill="currentColor" stroke="none">`）。ただしお手本の
+  線画（`*-lineart`）とクイズの選択肢の図（`quiz-*`）には、ラベルや答えの手がかりを入れない。
 
 ## 本文のトーン
 

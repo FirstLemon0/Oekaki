@@ -1,0 +1,44 @@
+/* ポーズ人形（three.js）とジェスチャー画面での置き方 */
+
+.mq-host { position: absolute; inset: 0; }
+.mq-canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.mq-canvas:active { cursor: grabbing; }
+
+/* 左パネル: 枠（360×520 比）＋ 回転ボタン ＋ 説明 */
+.ls-pose.mq-side { gap: var(--sp-3); }
+.ls-pose.mq-side .ls-pose__frame {
+  position: relative;
+  width: auto;
+  height: min(520px, calc(100% - 104px));
+  max-width: 100%;
+  max-height: none;
+  aspect-ratio: 360 / 520;
+  display: block;
+}
+.mq-side .ls-pose__frame > .ls-pose__svg { position: absolute; inset: 0; }
+.mq-side__meta { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); min-width: 0; }
+.mq-side__controls { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-2); }
+.mq-side__hint { font-size: 12px; color: var(--color-ink-3); }
+.mq-side__loading {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--color-ink-3);
+  white-space: nowrap;
+}
+
+/* 見比べ */
+.ls-compare__panel > img.mq-snap { object-fit: contain; }
+.ls-compare__stack img.mq-silhouette { opacity: 0.8; }
+
+/* 縦向き・幅 1000px 未満: 左パネルを上に 40% 高で置く */
+@media (orientation: portrait), (max-width: 999.98px) {
+  .ls-canvas.has-side:has(.mq-side) { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 40%) minmax(0, 1fr); }
+  .ls-canvas.has-side:has(.mq-side) .ls-canvas__side { border-right: 0; border-bottom: 1px solid var(--color-line); }
+  .ls-pose.mq-side { flex-direction: row; padding: var(--sp-3) var(--sp-5); gap: var(--sp-5); }
+  .ls-pose.mq-side .ls-pose__frame { height: 100%; }
+  .mq-side__meta { align-items: flex-start; }
+  .mq-side__controls { flex-direction: column; align-items: stretch; }
+}

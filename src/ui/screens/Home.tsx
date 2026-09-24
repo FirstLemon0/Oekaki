@@ -16,7 +16,7 @@ import { stageProgress } from '@/content';
 import { monthlyPromptDue } from '@/data/beforeAfter';
 import { diffDays } from '@/data/date';
 import type { DueReview } from '@/data/review';
-import { Button, CounterChip, Icon, showToast } from '../components';
+import { Button, CounterChip, Icon, Modal, showToast } from '../components';
 import { drillName, formatStageOrder, lessonNumber, nf, unitNumber } from '../format';
 import { href, navigate } from '../router';
 import {
@@ -24,6 +24,8 @@ import {
   completedTodayIds,
   counters,
   curriculum,
+  freezeAvailability,
+  freezeToday,
   isFirstRun,
   level,
   localDay,
@@ -32,6 +34,7 @@ import {
   path,
   profile,
   reviews,
+  skippedIds,
   saveProfile,
   saveSettings,
   streak,
@@ -95,6 +98,11 @@ function lessonTitle(node: PathNode): string {
   return l.kind === 'lesson' ? `L${lessonNumber(l.id)} ${l.title}` : l.title;
 }
 
+/** 選択式（飛ばせる）レッスンか */
+function isOptional(node: PathNode): boolean {
+  return node.lesson.optional === true;
+}
+
 function unitLabel(node: PathNode): string {
   return `U${formatStageOrder(node.stage.order)}-${unitNumber(node.unit.id)} ${node.unit.title}`;
 }
@@ -106,8 +114,18 @@ function unitLabel(node: PathNode): string {
 type NodeState = 'done' | 'today' | 'tomorrow' | 'locked';
 
 type PathItem =
-  | { kind: 'unit'; key: string; y: number; label: string }
-  | { kind: 'node'; key: string; x: number; y: number; node: PathNode; state: NodeState; pi: number }
+  | { kind: 'unit'; key: string; y: number; label: string; skippable: boolean }
+  | {
+      kind: 'node';
+      key: string;
+      x: number;
+      y: number;
+      node: PathNode;
+      state: NodeState;
+      pi: number;
+      optional: boolean;
+      skipped: boolean;
+    }
   | { kind: 'review'; key: string; x: number; y: number; review: DueReview; pi: number };
 
 const PATH_W = 520;
@@ -130,6 +148,7 @@ interface PathLayout {
 function layoutStage(
   nodes: PathNode[],
   done: Set<string>,
+  skipped: Set<string>,
   next: PathNode | undefined,
   finishedToday: boolean,
   review: DueReview | undefined,
@@ -143,6 +162,7 @@ function layoutStage(
   let solidEnd = -1;
   let justIdx = -1;
   let gateY: number | null = null;
+  let gap = false;
 
   const push = (x: number, py: number) => {
     points.push({ x, y: py });
@@ -152,7 +172,8 @@ function layoutStage(
   for (const node of nodes) {
     if (node.unit.id !== prevUnit) {
       if (prevUnit !== '') y += 24;
-      items.push({ kind: 'unit', key: `unit-${node.unit.id}`, y: y - 42, label: unitLabel(node) });
+      const skippable = nodes.some((n) => n.unit.id === node.unit.id && isOptional(n));
+      items.push({ kind: 'unit', key: `unit-${node.unit.id}`, y: y - 42, label: unitLabel(node), skippable });
       prevUnit = node.unit.id;
     }
 
@@ -175,12 +196,26 @@ function layoutStage(
     if (isGate) y += 16;
     const x = isGate ? CX : CX + WAVE[k++ % WAVE.length]!;
     const pi = push(x, y);
-    items.push({ kind: 'node', key: node.lesson.id, x, y, node, state, pi });
+    items.push({
+      kind: 'node',
+      key: node.lesson.id,
+      x,
+      y,
+      node,
+      state,
+      pi,
+      optional: isOptional(node),
+      skipped: state === 'done' && skipped.has(node.lesson.id),
+    });
+    // 実線は「先頭から途切れずに進んだところ」まで（飛ばして先に済ませたノードでは伸ばさない）
     if (state === 'done') {
-      solidEnd = pi;
+      if (!gap) solidEnd = pi;
       if (node.lesson.id === justDone) justIdx = pi;
     } else if (state === 'today' || state === 'tomorrow') {
       solidEnd = pi;
+      gap = true;
+    } else {
+      gap = true;
     }
     if (isGate) gateY = y;
     // 今日のノードは題と「今日」ピルぶん下を空ける
@@ -225,12 +260,12 @@ function NodeView({
   justDone: boolean;
   gateJustOpened: boolean;
 }) {
-  const { node, state } = item;
+  const { node, state, optional, skipped } = item;
   const lesson = node.lesson;
   const shape = lesson.kind === 'graduation' ? 'gate' : lesson.kind === 'checkpoint' ? 'cp' : 'lesson';
   const blocked = state === 'locked' || state === 'tomorrow';
   const stateLabel = { done: '完了', today: '今日', tomorrow: '明日', locked: 'ロック中' }[state];
-  const aria = `${lessonTitle(node)}（${stateLabel}）`;
+  const aria = `${lessonTitle(node)}（${skipped ? '飛ばした · タップで挑戦' : stateLabel}${optional ? ' · 任意' : ''}）`;
 
   const onClick = (e: MouseEvent) => {
     if (blocked) {
@@ -277,7 +312,9 @@ function NodeView({
   }
 
   let glyph;
-  if (state === 'done') {
+  if (skipped) {
+    glyph = <Icon name="chevron" size={26} strokeWidth={2.25} />;
+  } else if (state === 'done') {
     glyph = (
       <svg class="node__check" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M5 12l5 5L20 7" pathLength={30} stroke-dasharray={justDone ? 30 : undefined} />
@@ -291,20 +328,23 @@ function NodeView({
 
   return (
     <div
-      class={`pnode pnode--${state}`}
+      class={`pnode pnode--${state}${optional ? ' pnode--optional' : ''}${skipped ? ' pnode--skipped' : ''}`}
       style={{ left: `${item.x - 60}px`, top: `${item.y - (state === 'today' ? 36 : 32)}px` }}
       data-today={state === 'today' || state === 'tomorrow' ? 'true' : undefined}
     >
       <button
         type="button"
-        class={`node node--${shape} node--${state}${justDone ? ' node--just-done' : ''}`}
+        class={`node node--${shape} node--${state}${skipped ? ' node--skipped' : ''}${optional ? ' node--optional' : ''}${justDone && !skipped ? ' node--just-done' : ''}`}
         aria-label={aria}
         aria-disabled={blocked || undefined}
         onClick={onClick}
       >
         <span class="node__glyph">{glyph}</span>
       </button>
-      <span class="pnode__label">{lessonTitle(node)}</span>
+      <span class="pnode__label">
+        {lessonTitle(node)}
+        {optional && <span class="pnode__optional">任意</span>}
+      </span>
       {state === 'today' && <span class="pnode__tag">今日</span>}
       {state === 'tomorrow' && <span class="pnode__tag pnode__tag--quiet">明日</span>}
     </div>
@@ -383,7 +423,7 @@ function PathView({ justDone }: { justDone: string | null }) {
   const cur = currentStageNode();
   const nodes = cur ? path.value.filter((n) => n.stage.id === cur.stage.id) : [];
   const next = nextNode.value;
-  const layout = layoutStage(nodes, completedIds.value, next, todayDone.value, reviews.value[0], justDone);
+  const layout = layoutStage(nodes, completedIds.value, skippedIds.value, next, todayDone.value, reviews.value[0], justDone);
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrolled = useRef(false);
 
@@ -428,6 +468,7 @@ function PathView({ justDone }: { justDone: string | null }) {
               return (
                 <span key={item.key} class="path-unit" style={{ top: `${item.y}px` }}>
                   {item.label}
+                  {item.skippable && <span class="path-unit__note">この技法は飛ばせます</span>}
                 </span>
               );
             case 'review':
@@ -520,6 +561,23 @@ function timeLeftToday(d: Date): string {
 function TodayCard() {
   const next = nextNode.value;
   const freezes = streak.value?.freezes ?? 0;
+  const avail = freezeAvailability.value;
+  const [asking, setAsking] = useState(false);
+  const [freezing, setFreezing] = useState(false);
+
+  const confirmFreeze = async () => {
+    setFreezing(true);
+    try {
+      const ok = await freezeToday();
+      setAsking(false);
+      if (ok) showToast('今日はお休み。ストリークは続きます');
+      else showToast('フリーズを使えませんでした', 'danger', 3200);
+    } catch (e) {
+      showToast(`保存できませんでした: ${e instanceof Error ? e.message : String(e)}`, 'danger', 4000);
+    } finally {
+      setFreezing(false);
+    }
+  };
 
   if (!next) {
     return (
@@ -574,17 +632,40 @@ function TodayCard() {
             variant="secondary"
             size="lg"
             class="btn--on-ink"
-            onClick={() =>
-              showToast(
-                freezes > 0 ? '今日描けなくても、フリーズ 1 つでストリークが続きます' : 'フリーズは残っていません',
-                'info',
-                3200,
-              )
-            }
+            disabled={!avail.ok || freezing}
+            aria-describedby={avail.ok ? undefined : 'freeze-reason'}
+            onClick={() => setAsking(true)}
           >
+            <Icon name="snow" size={18} />
             フリーズ
           </Button>
         </div>
+        {!avail.ok && (
+          <p id="freeze-reason" class="today__reason">
+            {avail.reason}
+          </p>
+        )}
+        <Modal
+          open={asking}
+          onClose={() => setAsking(false)}
+          title="フリーズを使いますか？"
+          width={440}
+          actions={
+            <>
+              <Button variant="secondary" size="md" onClick={() => setAsking(false)}>
+                やめる
+              </Button>
+              <Button variant="primary" size="md" disabled={freezing} onClick={() => void confirmFreeze()}>
+                使う
+              </Button>
+            </>
+          }
+        >
+          <p class="muted">
+            今日の分をスキップして、ストリークを保ちます。残り <span class="num">{freezes}</span> →{' '}
+            <span class="num">{Math.max(0, freezes - 1)}</span>。
+          </p>
+        </Modal>
       </section>
     );
   }

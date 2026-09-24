@@ -36,6 +36,15 @@ export interface CanvasOptions {
   allowMouse: boolean;
 }
 
+export interface ToWebpOptions {
+  /**
+   * true（既定）: 完了ストロークの範囲＋余白（内容の長辺の 8%、最低 24px。線幅ぶんも含む）に切り詰める。
+   * 縦横比は内容のまま。ストロークが無ければ紙全体。
+   * false: 紙全体（attach 前はストロークの範囲 + 16px、原点は 0,0）。
+   */
+  crop?: boolean;
+}
+
 export interface CanvasEngine {
   attach(host: HTMLElement): void;
   detach(): void;
@@ -53,7 +62,11 @@ export interface CanvasEngine {
   loadStrokes(d: Drawing): void;
   replay(opts: { speed: number }): Promise<void>;
   cancelReplay(): void;
-  toWebp(maxEdge: number, quality?: number): Promise<Blob>;
+  /**
+   * 紙色＋完了ストロークを画像化する。長辺は maxEdge 以下。
+   * 既定では内容の範囲（＋余白）に切り詰める。紙全体が欲しいときは `{ crop: false }`。
+   */
+  toWebp(maxEdge: number, quality?: number, opts?: ToWebpOptions): Promise<Blob>;
   size(): { width: number; height: number };
   on(event: 'strokeend', cb: (s: Stroke) => void): () => void;
   on(event: 'change', cb: () => void): () => void;

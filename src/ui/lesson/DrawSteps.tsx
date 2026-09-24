@@ -15,7 +15,7 @@ import { Figure, ReferencePicker, useBlobUrl, useEngine } from './common';
 import { fitTemplate, type Size } from './drillSetup';
 import { loadFigure, svgForOverlay } from './figures';
 import { ScoreSheet } from './ScoreSheet';
-import { saveDrawingMeta, saveImported, saveStrokes, scorers, type LessonSession } from './stateBridge';
+import { bumpForStep, saveDrawingMeta, saveImported, saveStrokes, scorers, type LessonSession } from './stateBridge';
 import { drawingKindForStep } from './steps';
 import { ImportView, StepFrame } from './StepViews';
 
@@ -105,6 +105,8 @@ export function TraceView({ step, ctx }: { step: TraceStep; ctx: StepCtx }) {
   const next = async () => {
     if (!scored) return;
     ctx.session.otherScores.push(scored.result.score);
+    // 累計（counter があれば 1 回なぞるごとに 1）
+    void bumpForStep(step, ctx.session);
     setBest((b) => (b === null ? scored.result.score : Math.max(b, scored.result.score)));
     if (i + 1 >= count) {
       await saveStrokes(scored.strokes, 'lesson', ctx.node.lesson.id, ctx.session);
@@ -227,7 +229,9 @@ export function ConstructView({ step, ctx }: { step: ConstructStep; ctx: StepCtx
   const finish = async () => {
     setBusy(true);
     try {
-      await saveStrokes(engine.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session);
+      const saved = await saveStrokes(engine.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session);
+      // 累計（counter があれば count ぶん）。何も描かずに進んだときは足さない
+      if (saved) await bumpForStep(step, ctx.session);
     } finally {
       setBusy(false);
     }

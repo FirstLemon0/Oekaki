@@ -4,12 +4,13 @@
  * 描画レイヤー: 紙色 → グリッド → 重ね（overlay） → 完了ストローク（オフスクリーンにキャッシュ） → 進行中ストローク。
  */
 import type { Drawing, Stroke, StrokePoint, Vec2 } from '@/scoring/types';
-import type { CanvasEngine, CanvasOptions, OverlaySpec, Tool } from './types';
+import type { CanvasEngine, CanvasOptions, OverlaySpec, Tool, ToWebpOptions } from './types';
 import { UndoStack } from './history';
 import { findHitStrokes } from './hit';
 import { lineWidth, normalizePressure, quadSegmentAt, shouldAppend, tailSegment, type QuadSegment } from './smooth';
 import { buildReplaySchedule, visibleCounts, type ReplaySchedule } from './replay';
 import { resolveColor } from './color';
+import { cropRect, exportScale, type Rect } from './crop';
 
 export const DEFAULT_OPTIONS: CanvasOptions = {
   penOnly: false,
@@ -676,22 +677,28 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
       endReplay();
     },
 
-    toWebp(maxEdge: number, quality = 0.85): Promise<Blob> {
+    toWebp(maxEdge: number, quality = 0.85, o?: ToWebpOptions): Promise<Blob> {
       if (typeof document === 'undefined') return Promise.reject(new Error('toWebp: document がありません'));
       if (!host) resolveColors();
       const drawing = current();
-      const sz = cssW > 0 && cssH > 0 ? { width: cssW, height: cssH } : strokeBounds(drawing);
-      const w = Math.max(1, sz.width);
-      const h = Math.max(1, sz.height);
-      const k = Math.min(Math.max(1, dpr), maxEdge / Math.max(w, h));
+      const crop = o?.crop ?? true;
+      const cropped = crop ? cropRect(drawing, opts.baseWidth) : null;
+      let rect: Rect;
+      if (cropped) {
+        rect = cropped;
+      } else {
+        const sz = cssW > 0 && cssH > 0 ? { width: cssW, height: cssH } : strokeBounds(drawing);
+        rect = { x: 0, y: 0, width: Math.max(1, sz.width), height: Math.max(1, sz.height) };
+      }
+      const k = exportScale(rect, maxEdge, dpr, cropped !== null);
       const out = document.createElement('canvas');
-      out.width = Math.max(1, Math.round(w * k));
-      out.height = Math.max(1, Math.round(h * k));
+      out.width = Math.max(1, Math.round(rect.width * k));
+      out.height = Math.max(1, Math.round(rect.height * k));
       const c = out.getContext('2d');
       if (!c) return Promise.reject(new Error('toWebp: 2D コンテキストを作れません'));
       c.fillStyle = paper;
       c.fillRect(0, 0, out.width, out.height);
-      c.setTransform(k, 0, 0, k, 0, 0);
+      c.setTransform(k, 0, 0, k, -rect.x * k, -rect.y * k);
       const style = normalStyle();
       for (const s of drawing) drawStrokeFull(c, s, style);
       return new Promise<Blob>((resolve, reject) => {

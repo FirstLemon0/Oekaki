@@ -129,8 +129,8 @@
     --color-canvas: #3A3833;
     --color-line: #4A473F;
     --color-ink: #EDE9E0;
-    --color-ink-2: #B5B0A6;
-    --color-ink-3: #7E7A71;
+    --color-ink-2: #BCB7AD;
+    --color-ink-3: #8A867C;
     --color-ink-inverse: #2A2926;
     --color-accent: #8FC56F;
     --color-accent-press: #7FB35F;
@@ -176,8 +176,8 @@
   --color-canvas: #3A3833;
   --color-line: #4A473F;
   --color-ink: #EDE9E0;
-  --color-ink-2: #B5B0A6;
-  --color-ink-3: #7E7A71;
+  --color-ink-2: #BCB7AD;
+  --color-ink-3: #8A867C;
   --color-ink-inverse: #2A2926;
   --color-accent: #8FC56F;
   --color-accent-press: #7FB35F;
@@ -213,38 +213,6 @@
   --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.3);
   --shadow-3: 0 12px 32px rgba(0, 0, 0, 0.4);
   --shadow-sheet: 0 -8px 32px rgba(0, 0, 0, 0.35);
-}
-
-/*
- * 互換エイリアス（非推奨）: 旧トークン（案A）名で書かれた並行作業中のコードが
- * 壊れないよう、新トークンへ向けておく。新規コードでは使わない。統合後に削除する。
- */
-:root {
-  --color-card: var(--color-surface);
-  --color-groove: var(--color-locked);
-  --score-off: var(--score-bad);
-  --color-focus: var(--color-accent-text);
-  --color-scrim: var(--scrim);
-  --font-display: var(--font-body);
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-10: 40px;
-  --radius-card: var(--radius-lg);
-  --shadow-modal: var(--shadow-3);
-  --text-xs: 0.75rem;
-  --text-sm: 0.8125rem;
-  --text-base: 1rem;
-  --text-md: 1.125rem;
-  --text-lg: 1.25rem;
-  --text-xl: 1.5rem;
-  --text-2xl: 1.875rem;
-  --text-timer: var(--text-display);
-  --text-score: var(--text-num-lg);
 }
 
 /* 文字サイズ「大きめ」 */

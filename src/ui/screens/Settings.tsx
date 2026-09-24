@@ -10,12 +10,11 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { version as APP_VERSION } from '../../../package.json';
-import { estimateCostJpy } from '@/critic';
+import { estimateCostJpy, testConnection, type CriticErrorKind } from '@/critic';
 import { exportBackup, importBackup } from '@/data/backup';
 import type { CritiqueEffort, FontScale, Strictness, Theme } from '@/data/types';
 import { Button, Icon, ListRow, Modal, Segment, Stepper, TextField, Toggle, showToast } from '../components';
 import { formatBytes, yyyymmdd } from '../format';
-import { testConnection } from '../lesson/connectionTest';
 import { href, navigate } from '../router';
 import { critiques, persisted, profile, reloadData, saveSettings, settings, uiPrefs } from '../state';
 
@@ -103,6 +102,23 @@ const MODEL_PRESETS = [
   { value: 'claude-sonnet-5', label: 'Sonnet 5' },
 ] as const;
 
+/** 接続テスト失敗の理由（種別ごとの短い文言） */
+function connectionReason(kind: CriticErrorKind, key: string): string {
+  switch (kind) {
+    case 'no_api_key':
+      return key.trim() === '' ? 'API キーが未設定です' : 'キーが違います（貼り付け直してください）';
+    case 'daily_limit':
+      return '利用上限に達しています（しばらく待つか、上限を確認してください）';
+    case 'network':
+      return '通信できませんでした（ネットワークを確認してください）';
+    case 'model_unavailable':
+      return 'このモデルは使えません（モデル ID を確認してください）';
+    case 'refused':
+    case 'bad_response':
+      return '応答を確認できませんでした';
+  }
+}
+
 type TestState =
   | { kind: 'idle' }
   | { kind: 'busy' }
@@ -133,9 +149,14 @@ function AiGroup() {
 
   const runTest = async () => {
     setTest({ kind: 'busy' });
-    const r = await testConnection(settings.value?.apiKey ?? null, modelId);
-    if (r.ok) setTest({ kind: 'ok', model: r.model, at: new Date() });
-    else setTest({ kind: 'ng', text: r.reason === 'no_api_key' ? 'キーが未設定か、正しくありません' : '未接続（通信できませんでした）' });
+    const key = keyDraft.trim();
+    try {
+      const r = await testConnection({ apiKey: key, model: modelId });
+      if (r.ok) setTest({ kind: 'ok', model: r.model, at: new Date() });
+      else setTest({ kind: 'ng', text: `接続できませんでした: ${connectionReason(r.kind, key)}` });
+    } catch (e) {
+      setTest({ kind: 'ng', text: `接続できませんでした: ${e instanceof Error ? e.message : String(e)}` });
+    }
   };
 
   return (

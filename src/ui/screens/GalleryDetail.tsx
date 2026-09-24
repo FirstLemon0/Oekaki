@@ -1,17 +1,21 @@
 /**
  * 絵の詳細  #/gallery/:id
  *
- * 大きく表示、日付・種別、描いた順に再生（src/canvas の replay。未統合のあいだは押せない）、
+ * 大きく表示、日付・種別、描いた順に再生（src/canvas の replay。ストロークの無い取込画像では出さない）、
  * 批評（4 ブロック）、削除（確認つき）。
+ *
+ * 再生: 表示中の画像と同じ枠に createCanvasEngine を attach し、loadStrokes → replay({ speed: 2 })。
+ * キャンバスはストロークの座標（CSS px）のまま描くので、書き出し範囲（切り詰めなら cropRect、
+ * 旧データの紙全体書き出しなら紙の大きさの推定）ぶんの箱を作って枠に合わせて拡大縮小する。
  */
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { createCanvasEngine, cropRect, DEFAULT_OPTIONS, type CanvasEngine, type Rect } from '@/canvas';
 import { deleteDrawing, getCritique, getDrawing } from '@/data/repo';
-import type { Critique, Drawing } from '@/data/types';
-import { Button, CritiqueFixes, CritiqueGood, CritiqueNext, EmptyState, Icon, Modal, showToast } from '../components';
+import type { Critique, Drawing, StrokeDrawing } from '@/data/types';
+import { Button, CritiqueFixes, CritiqueGood, CritiqueNext, EmptyState, Modal, showToast } from '../components';
 import { formatDate, KIND_LABEL } from '../format';
 import { href, navigate } from '../router';
 import { path } from '../state';
-import { canvasAvailable } from '../stubs/canvas';
 import { useObjectUrls } from '../useObjectUrl';
 
 function CritiqueBlocks({ critique }: { critique: Critique }) {
@@ -32,10 +36,124 @@ function CritiqueBlocks({ critique }: { critique: Critique }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// 描いた順に再生
+// ---------------------------------------------------------------------------
+
+type ReplayMode = 'idle' | 'playing' | 'done';
+
+/**
+ * 画像に対応するストローク座標の範囲。保存時の toWebp が切り詰めていれば cropRect と縦横比が一致する。
+ * 一致しなければ（切り詰め導入前の絵）紙全体を書き出したものとみなし、原点から画像の縦横比で広げる。
+ */
+function sourceRect(strokes: StrokeDrawing, imageAspect: number): Rect {
+  const crop = cropRect(strokes, DEFAULT_OPTIONS.baseWidth);
+  if (crop && imageAspect > 0 && Math.abs(crop.width / crop.height - imageAspect) / imageAspect < 0.03) return crop;
+  let maxX = 1;
+  let maxY = 1;
+  for (const st of strokes) {
+    for (const p of st) {
+      if (p.x > maxX) maxX = p.x;
+      if (p.y > maxY) maxY = p.y;
+    }
+  }
+  const r = imageAspect > 0 ? imageAspect : (maxX + 16) / (maxY + 16);
+  const width = Math.max(maxX + 16, (maxY + 16) * r);
+  return { x: 0, y: 0, width, height: width / r };
+}
+
+function shift(strokes: StrokeDrawing, dx: number, dy: number): StrokeDrawing {
+  return strokes.map((st) => st.map((p) => ({ ...p, x: p.x - dx, y: p.y - dy })));
+}
+
+/** 画像の上に重ねる再生面。mode が idle 以外のあいだだけ描画される */
+function ReplayStage({
+  strokes,
+  imageAspect,
+  runId,
+  onEnd,
+  engineRef,
+}: {
+  strokes: StrokeDrawing;
+  imageAspect: number;
+  /** 増えるたびに頭から再生する */
+  runId: number;
+  onEnd: () => void;
+  engineRef: { current: CanvasEngine | null };
+}) {
+  const frameRef = useRef<HTMLDivElement>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
+  const rect = useMemo(() => sourceRect(strokes, imageAspect), [strokes, imageAspect]);
+  const [scale, setScale] = useState<{ x: number; y: number } | null>(null);
+
+  // 枠の大きさに合わせる
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) return;
+    const fit = () => {
+      const w = frame.clientWidth;
+      const h = frame.clientHeight;
+      if (w > 0 && h > 0) setScale({ x: w / rect.width, y: h / rect.height });
+    };
+    fit();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(fit);
+    ro.observe(frame);
+    return () => ro.disconnect();
+  }, [rect]);
+
+  // エンジンを attach（1 回だけ）
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const engine = createCanvasEngine({ penOnly: true, allowMouse: false });
+    engine.attach(host);
+    engine.loadStrokes(shift(strokes, rect.x, rect.y));
+    engineRef.current = engine;
+    return () => {
+      engine.cancelReplay();
+      engine.detach();
+      engineRef.current = null;
+    };
+  }, [strokes, rect, engineRef]);
+
+  // 再生（runId が変わるたび）
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (!engine) return;
+    let alive = true;
+    void engine.replay({ speed: 2 }).then(() => {
+      if (alive) onEnd();
+    });
+    return () => {
+      alive = false;
+    };
+  }, [runId]);
+
+  return (
+    <div class="replay" ref={frameRef} aria-hidden="true">
+      <div
+        class="replay__host"
+        ref={hostRef}
+        style={{
+          width: `${rect.width}px`,
+          height: `${rect.height}px`,
+          transform: scale ? `scale(${scale.x}, ${scale.y})` : undefined,
+          visibility: scale ? undefined : 'hidden',
+        }}
+      />
+    </div>
+  );
+}
+
 export function GalleryDetail({ id }: { id: string }) {
   const [drawing, setDrawing] = useState<Drawing | null | undefined>(undefined);
   const [critique, setCritique] = useState<Critique | undefined>(undefined);
   const [confirming, setConfirming] = useState(false);
+  const [mode, setMode] = useState<ReplayMode>('idle');
+  const [runId, setRunId] = useState(0);
+  const [imageAspect, setImageAspect] = useState(0);
+  const engineRef = useRef<CanvasEngine | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -67,7 +185,16 @@ export function GalleryDetail({ id }: { id: string }) {
   }
 
   const lesson = drawing.lessonId ? path.value.find((n) => n.lesson.id === drawing.lessonId)?.lesson : undefined;
-  const canReplay = canvasAvailable && drawing.strokes !== null && drawing.strokes.length > 0;
+  const strokes = drawing.strokes && drawing.strokes.some((st) => st.length > 0) ? drawing.strokes : null;
+
+  const startReplay = () => {
+    setMode('playing');
+    setRunId((n) => n + 1);
+  };
+  const stopReplay = () => {
+    engineRef.current?.cancelReplay();
+    setMode('done');
+  };
 
   const doDelete = async () => {
     await deleteDrawing(drawing.id);
@@ -86,9 +213,16 @@ export function GalleryDetail({ id }: { id: string }) {
           <span class="detail__date num">{formatDate(drawing.createdAt)}</span>
         </div>
         <div class="detail__actions">
-          <Button variant="secondary" icon="play" disabled={!canReplay} title={canReplay ? undefined : '再生は準備中です'}>
-            描いた順に再生
-          </Button>
+          {strokes &&
+            (mode === 'playing' ? (
+              <Button variant="secondary" icon="close" onClick={stopReplay}>
+                止める
+              </Button>
+            ) : (
+              <Button variant="secondary" icon={mode === 'done' ? 'rotate' : 'play'} disabled={imageAspect === 0} onClick={startReplay}>
+                {mode === 'done' ? 'もう一度' : '描いた順に再生'}
+              </Button>
+            ))}
           <Button variant="danger" icon="trash" onClick={() => setConfirming(true)}>
             削除
           </Button>
@@ -97,15 +231,33 @@ export function GalleryDetail({ id }: { id: string }) {
 
       <div class={critique ? 'detail__body detail__body--split' : 'detail__body'}>
         <div class="detail__image">
-          <img src={urls.get(drawing.id)} alt={`${KIND_LABEL[drawing.kind]}の絵`} />
+          <div class="detail__frame">
+            <img
+              src={urls.get(drawing.id)}
+              alt={`${KIND_LABEL[drawing.kind]}の絵`}
+              style={mode === 'idle' ? undefined : { visibility: 'hidden' }}
+              onLoad={(e) => {
+                const img = e.currentTarget as HTMLImageElement;
+                if (img.naturalWidth > 0 && img.naturalHeight > 0) setImageAspect(img.naturalWidth / img.naturalHeight);
+              }}
+            />
+            {strokes && mode !== 'idle' && imageAspect > 0 && (
+              <ReplayStage
+                strokes={strokes}
+                imageAspect={imageAspect}
+                runId={runId}
+                engineRef={engineRef}
+                onEnd={() => setMode('done')}
+              />
+            )}
+          </div>
+          {mode === 'playing' && (
+            <span class="detail__replaying" role="status">
+              再生中
+            </span>
+          )}
         </div>
-        {critique ? (
-          <CritiqueBlocks critique={critique} />
-        ) : drawing.strokes === null ? null : (
-          <p class="detail__hint">
-            <Icon name="help" size={18} /> 線の記録があります。再生は近日対応です。
-          </p>
-        )}
+        {critique && <CritiqueBlocks critique={critique} />}
       </div>
 
       <Modal

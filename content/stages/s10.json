@@ -143,6 +143,7 @@
           "minutes": 15,
           "kind": "lesson",
           "summary": "アニメ塗りの基本、クリッピングした影レイヤーにくっきりした影を塗る方法を覚えます。",
+          "optional": true,
           "steps": [
             {
               "type": "read",
@@ -179,6 +180,7 @@
           "minutes": 15,
           "kind": "lesson",
           "summary": "肌と服に、くっきりした1影と2影を塗り分けます。",
+          "optional": true,
           "steps": [
             {
               "type": "read",
@@ -213,6 +215,7 @@
           "minutes": 15,
           "kind": "lesson",
           "summary": "髪の毛束に沿った影と、つやを表す「天使の輪」のハイライトを塗ります。",
+          "optional": true,
           "steps": [
             {
               "type": "read",
@@ -238,6 +241,7 @@
           "minutes": 15,
           "kind": "lesson",
           "summary": "厚塗りの考え方と、まず白黒で明暗を決める進め方を知ります。",
+          "optional": true,
           "steps": [
             {
               "type": "read",
@@ -263,6 +267,7 @@
           "minutes": 15,
           "kind": "lesson",
           "summary": "白黒で決めた明暗に色をのせ、スポイトで拾った中間色で境目をなじませます。",
+          "optional": true,
           "steps": [
             {
               "type": "read",
@@ -288,6 +293,7 @@
           "minutes": 15,
           "kind": "lesson",
           "summary": "描き込む場所を顔まわりに絞り、見てほしい所をはっきりさせます。",
+          "optional": true,
           "steps": [
             {
               "type": "read",
@@ -313,6 +319,7 @@
           "minutes": 15,
           "kind": "lesson",
           "summary": "透明感のある水彩風の塗り方の考え方と、薄い色から重ねる進め方を知ります。",
+          "optional": true,
           "steps": [
             {
               "type": "read",
@@ -343,6 +350,7 @@
           "minutes": 15,
           "kind": "lesson",
           "summary": "薄いベタの上に、乗算のレイヤーで影を重ねていきます。",
+          "optional": true,
           "steps": [
             {
               "type": "read",
@@ -368,6 +376,7 @@
           "minutes": 15,
           "kind": "lesson",
           "summary": "境目をぼかしつつ縁だけ少し濃くする、水彩らしい「にじみ」を表現します。",
+          "optional": true,
           "steps": [
             {
               "type": "read",

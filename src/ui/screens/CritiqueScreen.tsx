@@ -14,10 +14,12 @@ import { critiques, curriculum, path, settings, today } from '../state';
 import { useBlobUrl } from '../lesson/common';
 import { critiqueGate, critiquesToday } from '../lesson/limits';
 import { storeCritique } from '../lesson/stateBridge';
+import { markerPlacement, type MarkerPos as Pos } from '../lesson/critiqueMarkers';
 
+/** 番号マーカーの位置は「保存した（切り詰め後の）絵の左上原点 0..1」 */
 interface View {
   good: string[];
-  issues: { where: string; what: string; fix: string }[];
+  issues: { where: string; what: string; fix: string; pos?: Pos }[];
   next_one: string;
   encourage: string;
   model: string;
@@ -26,7 +28,7 @@ interface View {
 function fromSaved(c: Critique): View {
   return {
     good: c.response.good,
-    issues: c.response.issues.map((i) => ({ where: i.where, what: i.what, fix: i.how })),
+    issues: c.response.issues.map((i) => ({ where: i.where, what: i.what, fix: i.how, ...(i.pos ? { pos: i.pos } : {}) })),
     next_one: c.response.next_one,
     encourage: c.response.encourage,
     model: c.model,
@@ -251,13 +253,31 @@ export function CritiqueScreen(props: CritiqueScreenProps) {
       {phase.k === 'result' && (
         <div class="ls-cresult">
           <figure class="ls-cpic ls-cpic--result">
-            {imgUrl && <img src={imgUrl} alt="批評を受けた絵" />}
+            <div class="ls-cpic__frame">
+              {imgUrl && <img src={imgUrl} alt="批評を受けた絵" />}
+              {phase.view.issues.map((it, i) => {
+                const at = markerPlacement(it.pos);
+                return at ? (
+                  <span
+                    key={i}
+                    class="ls-marker num ls-cpic__pin"
+                    style={{ left: `${at.x * 100}%`, top: `${at.y * 100}%` }}
+                    aria-hidden="true"
+                    data-testid="critique-pin"
+                  >
+                    {i + 1}
+                  </span>
+                ) : null;
+              })}
+            </div>
             <div class="ls-cpic__markers" aria-hidden="true">
-              {phase.view.issues.map((_, i) => (
-                <span key={i} class="ls-marker num">
-                  {i + 1}
-                </span>
-              ))}
+              {phase.view.issues.map((it, i) =>
+                markerPlacement(it.pos) ? null : (
+                  <span key={i} class="ls-marker num">
+                    {i + 1}
+                  </span>
+                ),
+              )}
             </div>
             <figcaption class="ls-note">
               番号は右の「直す点」と対応します。モデル: <span class="num">{phase.view.model}</span>
