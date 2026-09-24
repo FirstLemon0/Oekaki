@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <line x1="20" y1="40" x2="380" y2="40" stroke-width="1.5" opacity="0.45"/>
+  <text x="30" y="30" font-size="16" fill="currentColor" stroke="none" text-anchor="start">目の高さ（上）</text>
+  <line x1="200" y1="310" x2="200" y2="380" stroke-width="3"/>
+  <line x1="130" y1="289" x2="130" y2="353.6" stroke-width="3"/>
+  <line x1="280" y1="286" x2="280" y2="349.8" stroke-width="3"/>
+  <line x1="200" y1="310" x2="130" y2="289" stroke-width="3"/>
+  <line x1="200" y1="310" x2="280" y2="286" stroke-width="3"/>
+  <line x1="200" y1="380" x2="130" y2="353.6" stroke-width="3"/>
+  <line x1="200" y1="380" x2="280" y2="349.8" stroke-width="3"/>
+  <line x1="130" y1="289" x2="210.1" y2="268.4" stroke-width="3"/>
+  <line x1="280" y1="286" x2="210.1" y2="268.4" stroke-width="3"/>
+  <path d="M200,310 L130,289 L210.1,268.4 L280,286 Z" fill="currentColor" fill-opacity="0.15" stroke="none"/>
+  <line x1="200" y1="150" x2="200" y2="270" stroke-width="3"/>
+  <line x1="110" y1="139" x2="110" y2="247" stroke-width="3"/>
+  <line x1="300" y1="137.8" x2="300" y2="244.4" stroke-width="3"/>
+  <line x1="200" y1="150" x2="110" y2="139" stroke-width="3"/>
+  <line x1="200" y1="150" x2="300" y2="137.8" stroke-width="3"/>
+  <line x1="200" y1="270" x2="110" y2="247" stroke-width="3"/>
+  <line x1="200" y1="270" x2="300" y2="244.4" stroke-width="3"/>
+  <line x1="110" y1="139" x2="210.1" y2="129" stroke-width="3"/>
+  <line x1="300" y1="137.8" x2="210.1" y2="129" stroke-width="3"/>
+  <path d="M200,150 L110,139 L210.1,129 L300,137.8 Z" fill="currentColor" fill-opacity="0.15" stroke="none"/>
+  <text x="200" y="440" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">俯瞰：上の面が見える</text>
+  <line x1="420" y1="470" x2="780" y2="470" stroke-width="1.5" opacity="0.45"/>
+  <text x="770" y="462" font-size="16" fill="currentColor" stroke="none" text-anchor="end">目の高さ（下）</text>
+  <line x1="600" y1="90" x2="600" y2="210" stroke-width="3"/>
+  <line x1="510" y1="128" x2="510" y2="236" stroke-width="3"/>
+  <line x1="700" y1="132.2" x2="700" y2="238.9" stroke-width="3"/>
+  <line x1="600" y1="90" x2="510" y2="128" stroke-width="3"/>
+  <line x1="600" y1="90" x2="700" y2="132.2" stroke-width="3"/>
+  <line x1="600" y1="210" x2="510" y2="236" stroke-width="3"/>
+  <line x1="600" y1="210" x2="700" y2="238.9" stroke-width="3"/>
+  <line x1="510" y1="236" x2="610.1" y2="259.7" stroke-width="3"/>
+  <line x1="700" y1="238.9" x2="610.1" y2="259.7" stroke-width="3"/>
+  <path d="M600,210 L510,236 L610.1,259.7 L700,238.9 Z" fill="currentColor" fill-opacity="0.15" stroke="none"/>
+  <line x1="600" y1="260" x2="600" y2="330" stroke-width="3"/>
+  <line x1="530" y1="276.3" x2="530" y2="340.9" stroke-width="3"/>
+  <line x1="680" y1="278.7" x2="680" y2="342.4" stroke-width="3"/>
+  <line x1="600" y1="260" x2="530" y2="276.3" stroke-width="3"/>
+  <line x1="600" y1="260" x2="680" y2="278.7" stroke-width="3"/>
+  <line x1="600" y1="330" x2="530" y2="340.9" stroke-width="3"/>
+  <line x1="600" y1="330" x2="680" y2="342.4" stroke-width="3"/>
+  <line x1="530" y1="340.9" x2="610.1" y2="351.5" stroke-width="3"/>
+  <line x1="680" y1="342.4" x2="610.1" y2="351.5" stroke-width="3"/>
+  <path d="M600,330 L530,340.9 L610.1,351.5 L680,342.4 Z" fill="currentColor" fill-opacity="0.15" stroke="none"/>
+  <text x="600" y="420" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">アオリ：下の面が見える</text>
+</svg>

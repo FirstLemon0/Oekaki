@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M140,60 C150,150 120,250 140,440" stroke="#7BB661" stroke-width="4"/>
+  <text x="140" y="480" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">① 動きの線</text>
+  <ellipse cx="340" cy="80" rx="20" ry="25"/>
+  <ellipse cx="335" cy="170" rx="45" ry="60" transform="rotate(5 335 170)" stroke-width="3"/>
+  <ellipse cx="330" cy="280" rx="40" ry="32" stroke-width="3"/>
+  <text x="340" y="480" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">② 頭と豆</text>
+  <ellipse cx="579" cy="89.8" rx="22" ry="28" transform="rotate(6 579 89.8)"/>
+  <line x1="574.5" y1="124" x2="570" y2="170.8"/>
+  <ellipse cx="570" cy="170.8" rx="34" ry="42" transform="rotate(5 570 170.8)"/>
+  <ellipse cx="565.5" cy="242.8" rx="30" ry="24" transform="rotate(-7 565.5 242.8)"/>
+  <path d="M512.5,142.2 L501.9,212.8 A7,7 0 0 0 515.7,215.2 L530.3,145.4 A9,9 0 0 0 512.5,142.2"/>
+  <path d="M501.8,214.2 L505.6,264.6 A5,5 0 0 0 515.6,264.2 L515.8,213.8 A7,7 0 0 0 501.8,214.2"/>
+  <path d="M609.8,134.8 L626.1,204.6 A7,7 0 0 0 639.9,201.8 L627.4,131.2 A9,9 0 0 0 609.8,134.8"/>
+  <path d="M626.1,202.2 L620.8,254.7 A5,5 0 0 0 630.8,256.1 L639.9,204.2 A7,7 0 0 0 626.1,202.2"/>
+  <path d="M531.9,255.6 L525.1,343.4 A9,9 0 0 0 542.9,345.6 L557.7,258.8 A13,13 0 0 0 531.9,255.6"/>
+  <path d="M525.1,345.8 L538.9,421.8 A6,6 0 0 0 550.7,420.2 L542.9,343.2 A9,9 0 0 0 525.1,345.8"/>
+  <path d="M575,245.8 L574.5,341.4 A9,9 0 0 0 592.5,342.2 L601,247 A13,13 0 0 0 575,245.8"/>
+  <path d="M574.5,341.3 L573,427.9 A6,6 0 0 0 585,428.5 L592.5,342.3 A9,9 0 0 0 574.5,341.3"/>
+  <circle cx="521.4" cy="143.8" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="618.6" cy="133" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="508.8" cy="214" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="633" cy="203.2" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="534" cy="344.5" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="583.5" cy="341.8" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="544.8" cy="257.2" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="588" cy="246.4" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <line x1="544.8" y1="421" x2="530.4" y2="433.6" stroke-width="5"/>
+  <line x1="579" y1="428.2" x2="595.2" y2="437.2" stroke-width="5"/>
+  <text x="560" y="480" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">③ 円柱の腕・脚＋関節</text>
+  <line x1="200" y1="250" x2="260" y2="250" stroke="#7BB661"/>
+  <path d="M247.4,256.1 L260,250 L247.4,243.9" stroke="#7BB661"/>
+  <line x1="400" y1="250" x2="460" y2="250" stroke="#7BB661"/>
+  <path d="M447.4,256.1 L460,250 L447.4,243.9" stroke="#7BB661"/>
+</svg>

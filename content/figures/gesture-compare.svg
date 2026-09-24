@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <ellipse cx="264" cy="118" rx="20" ry="25" transform="rotate(20 264 118)" opacity="0.45"/>
+  <path d="M252,144.4 L236,182 L212,246" opacity="0.45"/>
+  <path d="M220,154 L256,162" opacity="0.45"/>
+  <path d="M197.6,254 L224,250" opacity="0.45"/>
+  <path d="M220,154 L244,114 L276,82" opacity="0.45"/>
+  <path d="M256,162 L300,146 L332,126" opacity="0.45"/>
+  <path d="M197.6,254 L172,326 L148,402" opacity="0.45"/>
+  <path d="M224,250 L236,330 L252,406" opacity="0.45"/>
+  <path d="M125,440 C110,350 140,250 210,170 C230,145 250,120 275,95" stroke="#7BB661" stroke-width="4"/>
+  <text x="220" y="470" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">お手本</text>
+  <path d="M560,440 C555,350 565,250 590,170 C600,140 605,120 610,95" stroke-width="4"/>
+  <path d="M560,440 C545,350 575,250 645,170 C665,145 685,120 710,95" stroke="#7BB661" stroke-width="3" stroke-dasharray="8 6"/>
+  <text x="640" y="470" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">自分の線＋お手本を重ねる</text>
+  <line x1="610" y1="230" x2="650" y2="200" stroke-width="2"/>
+  <path d="M643.6,212.4 L650,200 L636.3,202.7" stroke-width="2"/>
+  <text x="690" y="250" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">カーブが浅い</text>
+  <text x="400" y="40" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">描いたら必ず見比べる：違いを1つだけ言葉にする</text>
+</svg>

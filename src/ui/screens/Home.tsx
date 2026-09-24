@@ -1,39 +1,39 @@
 /**
- * ホーム（一本道パス）  #/
+ * ホーム（一本道パス）  #/   （DESIGN_SYSTEM.md §3 ホーム）
  *
- * レイアウト（横 1472×920 想定）: 左レール 88 | 上部ピル＋ステージバナー＋パス（スクロール） | 右パネル 372
- * 縦向き: 右パネルは「今日のカード」だけ下部固定。つみあげ等はパスの左余白に縦並び。
+ * 横 1472×920: 左レール 96 | 上部バー 72（ピル群 ＋ Lv/XP）
+ *              | 中央: ステージバナー 520×64 ＋ パス（幅 520、縦スクロール） | 右パネル 400
+ * 縦 920×1472: 上部バー 80 → 今日カード（横並び）→ 累計チップ横スクロール → バナー＋パス → 下ナビ 88
+ *
+ * パスに出すのは「今いるステージ」だけ。末尾に門（卒業課題）と、次ステージのロック帯を置く。
+ *
+ * 完了アニメ: `#/?justDone=<lessonId>` で来たら、そのノードを塗り（200ms）→ チェックを描き（300ms）
+ * → 次区間の道を伸ばす（400ms）。読んだらハッシュは `#/` に戻す（再訪で繰り返さない）。
  */
-import { useLayoutEffect, useRef } from 'preact/hooks';
-import type { PathNode } from '@/content';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import type { PathNode, Step } from '@/content';
 import { stageProgress } from '@/content';
 import { monthlyPromptDue } from '@/data/beforeAfter';
 import { diffDays } from '@/data/date';
 import type { DueReview } from '@/data/review';
-import { Button, Card, Icon, Pill, ProgressBar } from '../components';
-import {
-  drillName,
-  formatStageOrder,
-  lessonHeadline,
-  lessonNumber,
-  nf,
-  stepComposition,
-  unitNumber,
-} from '../format';
+import { Button, CounterChip, Icon, showToast } from '../components';
+import { drillName, formatStageOrder, lessonNumber, nf, unitNumber } from '../format';
 import { href, navigate } from '../router';
 import {
   completedIds,
   completedTodayIds,
   counters,
+  curriculum,
   isFirstRun,
   level,
   localDay,
   nextNode,
+  now,
   path,
   profile,
   reviews,
   saveProfile,
-  saveUiPrefs,
+  saveSettings,
   streak,
   streakAtRisk,
   today,
@@ -43,73 +43,127 @@ import {
 } from '../state';
 
 // ---------------------------------------------------------------------------
-// パスのレイアウト計算
+// 直近完了ノード（#/?justDone=<lessonId>）
+// ---------------------------------------------------------------------------
+
+function readJustDone(): string | null {
+  if (typeof location === 'undefined') return null;
+  const q = location.hash.split('?')[1];
+  if (!q) return null;
+  return new URLSearchParams(q).get('justDone');
+}
+
+/** 初回描画時に一度だけ読み、ハッシュからは消す（ルートは home のまま） */
+function useJustDone(): string | null {
+  const [id] = useState(readJustDone);
+  useEffect(() => {
+    if (id && typeof history !== 'undefined') history.replaceState(null, '', '#/');
+  }, [id]);
+  return id;
+}
+
+// ---------------------------------------------------------------------------
+// 表示用の小さな整形
+// ---------------------------------------------------------------------------
+
+const STEP_NAME: Record<Step['type'], string> = {
+  read: '説明',
+  drill: 'ドリル',
+  trace: 'なぞり',
+  copy: '見て描く',
+  construct: '構築',
+  gesture: 'ジェスチャー',
+  quiz: 'クイズ',
+  mosha: '模写',
+  critique: '批評',
+  submit: '提出',
+  free: '自由',
+};
+
+/** 「説明 → ドリル → なぞり」（出てくる順・重複なし・最大 4 つ） */
+function stepFlow(steps: Step[]): string {
+  const seen: string[] = [];
+  for (const s of steps) {
+    const n = STEP_NAME[s.type];
+    if (!seen.includes(n)) seen.push(n);
+  }
+  return seen.slice(0, 4).join(' → ');
+}
+
+function lessonTitle(node: PathNode): string {
+  const l = node.lesson;
+  return l.kind === 'lesson' ? `L${lessonNumber(l.id)} ${l.title}` : l.title;
+}
+
+function unitLabel(node: PathNode): string {
+  return `U${formatStageOrder(node.stage.order)}-${unitNumber(node.unit.id)} ${node.unit.title}`;
+}
+
+// ---------------------------------------------------------------------------
+// パスのレイアウト（幅 520、中心 x=260 の縦うねり）
 // ---------------------------------------------------------------------------
 
 type NodeState = 'done' | 'today' | 'tomorrow' | 'locked';
 
 type PathItem =
   | { kind: 'unit'; key: string; y: number; label: string }
-  | { kind: 'stage'; key: string; y: number; node: PathNode; done: boolean }
-  | { kind: 'node'; key: string; x: number; y: number; node: PathNode; state: NodeState }
-  | { kind: 'review'; key: string; x: number; y: number; review: DueReview };
+  | { kind: 'node'; key: string; x: number; y: number; node: PathNode; state: NodeState; pi: number }
+  | { kind: 'review'; key: string; x: number; y: number; review: DueReview; pi: number };
 
-const PATH_BASE_X = 156;
-const PATH_AMP = 64;
-const ROW = { unit: 64, node: 112, today: 148, gate: 96, stage: 156, review: 104 };
+const PATH_W = 520;
+const CX = PATH_W / 2;
+/** 原本のうねり（260, 330, 370, 330, 260, 190, 150, 190 …） */
+const WAVE = [0, 70, 110, 70, 0, -70, -110, -70];
+const STEP_Y = 92;
 
 interface PathLayout {
   items: PathItem[];
-  segments: { x: number; y: number }[][];
+  points: { x: number; y: number }[];
+  /** 若葉の実線で描く最後の点（含む）。-1 なら実線なし */
+  solidEnd: number;
+  /** 直近完了ノードの点（完了アニメの起点）。無ければ -1 */
+  justIdx: number;
+  gateY: number | null;
   height: number;
 }
 
-function layoutPath(
+function layoutStage(
   nodes: PathNode[],
   done: Set<string>,
   next: PathNode | undefined,
   finishedToday: boolean,
   review: DueReview | undefined,
+  justDone: string | null,
 ): PathLayout {
   const items: PathItem[] = [];
-  const segments: { x: number; y: number }[][] = [[]];
-  let y = 8;
+  const points: { x: number; y: number }[] = [];
+  let y = 40;
   let k = 0;
   let prevUnit = '';
-  let prevStage = nodes[0]?.stage.id ?? '';
-  const currentStageId = (next ?? nodes[nodes.length - 1])?.stage.id;
+  let solidEnd = -1;
+  let justIdx = -1;
+  let gateY: number | null = null;
 
-  const xAt = (i: number) => Math.round(PATH_BASE_X + PATH_AMP * Math.sin(i * 0.95));
-  const pushPoint = (x: number, py: number) => segments[segments.length - 1]!.push({ x, y: py });
+  const push = (x: number, py: number) => {
+    points.push({ x, y: py });
+    return points.length - 1;
+  };
 
   for (const node of nodes) {
-    if (node.stage.id !== prevStage) {
-      // ステージの切れ目: 線を切ってカードを置く
-      const stageDone = node.stage.units.every((u) => u.lessons.every((l) => done.has(l.id)));
-      items.push({ kind: 'stage', key: `stage-${node.stage.id}`, y, node, done: stageDone });
-      y += ROW.stage;
-      segments.push([]);
-      prevStage = node.stage.id;
-    }
     if (node.unit.id !== prevUnit) {
-      items.push({
-        kind: 'unit',
-        key: `unit-${node.unit.id}`,
-        y,
-        label: `ユニット ${unitNumber(node.unit.id)} ・ ${node.unit.title}`,
-      });
-      y += ROW.unit;
+      if (prevUnit !== '') y += 24;
+      items.push({ kind: 'unit', key: `unit-${node.unit.id}`, y: y - 42, label: unitLabel(node) });
       prevUnit = node.unit.id;
     }
 
     const isNext = next?.lesson.id === node.lesson.id;
 
-    if (isNext && review && !finishedToday && node.stage.id === currentStageId) {
-      const x = xAt(k++);
-      const cy = y + ROW.review / 2;
-      items.push({ kind: 'review', key: `review-${review.drillType}`, x, y: cy, review });
-      pushPoint(x, cy);
-      y += ROW.review;
+    if (isNext && review && !finishedToday) {
+      const x = CX + WAVE[k++ % WAVE.length]!;
+      const pi = push(x, y);
+      items.push({ kind: 'review', key: `review-${review.drillType}`, x, y, review, pi });
+      solidEnd = pi;
+      y += STEP_Y;
     }
 
     let state: NodeState;
@@ -118,232 +172,337 @@ function layoutPath(
     else state = 'locked';
 
     const isGate = node.lesson.kind === 'graduation';
-    const h = isGate ? ROW.gate : state === 'today' ? ROW.today : ROW.node;
-    const x = isGate ? PATH_BASE_X : xAt(k++);
-    const cy = y + h / 2;
-    items.push({ kind: 'node', key: node.lesson.id, x, y: cy, node, state });
-    pushPoint(x, cy);
-    y += h;
+    if (isGate) y += 16;
+    const x = isGate ? CX : CX + WAVE[k++ % WAVE.length]!;
+    const pi = push(x, y);
+    items.push({ kind: 'node', key: node.lesson.id, x, y, node, state, pi });
+    if (state === 'done') {
+      solidEnd = pi;
+      if (node.lesson.id === justDone) justIdx = pi;
+    } else if (state === 'today' || state === 'tomorrow') {
+      solidEnd = pi;
+    }
+    if (isGate) gateY = y;
+    // 今日のノードは題と「今日」ピルぶん下を空ける
+    y += state === 'today' || state === 'tomorrow' ? STEP_Y + 24 : STEP_Y;
   }
 
-  return { items, segments: segments.filter((s) => s.length > 0), height: y + 40 };
+  return { items, points, solidEnd, justIdx, gateY, height: y };
 }
 
-function smoothPath(points: { x: number; y: number }[]): string {
+/** ノード中心を通る縦向きの滑らかな曲線（各ノードで接線が縦になる 3 次ベジェ） */
+function curve(points: { x: number; y: number }[]): string {
   if (points.length === 0) return '';
-  const [first, ...rest] = points;
-  let d = `M ${first!.x} ${first!.y}`;
-  let prev = first!;
-  for (const p of rest) {
-    const my = (prev.y + p.y) / 2;
-    d += ` C ${prev.x} ${my}, ${p.x} ${my}, ${p.x} ${p.y}`;
-    prev = p;
+  let d = `M${points[0]!.x} ${points[0]!.y}`;
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1]!;
+    const b = points[i]!;
+    const my = (a.y + b.y) / 2;
+    d += ` C${a.x} ${my} ${b.x} ${my} ${b.x} ${b.y}`;
   }
   return d;
 }
 
 // ---------------------------------------------------------------------------
-// パスのノード
+// ノード
 // ---------------------------------------------------------------------------
 
-function NodeButton({ item }: { item: Extract<PathItem, { kind: 'node' }> }) {
+/** ロック: 左右に 3px 1 回だけ振れて「明日開きます」 */
+function shake(el: HTMLElement) {
+  el.classList.remove('st-shake');
+  void el.offsetWidth;
+  el.classList.add('st-shake');
+  el.addEventListener('animationend', () => el.classList.remove('st-shake'), { once: true });
+  showToast('明日開きます', 'info', 2000);
+}
+
+function NodeView({
+  item,
+  justDone,
+  gateJustOpened,
+}: {
+  item: Extract<PathItem, { kind: 'node' }>;
+  justDone: boolean;
+  gateJustOpened: boolean;
+}) {
   const { node, state } = item;
   const lesson = node.lesson;
-  const n = lessonNumber(lesson.id);
-  const locked = state === 'locked';
-  const shape = lesson.kind === 'graduation' ? 'gate' : lesson.kind === 'checkpoint' ? 'checkpoint' : 'lesson';
+  const shape = lesson.kind === 'graduation' ? 'gate' : lesson.kind === 'checkpoint' ? 'cp' : 'lesson';
+  const blocked = state === 'locked' || state === 'tomorrow';
   const stateLabel = { done: '完了', today: '今日', tomorrow: '明日', locked: 'ロック中' }[state];
-  const aria = `${shape === 'gate' ? '卒業課題の門' : shape === 'checkpoint' ? '模写チェックポイント' : `L${n}`} ${lesson.title}（${stateLabel}）`;
+  const aria = `${lessonTitle(node)}（${stateLabel}）`;
 
-  let inner = null;
+  const onClick = (e: MouseEvent) => {
+    if (blocked) {
+      shake(e.currentTarget as HTMLElement);
+      return;
+    }
+    navigate(href.lesson(lesson.id));
+  };
+
   if (shape === 'gate') {
-    inner = (
-      <>
-        {state === 'done' ? <Icon name="check" size={20} /> : locked ? <Icon name="lock" size={18} /> : null}
-        <span>卒業課題の門</span>
-      </>
+    const open = state === 'today';
+    return (
+      <div class="pnode pnode--gate" style={{ left: `${item.x - 100}px`, top: `${item.y - 30}px` }} data-today={open ? 'true' : undefined}>
+        <button
+          type="button"
+          class={`gate gate--${state}${gateJustOpened ? ' gate--opening' : ''}`}
+          aria-label={aria}
+          aria-disabled={blocked || undefined}
+          onClick={onClick}
+        >
+          {state === 'done' ? (
+            <>
+              <Icon name="check" size={20} strokeWidth={2.5} />
+              卒業課題
+            </>
+          ) : open ? (
+            <>卒業課題へ</>
+          ) : (
+            <>
+              <span class="gate__seam" aria-hidden="true" />
+              <Icon name="lock" size={20} />
+              卒業課題
+            </>
+          )}
+          {gateJustOpened && (
+            <>
+              <span class="gate__door gate__door--l" aria-hidden="true" />
+              <span class="gate__door gate__door--r" aria-hidden="true" />
+            </>
+          )}
+        </button>
+      </div>
     );
-  } else if (state === 'done') {
-    inner = <Icon name="check" size={shape === 'checkpoint' ? 22 : 28} strokeWidth={3} class="node__glyph" />;
-  } else if (locked) {
-    inner = <Icon name="lock" size={22} class="node__glyph" />;
+  }
+
+  let glyph;
+  if (state === 'done') {
+    glyph = (
+      <svg class="node__check" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M5 12l5 5L20 7" pathLength={30} stroke-dasharray={justDone ? 30 : undefined} />
+      </svg>
+    );
   } else if (state === 'today') {
-    inner = <Icon name="pen" size={32} class="node__glyph" />;
+    glyph = <Icon name={shape === 'cp' ? 'image' : 'pen'} size={shape === 'cp' ? 26 : 32} />;
   } else {
-    inner = <span class="node__num num node__glyph">{n}</span>;
+    glyph = <Icon name={shape === 'cp' ? 'image' : 'lock'} size={24} />;
   }
 
   return (
     <div
-      class={`path-row path-row--${state}`}
-      style={{ top: `${item.y}px`, left: `${item.x}px` }}
+      class={`pnode pnode--${state}`}
+      style={{ left: `${item.x - 60}px`, top: `${item.y - (state === 'today' ? 36 : 32)}px` }}
       data-today={state === 'today' || state === 'tomorrow' ? 'true' : undefined}
     >
       <button
         type="button"
-        class={`node node--${shape} node--${state}`}
-        disabled={locked}
+        class={`node node--${shape} node--${state}${justDone ? ' node--just-done' : ''}`}
         aria-label={aria}
-        onClick={() => navigate(href.lesson(lesson.id))}
+        aria-disabled={blocked || undefined}
+        onClick={onClick}
       >
-        {inner}
+        <span class="node__glyph">{glyph}</span>
       </button>
-      {state === 'today' ? (
-        <div class="node-label node-label--today">
-          <span class="label today-tag">今日</span>
-          <span class="node-label__title">{lesson.title}</span>
-          <span class="node-label__meta">
-            約{lesson.minutes}分 ・ {stepComposition(lesson)}
-          </span>
-        </div>
-      ) : state === 'tomorrow' ? (
-        <div class="node-label">
-          <span class="label today-tag">明日</span>
-          <span class="node-label__text">
-            L{n} {lesson.title}
-          </span>
-        </div>
-      ) : (
-        <div class={locked ? 'node-label is-locked' : 'node-label'}>
-          <span class="node-label__text">
-            {shape === 'gate' ? lesson.title : shape === 'checkpoint' ? `模写チェックポイント ・ ${lesson.title}` : `L${n} ${lesson.title}`}
-          </span>
-        </div>
-      )}
+      <span class="pnode__label">{lessonTitle(node)}</span>
+      {state === 'today' && <span class="pnode__tag">今日</span>}
+      {state === 'tomorrow' && <span class="pnode__tag pnode__tag--quiet">明日</span>}
     </div>
   );
 }
 
-function ReviewButton({ item, target }: { item: Extract<PathItem, { kind: 'review' }>; target: string }) {
+function ReviewView({ item }: { item: Extract<PathItem, { kind: 'review' }> }) {
   return (
-    <div class="path-row" style={{ top: `${item.y}px`, left: `${item.x}px` }}>
+    <div class="pnode pnode--review" style={{ left: `${item.x - 60}px`, top: `${item.y - 28}px` }}>
       <button
         type="button"
         class="node node--review"
         aria-label={`復習 ${drillName(item.review.drillType)}`}
-        onClick={() => navigate(target)}
+        onClick={() => navigate(href.review(item.review.drillType))}
       >
-        <Icon name="rotate" size={24} class="node__glyph" />
+        <Icon name="undo" size={24} />
       </button>
-      <div class="node-label">
-        <span class="node-label__text">復習 ・ {drillName(item.review.drillType)}</span>
+      <span class="pnode__label">復習 · {drillName(item.review.drillType)}</span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ステージバナー
+// ---------------------------------------------------------------------------
+
+function currentStageNode(): PathNode | undefined {
+  return nextNode.value ?? path.value[path.value.length - 1];
+}
+
+function StageBanner() {
+  const node = currentStageNode();
+  if (!node) return null;
+  const sp = stageProgress(path.value, completedIds.value, node.stage.id);
+  return (
+    <div class="stage-banner">
+      <div class="stage-banner__text">
+        <span class="stage-banner__kicker">STAGE {formatStageOrder(node.stage.order)}</span>
+        <h1 class="stage-banner__title">{node.stage.title}</h1>
+      </div>
+      <div class="stage-banner__progress">
+        <span class="stage-banner__bar" aria-hidden="true">
+          <span style={{ width: `${sp.total > 0 ? (sp.done / sp.total) * 100 : 0}%` }} />
+        </span>
+        <span class="stage-banner__count num" aria-label={`${sp.total} レッスン中 ${sp.done} 完了`}>
+          {sp.done}
+          <span class="stage-banner__of">/{sp.total}</span>
+        </span>
       </div>
     </div>
   );
 }
 
-function PathView() {
-  const nodes = path.value;
+function NextStageBanner({ top }: { top: number }) {
+  const node = currentStageNode();
+  const cur = curriculum.value;
+  if (!node || !cur) return null;
+  const nextStage = [...cur.stages].sort((a, b) => a.order - b.order).find((s) => s.order > node.stage.order);
+  if (!nextStage) return null;
+  return (
+    <div class="stage-next" style={{ top: `${top}px` }} role="note" aria-label={`次のステージ ${nextStage.title}（ロック中）`}>
+      <div>
+        <span class="stage-next__kicker">STAGE {formatStageOrder(nextStage.order)}</span>
+        <span class="stage-next__title">{nextStage.title}</span>
+      </div>
+      <Icon name="lock" size={18} />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// パス
+// ---------------------------------------------------------------------------
+
+function PathView({ justDone }: { justDone: string | null }) {
+  const cur = currentStageNode();
+  const nodes = cur ? path.value.filter((n) => n.stage.id === cur.stage.id) : [];
   const next = nextNode.value;
-  const review = reviews.value[0];
-  const layout = layoutPath(nodes, completedIds.value, next, todayDone.value, review);
+  const layout = layoutStage(nodes, completedIds.value, next, todayDone.value, reviews.value[0], justDone);
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrolled = useRef(false);
 
-  // 今日のノードが画面内に来るよう初期スクロール（アニメーションなし）
+  // 今日のノードが画面内（上から 4 割あたり）に来るよう初期スクロール（アニメーションなし）
   useLayoutEffect(() => {
     if (scrolled.current) return;
     const host = scrollRef.current;
     const el = host?.querySelector<HTMLElement>('[data-today="true"]');
     if (host && el) {
-      const top = el.offsetTop - host.clientHeight / 2;
-      host.scrollTop = Math.max(0, top);
+      host.scrollTop = Math.max(0, el.offsetTop - host.clientHeight * 0.4);
       scrolled.current = true;
     }
   }, [nodes.length]);
 
-  if (nodes.length === 0) {
-    return <div class="path-scroll" />;
-  }
+  if (nodes.length === 0) return <div class="path-scroll" />;
+
+  const { points, solidEnd, justIdx } = layout;
+  // 完了アニメ中は「直近完了ノードまで」を実線、その先 1 区間を伸ばす
+  const growing = justIdx >= 0 && justIdx < solidEnd;
+  const solidPts = points.slice(0, (growing ? justIdx : solidEnd) + 1);
+  const growPts = growing ? points.slice(justIdx, justIdx + 2) : [];
+  const gateItem = layout.items.find(
+    (it): it is Extract<PathItem, { kind: 'node' }> => it.kind === 'node' && it.node.lesson.kind === 'graduation',
+  );
+  const gateJustOpened =
+    !!gateItem && gateItem.state === 'today' && justDone !== null && points[justIdx + 1]?.y === gateItem.y;
+  const lastY = points[points.length - 1]?.y ?? 0;
+  const bottom = layout.gateY !== null ? layout.gateY + 30 + 40 : lastY + 88;
+  const height = bottom + 52 + 40;
 
   return (
     <div class="path-scroll" ref={scrollRef}>
-      <div class="path" style={{ height: `${layout.height}px` }}>
-        <svg class="path__line" width="100%" height={layout.height} aria-hidden="true">
-          {layout.segments.map((seg, i) => (
-            <path key={i} d={smoothPath(seg)} />
-          ))}
+      <div class="path" style={{ height: `${height}px` }}>
+        <svg class="path__svg" width={PATH_W} height={height} viewBox={`0 0 ${PATH_W} ${height}`} fill="none" aria-hidden="true">
+          <path class="path__todo" d={curve(points)} />
+          {solidPts.length > 1 && <path class="path__done" d={curve(solidPts)} />}
+          {growPts.length > 1 && <path class="path__done path__grow" d={curve(growPts)} pathLength={1} />}
         </svg>
         {layout.items.map((item) => {
           switch (item.kind) {
             case 'unit':
               return (
-                <h3 key={item.key} class="path-unit label" style={{ top: `${item.y + 20}px` }}>
+                <span key={item.key} class="path-unit" style={{ top: `${item.y}px` }}>
                   {item.label}
-                </h3>
-              );
-            case 'stage':
-              return (
-                <div key={item.key} class="path-stage" style={{ top: `${item.y + 16}px` }}>
-                  <Card tone="dashed" class="path-stage__card">
-                    <span class="label">
-                      {item.done ? '修了' : 'つぎ'} ・ ステージ {formatStageOrder(item.node.stage.order)}
-                    </span>
-                    <span class="path-stage__title display">{item.node.stage.title}</span>
-                  </Card>
-                </div>
+                </span>
               );
             case 'review':
-              return <ReviewButton key={item.key} item={item} target={href.lesson(`review-${item.review.drillType}`)} />;
+              return <ReviewView key={item.key} item={item} />;
             case 'node':
-              return <NodeButton key={item.key} item={item} />;
+              return (
+                <NodeView
+                  key={item.key}
+                  item={item}
+                  justDone={item.pi === justIdx && item.state === 'done'}
+                  gateJustOpened={item === gateItem && gateJustOpened}
+                />
+              );
           }
         })}
+        <NextStageBanner top={bottom} />
       </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// 上部ピル・バナー
+// 上部バー
 // ---------------------------------------------------------------------------
 
 function TopBar() {
   const s = streak.value;
   const days = s?.current ?? 0;
+  const risk = streakAtRisk.value;
+  const done = todayDone.value;
   return (
-    <div class="home-top">
-      <div class="home-top__left">
-        <Pill icon="flame" iconClass="icon-flame">
-          {days > 0 ? (
-            <>
-              <span class="num">{days}</span>日つづけています
-            </>
-          ) : (
-            '今日から始めましょう'
-          )}
-        </Pill>
-        <Pill icon="freeze" iconClass="icon-freeze" title="ストリークフリーズ（最大 2）">
-          フリーズ <span class="num">{s?.freezes ?? 0}</span>
-        </Pill>
-        <Pill tone={todayDone.value ? 'accent' : 'default'}>
-          今日の目標 <span class="num">{todayDone.value ? 1 : 0} / 1</span>
-        </Pill>
-      </div>
-      <span class="home-top__xp num">
-        Lv.{level.value} · {nf.format(totalXp.value)} XP
-      </span>
-    </div>
-  );
-}
-
-function StageBanner() {
-  const node = nextNode.value ?? path.value[path.value.length - 1];
-  if (!node) return null;
-  const sp = stageProgress(path.value, completedIds.value, node.stage.id);
-  return (
-    <Card class="stage-banner">
-      <div class="stage-banner__text">
-        <span class="label">ステージ {formatStageOrder(node.stage.order)}</span>
-        <h1 class="stage-banner__title display">{node.stage.title}</h1>
-      </div>
-      <div class="stage-banner__progress">
-        <span class="num stage-banner__count">
-          {sp.done} / {sp.total} レッスン
+    <header class="home-top">
+      <div class="home-top__pills">
+        {risk ? (
+          <span class="pill pill--danger" title="ストリーク">
+            <Icon name="flame" size={20} />
+            <span class="num">{days}</span>
+            <span>日 · 今日まだ</span>
+          </span>
+        ) : (
+          <span class="pill" title="ストリーク">
+            <Icon name="flame" size={20} class="icon-flame" />
+            <span class="num">{days}</span>
+            <span>日</span>
+          </span>
+        )}
+        <span class="pill" title="ストリークフリーズ（最大 2）" aria-label={`フリーズ 残り ${s?.freezes ?? 0} / 2`}>
+          <Icon name="snow" size={18} />
+          <span class="num num--sm">{s?.freezes ?? 0}</span>
+          <span class="pill__of num">/2</span>
         </span>
-        <ProgressBar value={sp.done} max={sp.total} width={220} label="ステージの進み具合" />
+        {done ? (
+          <span class="pill pill--accent">
+            <span class="pill__target" aria-hidden="true">
+              <Icon name="target" size={20} />
+              <Icon name="check" size={20} strokeWidth={2.5} />
+            </span>
+            今日 達成
+          </span>
+        ) : (
+          <span class="pill pill--todo">
+            <Icon name="target" size={20} class="faint" />
+            今日 未達
+          </span>
+        )}
       </div>
-    </Card>
+      <div class="home-top__xp">
+        <span>
+          Lv <span class="num">{level.value}</span>
+        </span>
+        <span class="home-top__xp-points">
+          XP <span class="num">{nf.format(totalXp.value)}</span>
+        </span>
+      </div>
+    </header>
   );
 }
 
@@ -351,58 +510,119 @@ function StageBanner() {
 // 右パネル
 // ---------------------------------------------------------------------------
 
+function timeLeftToday(d: Date): string {
+  const end = new Date(d);
+  end.setHours(24, 0, 0, 0);
+  const mins = Math.max(0, Math.floor((end.getTime() - d.getTime()) / 60000));
+  return `${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, '0')}`;
+}
+
 function TodayCard() {
   const next = nextNode.value;
-  const firstRun = isFirstRun.value;
+  const freezes = streak.value?.freezes ?? 0;
 
   if (!next) {
     return (
-      <Card class="today-card">
-        <span class="label">今日のレッスン</span>
-        <h2 class="today-card__title display">全レッスンを終えました</h2>
-        <p class="today-card__body">ここまでの道のり、おつかれさまでした。自由お絵描きで描き続けましょう。</p>
-      </Card>
+      <section class="today today--done" aria-label="今日の1歩">
+        <span class="today__kicker">
+          <Icon name="check" size={16} strokeWidth={2.5} />
+          ぜんぶ終わり
+        </span>
+        <h2 class="today__title">全レッスンを終えました</h2>
+        <p class="today__meta">ここまでの道のり、おつかれさまでした。自由お絵描きで描き続けましょう。</p>
+      </section>
     );
   }
 
   if (todayDone.value) {
     const lastId = completedTodayIds.value[completedTodayIds.value.length - 1];
     return (
-      <Card class="today-card">
-        <span class="label">今日のレッスン</span>
-        <h2 class="today-card__title display">今日の分は終わり</h2>
-        <p class="today-card__body">
-          明日は L{lessonNumber(next.lesson.id)}「{next.lesson.title}」です。続きは明日で OK。
+      <section class="today today--done" aria-label="今日の1歩">
+        <span class="today__kicker">
+          <Icon name="check" size={16} strokeWidth={2.5} />
+          今日の分は終わり
+        </span>
+        <h2 class="today__title today__title--sm">明日は{next.lesson.title}</h2>
+        <p class="today__meta">次のノードは明日開きます。続けるなら:</p>
+        <div class="today__actions">
+          <Button variant="secondary" size="md" href={lastId ? href.lesson(lastId) : href.free()}>
+            追加ドリル
+          </Button>
+          <Button variant="secondary" size="md" href={href.free()}>
+            自由枠 10分
+          </Button>
+        </div>
+      </section>
+    );
+  }
+
+  if (streakAtRisk.value) {
+    return (
+      <section class="today today--risk" aria-label="今日の1歩">
+        <span class="today__kicker">今日まだ描いていません</span>
+        <h2 class="today__title">
+          あと <span class="num">{timeLeftToday(now.value)}</span> で日付が変わります
+        </h2>
+        <p class="today__meta">
+          5分の短縮版もあります。フリーズは残り <span class="num">{freezes}</span>。
         </p>
-        <p class="today-card__meta">もう少し描きたい日は、追加ドリルか自由枠へ。</p>
-        <Button variant="secondary" size="lg" block href={lastId ? href.lesson(lastId) : href.free()}>
-          追加ドリル
+        <div class="today__actions today__actions--risk">
+          <Button variant="primary" href={href.free()}>
+            5分だけ描く
+          </Button>
+          <Button
+            variant="secondary"
+            size="lg"
+            class="btn--on-ink"
+            onClick={() =>
+              showToast(
+                freezes > 0 ? '今日描けなくても、フリーズ 1 つでストリークが続きます' : 'フリーズは残っていません',
+                'info',
+                3200,
+              )
+            }
+          >
+            フリーズ
+          </Button>
+        </div>
+      </section>
+    );
+  }
+
+  if (isFirstRun.value) {
+    return (
+      <section class="today" aria-label="はじめに">
+        <span class="today__kicker">はじめに</span>
+        <h2 class="today__title">今の1枚を描きましょう</h2>
+        <p class="today__meta today__meta--body">
+          上手さは見ません。半年後に見比べるための「Before」です。好きなキャラを1人、15分で。
+        </p>
+        <Button variant="primary" block href={href.lesson(next.lesson.id)}>
+          Before を描く
         </Button>
-      </Card>
+      </section>
     );
   }
 
   return (
-    <Card class="today-card">
-      <span class="label">{firstRun ? 'はじめの 1 枚' : '今日のレッスン'}</span>
-      <h2 class="today-card__title display">{next.lesson.title}</h2>
-      <p class="today-card__body">
-        {firstRun ? 'まずは今の絵を Before として残しましょう。上手さは気にしなくて OK。' : next.lesson.summary}
-      </p>
-      <p class="today-card__meta num">
-        約{next.lesson.minutes}分 ・ {lessonHeadline(next.lesson)}
+    <section class="today" aria-label="今日の1歩">
+      <span class="today__kicker">今日の1歩</span>
+      <h2 class="today__title">{lessonTitle(next)}</h2>
+      <p class="today__meta">
+        約<span class="num">{next.lesson.minutes}</span>分 · <span class="num">{next.lesson.steps.length}</span>ステップ ·{' '}
+        {stepFlow(next.lesson.steps)}
       </p>
       <Button variant="primary" block href={href.lesson(next.lesson.id)}>
-        はじめる
+        始める
       </Button>
-    </Card>
+    </section>
   );
 }
 
 function FreeButton() {
   return (
     <a class="free-btn" href={href.free()}>
-      <Icon name="brush" size={24} />
+      <Icon name="brush" size={22} />
       <span class="free-btn__main">自由お絵描き</span>
       <span class="free-btn__sub">採点なし・記録だけ</span>
     </a>
@@ -415,78 +635,65 @@ function CountersCard() {
     { label: '直線', value: nf.format(c?.line ?? 0), unit: '本' },
     { label: '楕円', value: nf.format(c?.ellipse ?? 0), unit: '個' },
     { label: '円', value: nf.format(c?.circle ?? 0), unit: '個' },
-    { label: '箱', value: `${nf.format(c?.box ?? 0)} / 250` },
+    { label: '箱', value: nf.format(c?.box ?? 0), unit: '/250' },
     { label: 'ジェスチャー', value: nf.format(c?.gesture ?? 0), unit: '回' },
     { label: '完成した絵', value: nf.format(c?.completed ?? 0), unit: '枚' },
   ];
   return (
-    <Card class="counters-card">
-      <span class="label">つみあげ</span>
-      <dl class="counters">
+    <section class="counters-card" aria-label="累計">
+      <span class="counters-card__label">累計</span>
+      <div class="counters-grid">
         {cells.map((cell) => (
-          <div key={cell.label} class="counters__cell">
-            <dt>{cell.label}</dt>
-            <dd>
-              <span class="counters__num num">{cell.value}</span>
-              {cell.unit && <span class="counters__unit">{cell.unit}</span>}
-            </dd>
-          </div>
+          <CounterChip key={cell.label} label={cell.label} value={cell.value} unit={cell.unit} />
         ))}
-      </dl>
-    </Card>
+      </div>
+    </section>
   );
 }
 
-function NoticeCard() {
+function NoticeRow() {
   const pf = profile.value;
   const prefs = uiPrefs.value;
   const t = today.value;
+  if (todayDone.value || streakAtRisk.value) return null;
 
   if (pf && monthlyPromptDue(pf, t)) {
     return (
-      <Card tone="soft" class="notice">
-        <span class="notice__title">今月の Before / After</span>
-        <p class="notice__body">同じお題をもう一度描いて、並べてみましょう。</p>
-        <div class="notice__actions">
-          <a class="notice__link" href={href.free()}>
-            描く
-          </a>
-          <button type="button" class="notice__link notice__link--quiet" onClick={() => void saveProfile({ lastMonthlyPromptAt: t })}>
-            あとで
-          </button>
-        </div>
-      </Card>
+      <div class="notice-row" role="note">
+        <span class="notice-row__text">今月の Before / After を描きましょう</span>
+        <Button variant="secondary" size="sm" href={href.free()}>
+          描く
+        </Button>
+        <button type="button" class="notice-row__later" onClick={() => void saveProfile({ lastMonthlyPromptAt: t })}>
+          あとで
+        </button>
+      </div>
     );
   }
 
   const since = prefs.lastBackupAt ? diffDays(localDay(prefs.lastBackupAt), t) : pf ? diffDays(pf.startedAt, t) : 0;
   if (since >= 30 && prefs.backupSnoozedOn !== t) {
     return (
-      <Card tone="soft" class="notice">
-        <span class="notice__title">{prefs.lastBackupAt ? 'バックアップから 30 日たちました' : 'バックアップを取りましょう'}</span>
-        <p class="notice__body">端末の外に写しを残しておくと安心です。</p>
-        <div class="notice__actions">
-          <a class="notice__link" href={href.settings('data')}>
-            書き出す
-          </a>
-          <button type="button" class="notice__link notice__link--quiet" onClick={() => void saveUiPrefs({ backupSnoozedOn: t })}>
-            あとで
-          </button>
-        </div>
-      </Card>
+      <div class="notice-row" role="note">
+        <span class="notice-row__text">
+          {prefs.lastBackupAt ? (
+            <>
+              バックアップから<span class="num">{since}</span>日経過しました
+            </>
+          ) : (
+            'バックアップを取りましょう'
+          )}
+        </span>
+        <Button variant="secondary" size="sm" href={href.settings('data')}>
+          書き出す
+        </Button>
+        <button type="button" class="notice-row__later" onClick={() => void saveSettings({ backupSnoozedOn: t })}>
+          あとで
+        </button>
+      </div>
     );
   }
   return null;
-}
-
-function SideExtras() {
-  return (
-    <>
-      <FreeButton />
-      <CountersCard />
-      <NoticeCard />
-    </>
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -494,30 +701,21 @@ function SideExtras() {
 // ---------------------------------------------------------------------------
 
 export function Home() {
+  const justDone = useJustDone();
   return (
     <div class="home">
-      <div class="home__main">
-        <TopBar />
-        {streakAtRisk.value && (
-          <p class="risk-line" role="status">
-            <Icon name="flame" size={18} class="icon-flame" />
-            今日はまだです。5 分の自由お絵描きでも続きます。
-          </p>
-        )}
+      <TopBar />
+      <section class="home__path" aria-label="パス">
         <StageBanner />
-        <div class="home__body">
-          <aside class="home__side" aria-label="つみあげ">
-            <SideExtras />
-          </aside>
-          <PathView />
-        </div>
-      </div>
+        <PathView justDone={justDone} />
+      </section>
       <aside class="home__panel" aria-label="今日">
         <TodayCard />
-        <div class="home__panel-rest">
-          <SideExtras />
-        </div>
+        <FreeButton />
+        <CountersCard />
+        <NoticeRow />
       </aside>
     </div>
   );
 }
+

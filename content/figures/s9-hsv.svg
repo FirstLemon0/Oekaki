@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <circle cx="150" cy="130" r="18" fill="hsl(0,80%,55%)" stroke="none"/>
+  <circle cx="195" cy="142.1" r="18" fill="hsl(30,80%,55%)" stroke="none"/>
+  <circle cx="227.9" cy="175" r="18" fill="hsl(60,80%,55%)" stroke="none"/>
+  <circle cx="240" cy="220" r="18" fill="hsl(90,80%,55%)" stroke="none"/>
+  <circle cx="227.9" cy="265" r="18" fill="hsl(120,80%,55%)" stroke="none"/>
+  <circle cx="195" cy="297.9" r="18" fill="hsl(150,80%,55%)" stroke="none"/>
+  <circle cx="150" cy="310" r="18" fill="hsl(180,80%,55%)" stroke="none"/>
+  <circle cx="105" cy="297.9" r="18" fill="hsl(210,80%,55%)" stroke="none"/>
+  <circle cx="72.1" cy="265" r="18" fill="hsl(240,80%,55%)" stroke="none"/>
+  <circle cx="60" cy="220" r="18" fill="hsl(270,80%,55%)" stroke="none"/>
+  <circle cx="72.1" cy="175" r="18" fill="hsl(300,80%,55%)" stroke="none"/>
+  <circle cx="105" cy="142.1" r="18" fill="hsl(330,80%,55%)" stroke="none"/>
+  <text x="150" y="360" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">色相</text>
+  <text x="150" y="388" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">赤・黄・青…の種類</text>
+  <rect x="290" y="190" width="40" height="60" fill="hsl(210,0%,55%)" stroke="none"/>
+  <rect x="334" y="190" width="40" height="60" fill="hsl(210,25%,55%)" stroke="none"/>
+  <rect x="378" y="190" width="40" height="60" fill="hsl(210,50%,55%)" stroke="none"/>
+  <rect x="422" y="190" width="40" height="60" fill="hsl(210,75%,55%)" stroke="none"/>
+  <rect x="466" y="190" width="40" height="60" fill="hsl(210,100%,55%)" stroke="none"/>
+  <text x="400" y="360" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">彩度</text>
+  <text x="400" y="388" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">鮮やかさ（左ほど灰色）</text>
+  <rect x="540" y="190" width="40" height="60" fill="hsl(210,60%,10%)" stroke="none"/>
+  <rect x="584" y="190" width="40" height="60" fill="hsl(210,60%,30%)" stroke="none"/>
+  <rect x="628" y="190" width="40" height="60" fill="hsl(210,60%,50%)" stroke="none"/>
+  <rect x="672" y="190" width="40" height="60" fill="hsl(210,60%,70%)" stroke="none"/>
+  <rect x="716" y="190" width="40" height="60" fill="hsl(210,60%,90%)" stroke="none"/>
+  <text x="650" y="360" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">明度</text>
+  <text x="650" y="388" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">明るさ（左ほど暗い）</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">色は「種類・鮮やかさ・明るさ」の3つのつまみでできている</text>
+</svg>

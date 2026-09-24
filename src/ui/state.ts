@@ -1,11 +1,9 @@
 /**
  * アプリ状態（@preact/signals）。起動時に src/data/repo から読み込む。
  *
- * UI 専用の設定（利き手・ペン専用・校正の厳しさ・通知時刻・文字サイズ・最終バックアップ日）は
- * data/types の Settings にまだ項目が無いため、settings レコードに `ui` という追加フィールドとして
- * 保存している（IndexedDB にはそのまま残る）。
- * 注意: backup.ts の settingsSchema は未知キーを落とすので、バックアップ往復では `ui` が消える。
- * 統合時に Settings 型へ正式に取り込むこと（統括への申し送り）。
+ * 利き手・ペン専用・合格ラインの厳しさ・通知時刻・文字サイズ・最終バックアップ日などは
+ * data/types の Settings の正式項目（getSettings / updateSettings 経由）。
+ * 旧 `settings.ui` の仮置きは廃止した（読み取り用の `uiPrefs` は Settings からの派生として残す）。
  */
 import { batch, computed, effect, signal } from '@preact/signals';
 import { flattenPath, loadCurriculum, type Curriculum, type PathNode } from '@/content';
@@ -27,22 +25,14 @@ import { levelForXp, xpForDrillScore, xpForEvent } from '@/data/xp';
 import type { Counters, Critique, DrillStats, Profile, Progress, Settings, Streak } from '@/data/types';
 
 // ---------------------------------------------------------------------------
-// UI 専用設定
+// UI 向け設定（Settings の該当項目の読み取りビュー）
 // ---------------------------------------------------------------------------
 
-export interface UiPrefs {
-  leftHanded: boolean;
-  penOnly: boolean;
-  /** 合格ラインの厳しさ */
-  strictness: 'easy' | 'normal';
-  /** 通知時刻 HH:MM。null は通知なし */
-  notifyTime: string | null;
-  fontScale: 'normal' | 'large';
-  /** 最終バックアップ日時（ISO） */
-  lastBackupAt: string | null;
-  /** バックアップ通知を「あとで」にした日（YYYY-MM-DD） */
-  backupSnoozedOn: string | null;
-}
+/** Settings のうち UI が参照する項目。値の正は Settings（保存は saveSettings）。 */
+export type UiPrefs = Pick<
+  Settings,
+  'leftHanded' | 'penOnly' | 'strictness' | 'notifyTime' | 'fontScale' | 'lastBackupAt' | 'backupSnoozedOn'
+>;
 
 export const DEFAULT_UI_PREFS: UiPrefs = {
   leftHanded: false,
@@ -54,7 +44,8 @@ export const DEFAULT_UI_PREFS: UiPrefs = {
   backupSnoozedOn: null,
 };
 
-export type AppSettings = Settings & { ui?: Partial<UiPrefs> };
+/** @deprecated Settings と同じ。互換のため残す */
+export type AppSettings = Settings;
 
 // ---------------------------------------------------------------------------
 // 状態
@@ -67,7 +58,7 @@ export const curriculum = signal<Curriculum | null>(null);
 export const progress = signal<Progress[]>([]);
 export const streak = signal<Streak | null>(null);
 export const counters = signal<Counters | null>(null);
-export const settings = signal<AppSettings | null>(null);
+export const settings = signal<Settings | null>(null);
 export const profile = signal<Profile | null>(null);
 export const drillStats = signal<DrillStats[]>([]);
 export const critiques = signal<Critique[]>([]);
@@ -81,7 +72,19 @@ export const today = computed(() => todayLocalDate(now.value));
 // 派生
 // ---------------------------------------------------------------------------
 
-export const uiPrefs = computed<UiPrefs>(() => ({ ...DEFAULT_UI_PREFS, ...(settings.value?.ui ?? {}) }));
+export const uiPrefs = computed<UiPrefs>(() => {
+  const s = settings.value;
+  if (!s) return DEFAULT_UI_PREFS;
+  return {
+    leftHanded: s.leftHanded ?? DEFAULT_UI_PREFS.leftHanded,
+    penOnly: s.penOnly ?? DEFAULT_UI_PREFS.penOnly,
+    strictness: s.strictness ?? DEFAULT_UI_PREFS.strictness,
+    notifyTime: s.notifyTime === undefined ? DEFAULT_UI_PREFS.notifyTime : s.notifyTime,
+    fontScale: s.fontScale ?? DEFAULT_UI_PREFS.fontScale,
+    lastBackupAt: s.lastBackupAt ?? null,
+    backupSnoozedOn: s.backupSnoozedOn ?? null,
+  };
+});
 
 export const path = computed<PathNode[]>(() => (curriculum.value ? flattenPath(curriculum.value) : []));
 
@@ -140,8 +143,19 @@ export const streakAtRisk = computed(() => {
 // 読み込み・更新
 // ---------------------------------------------------------------------------
 
+/** 旧版が settings.ui に仮置きしていた値を Settings の正式項目へ移す（一度だけ） */
+async function migrateLegacyUi(se: Settings): Promise<Settings> {
+  const legacy = (se as Settings & { ui?: Partial<UiPrefs> }).ui;
+  if (!legacy || typeof legacy !== 'object') return se;
+  const patch: Partial<UiPrefs> & { ui?: undefined } = { ui: undefined };
+  for (const k of Object.keys(DEFAULT_UI_PREFS) as (keyof UiPrefs)[]) {
+    if (k in legacy) (patch as Record<string, unknown>)[k] = legacy[k];
+  }
+  return updateSettings(patch as Partial<Settings>);
+}
+
 export async function reloadData(): Promise<void> {
-  const [pr, st, co, se, pf, ds, cr] = await Promise.all([
+  const [pr, st, co, seRaw, pf, ds, cr] = await Promise.all([
     listProgress(),
     getStreak(),
     getCounters(),
@@ -150,11 +164,12 @@ export async function reloadData(): Promise<void> {
     listDrillStats(),
     listCritiques(),
   ]);
+  const se = await migrateLegacyUi(seRaw);
   batch(() => {
     progress.value = pr;
     streak.value = st;
     counters.value = co;
-    settings.value = se as AppSettings;
+    settings.value = se;
     profile.value = pf;
     drillStats.value = ds;
     critiques.value = cr;
@@ -191,14 +206,12 @@ export async function initState(): Promise<void> {
 }
 
 export async function saveSettings(patch: Partial<Omit<Settings, 'updatedAt'>>): Promise<void> {
-  settings.value = (await updateSettings(patch)) as AppSettings;
+  settings.value = await updateSettings(patch);
 }
 
+/** @deprecated saveSettings と同じ（UiPrefs は Settings の一部）。互換のため残す */
 export async function saveUiPrefs(patch: Partial<UiPrefs>): Promise<void> {
-  const ui: Partial<UiPrefs> = { ...(settings.value?.ui ?? {}), ...patch };
-  // Settings 型に ui は無いが、IndexedDB にはそのまま保存される（冒頭の注意を参照）
-  const extended: Partial<AppSettings> = { ui };
-  settings.value = (await updateSettings(extended)) as AppSettings;
+  await saveSettings(patch);
 }
 
 export async function saveProfile(patch: Partial<Omit<Profile, 'updatedAt'>>): Promise<void> {

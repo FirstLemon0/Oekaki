@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <line x1="20" y1="90" x2="780" y2="90" stroke-width="1.5" opacity="0.45"/>
+  <circle cx="400" cy="90" r="6" fill="#7BB661" stroke="none"/>
+  <line x1="-200" y1="480" x2="232" y2="199.2" stroke-width="1.5" opacity="0.45"/>
+  <line x1="0" y1="480" x2="288" y2="199.2" stroke-width="1.5" opacity="0.45"/>
+  <line x1="200" y1="480" x2="344" y2="199.2" stroke-width="1.5" opacity="0.45"/>
+  <line x1="400" y1="480" x2="400" y2="199.2" stroke-width="1.5" opacity="0.45"/>
+  <line x1="600" y1="480" x2="456" y2="199.2" stroke-width="1.5" opacity="0.45"/>
+  <line x1="800" y1="480" x2="512" y2="199.2" stroke-width="1.5" opacity="0.45"/>
+  <line x1="1000" y1="480" x2="568" y2="199.2" stroke-width="1.5" opacity="0.45"/>
+  <line x1="-200" y1="480" x2="1000" y2="480" stroke-width="1.5" opacity="0.45"/>
+  <line x1="-50" y1="382.5" x2="850" y2="382.5" stroke-width="1.5" opacity="0.45"/>
+  <line x1="58" y1="312.3" x2="742" y2="312.3" stroke-width="1.5" opacity="0.45"/>
+  <line x1="136" y1="261.6" x2="664" y2="261.6" stroke-width="1.5" opacity="0.45"/>
+  <line x1="190" y1="226.5" x2="610" y2="226.5" stroke-width="1.5" opacity="0.45"/>
+  <line x1="232" y1="199.2" x2="568" y2="199.2" stroke-width="1.5" opacity="0.45"/>
+  <path d="M100,382.5 L250,382.5 L250,262.5 L100,262.5 Z" stroke="#7BB661" stroke-width="3.5"/>
+  <path d="M100,262.5 L250,262.5 L286,221.1 L172,221.1 Z" stroke="#7BB661" stroke-width="3.5"/>
+  <line x1="250" y1="382.5" x2="286" y2="312.3" stroke="#7BB661" stroke-width="3.5"/>
+  <line x1="286" y1="312.3" x2="286" y2="221.1" stroke="#7BB661" stroke-width="3.5"/>
+  <path d="M550,382.5 L700,382.5 L700,300 L550,300 Z" stroke="#7BB661" stroke-width="3.5"/>
+  <path d="M550,300 L700,300 L628,249.6 L514,249.6 Z" stroke="#7BB661" stroke-width="3.5"/>
+  <line x1="550" y1="382.5" x2="514" y2="312.3" stroke="#7BB661" stroke-width="3.5"/>
+  <line x1="514" y1="312.3" x2="514" y2="249.6" stroke="#7BB661" stroke-width="3.5"/>
+  <path d="M312,261.6 L400,261.6 L400,195.6 L312,195.6 Z" stroke="#7BB661" stroke-width="3.5"/>
+  <path d="M312,195.6 L400,195.6 L400,174 L330,174 Z" stroke="#7BB661" stroke-width="3.5"/>
+  <line x1="400" y1="261.6" x2="400" y2="226.5" stroke="#7BB661" stroke-width="3.5"/>
+  <line x1="400" y1="226.5" x2="400" y2="174" stroke="#7BB661" stroke-width="3.5"/>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">床のマス目を先に描くと、箱の大きさと位置がそろう</text>
+</svg>

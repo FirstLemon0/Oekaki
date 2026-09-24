@@ -9,8 +9,8 @@ export function Placeholder({ title, body }: { title: string; body: string }) {
     <div class="placeholder">
       <Card class="placeholder__card">
         <Icon name="pen" size={32} class="placeholder__icon" />
-        <span class="label">準備中</span>
-        <h1 class="display placeholder__title">{title}</h1>
+        <span class="label label--accent">準備中</span>
+        <h1 class="placeholder__title">{title}</h1>
         <p class="muted">{body}</p>
         <Button variant="primary" href={href.home()}>
           ホームへ

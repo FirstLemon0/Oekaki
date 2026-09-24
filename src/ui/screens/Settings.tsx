@@ -1,41 +1,52 @@
 /**
  * 設定  #/settings（?section=ai|scoring|practice|data|appearance|about）
+ * （DESIGN_SYSTEM.md §3 設定）
  *
- * 左: グループ一覧＋左下に保存状況。右: 詳細（カード＋行）。値は getSettings/updateSettings で保存。
+ * 左列 300: 見出し「設定」＋ グループ一覧（行 52、選択 accent-soft）＋ 下に版と最終バックアップ。
+ * 右: 2 列グリッドにグループカードを並べる（ラベル 12 700 ＋ カード、行 56〜64・下罫線）。
+ * 左の一覧を押すと、そのグループへスクロールする。
+ * 値はすべて Settings（getSettings / updateSettings）に保存する。
  */
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { version as APP_VERSION } from '../../../package.json';
+import { estimateCostJpy } from '@/critic';
 import { exportBackup, importBackup } from '@/data/backup';
-import type { CritiqueEffort, Theme } from '@/data/types';
-import { Button, Card, Modal, Segment, Stepper, TextField, Toggle, showToast } from '../components';
-import { formatBytes, formatDate, yyyymmdd } from '../format';
+import type { CritiqueEffort, FontScale, Strictness, Theme } from '@/data/types';
+import { Button, Icon, ListRow, Modal, Segment, Stepper, TextField, Toggle, showToast } from '../components';
+import { formatBytes, yyyymmdd } from '../format';
+import { testConnection } from '../lesson/connectionTest';
 import { href, navigate } from '../router';
-import {
-  critiques,
-  persisted,
-  profile,
-  reloadData,
-  saveSettings,
-  saveUiPrefs,
-  settings,
-  uiPrefs,
-} from '../state';
-import { estimateCostJpy, testConnection } from '../stubs/critic';
+import { critiques, persisted, profile, reloadData, saveSettings, settings, uiPrefs } from '../state';
 
 type SectionId = 'ai' | 'scoring' | 'practice' | 'data' | 'appearance' | 'about';
 
 const SECTIONS: { id: SectionId; label: string }[] = [
   { id: 'ai', label: 'AI 批評' },
-  { id: 'scoring', label: '採点と校正' },
+  { id: 'scoring', label: '採点' },
   { id: 'practice', label: '練習' },
-  { id: 'data', label: 'データとバックアップ' },
+  { id: 'data', label: 'データ' },
   { id: 'appearance', label: '外観' },
   { id: 'about', label: 'このアプリについて' },
 ];
 
 function isSection(v: string | undefined): v is SectionId {
   return SECTIONS.some((s) => s.id === v);
+}
+
+/** 9/24 */
+function md(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+/** 9/24 07:12 */
+function mdhm(d: Date): string {
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function daysSince(iso: string): number {
+  return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000));
 }
 
 // ---------------------------------------------------------------------------
@@ -50,7 +61,7 @@ interface StorageInfo {
 function useStorageInfo(): [StorageInfo, () => void] {
   const [info, setInfo] = useState<StorageInfo>({ usage: null, quota: null });
   const refresh = () => {
-    const st = navigator.storage;
+    const st = typeof navigator !== 'undefined' ? navigator.storage : undefined;
     if (!st?.estimate) return;
     st.estimate()
       .then((e) => setInfo({ usage: e.usage ?? null, quota: e.quota ?? null }))
@@ -68,23 +79,22 @@ function useStorageInfo(): [StorageInfo, () => void] {
 }
 
 // ---------------------------------------------------------------------------
-// 行
+// グループの枠
 // ---------------------------------------------------------------------------
 
-function Row({ title, desc, children }: { title: string; desc?: ComponentChildren; children?: ComponentChildren }) {
+function Group({ id, label, children }: { id: SectionId; label: string; children: ComponentChildren }) {
   return (
-    <div class="set-row">
-      <div class="set-row__text">
-        <span class="set-row__title">{title}</span>
-        {desc && <span class="set-row__desc">{desc}</span>}
-      </div>
-      <div class="set-row__control">{children}</div>
-    </div>
+    <section class="set-group" id={`set-${id}`} data-section={id} aria-labelledby={`set-${id}-h`}>
+      <h2 class="set-group__label" id={`set-${id}-h`}>
+        {label}
+      </h2>
+      <div class="set-card">{children}</div>
+    </section>
   );
 }
 
 // ---------------------------------------------------------------------------
-// 各グループ
+// AI 批評
 // ---------------------------------------------------------------------------
 
 const MODEL_PRESETS = [
@@ -93,10 +103,16 @@ const MODEL_PRESETS = [
   { value: 'claude-sonnet-5', label: 'Sonnet 5' },
 ] as const;
 
-function AiSection() {
+type TestState =
+  | { kind: 'idle' }
+  | { kind: 'busy' }
+  | { kind: 'ok'; model: string; at: Date }
+  | { kind: 'ng'; text: string };
+
+function AiGroup() {
   const s = settings.value;
   const [keyDraft, setKeyDraft] = useState(s?.apiKey ?? '');
-  const [testState, setTestState] = useState<string | null>(null);
+  const [test, setTest] = useState<TestState>({ kind: 'idle' });
   const modelId = s?.modelId ?? 'claude-opus-5-5';
   const preset = MODEL_PRESETS.find((m) => m.value === modelId);
   const [custom, setCustom] = useState(!preset);
@@ -107,39 +123,49 @@ function AiSection() {
     const d = new Date(c.createdAt);
     return d.getFullYear() === nowD.getFullYear() && d.getMonth() === nowD.getMonth();
   }).length;
+  const perCall = estimateCostJpy(modelId);
 
   const saveKey = (v: string) => {
     setKeyDraft(v);
+    setTest({ kind: 'idle' });
     void saveSettings({ apiKey: v.trim() === '' ? null : v.trim() });
   };
 
   const runTest = async () => {
-    setTestState('確認しています…');
-    const r = await testConnection(s?.apiKey ?? null, modelId);
-    if (r.ok) setTestState(`接続できました（${r.model}）`);
-    else setTestState(r.reason === 'no_api_key' ? 'キーが未設定です' : '未接続（批評機能は準備中です）');
+    setTest({ kind: 'busy' });
+    const r = await testConnection(settings.value?.apiKey ?? null, modelId);
+    if (r.ok) setTest({ kind: 'ok', model: r.model, at: new Date() });
+    else setTest({ kind: 'ng', text: r.reason === 'no_api_key' ? 'キーが未設定か、正しくありません' : '未接続（通信できませんでした）' });
   };
 
   return (
-    <Card class="set-card">
-      <Row title="API キー" desc="端末の中にだけ保存します。">
-        <div class="set-inline">
-          <TextField type="password" label="API キー" value={keyDraft} onChange={saveKey} placeholder="sk-ant-…" width={240} />
-          <Button variant="secondary" onClick={() => void runTest()}>
+    <Group id="ai" label="AI 批評">
+      <ListRow title="API キー" stacked>
+        <div class="set-key">
+          <TextField type="password" label="API キー" value={keyDraft} onChange={saveKey} placeholder="sk-ant-…" />
+          <Button variant="secondary" size="md" disabled={test.kind === 'busy'} onClick={() => void runTest()}>
             接続テスト
           </Button>
         </div>
-        {testState && (
-          <span class="set-row__status" role="status">
-            {testState}
-          </span>
-        )}
-      </Row>
-      <Row title="モデル" desc="批評に使う Claude のモデルです。">
+        <span class={`set-test set-test--${test.kind}`} role="status">
+          {test.kind === 'ok' && (
+            <>
+              <Icon name="check" size={14} strokeWidth={2.5} />
+              接続できました（<span class="num">{mdhm(test.at)}</span>
+              {test.model !== modelId ? ` · ${test.model}` : ''}）
+            </>
+          )}
+          {test.kind === 'busy' && '確認しています…'}
+          {test.kind === 'ng' && test.text}
+          {test.kind === 'idle' && (s?.apiKey ? '未接続' : 'キーは端末の中にだけ保存します')}
+        </span>
+      </ListRow>
+      <ListRow title="モデル">
         <Segment
+          size="sm"
           label="モデル"
           value={segValue}
-          options={[...MODEL_PRESETS.map((m) => ({ value: m.value as string, label: m.label })), { value: 'custom', label: 'ID を入力' }]}
+          options={[...MODEL_PRESETS.map((m) => ({ value: m.value as string, label: m.label })), { value: 'custom', label: 'ID 入力' }]}
           onChange={(v) => {
             if (v === 'custom') {
               setCustom(true);
@@ -149,117 +175,137 @@ function AiSection() {
             }
           }}
         />
-        {custom && (
-          <TextField
-            label="モデル ID"
-            value={modelId}
-            width={280}
-            placeholder="claude-…"
-            onChange={(v) => v.trim() && void saveSettings({ modelId: v.trim() })}
-          />
+      </ListRow>
+      <ListRow title="モデル ID">
+        {custom ? (
+          <TextField label="モデル ID" value={modelId} width={220} placeholder="claude-…" onChange={(v) => v.trim() && void saveSettings({ modelId: v.trim() })} />
+        ) : (
+          <span class="num set-mono">{modelId}</span>
         )}
-      </Row>
-      <Row title="考える深さ" desc="深いほど時間と費用がかかります。">
+      </ListRow>
+      <ListRow title="思考の深さ">
         <Segment<CritiqueEffort>
-          label="考える深さ"
+          size="sm"
+          label="思考の深さ"
           value={s?.effort ?? 'high'}
           options={[
-            { value: 'low', label: '浅め' },
-            { value: 'medium', label: 'ふつう' },
-            { value: 'high', label: '深め' },
+            { value: 'low', label: 'low' },
+            { value: 'medium', label: 'medium' },
+            { value: 'high', label: 'high' },
           ]}
           onChange={(v) => void saveSettings({ effort: v })}
         />
-      </Row>
-      <Row
-        title="1 日の上限回数"
-        desc={
-          <span class="num">
-            目安 約¥{estimateCostJpy(modelId)} / 回 ・ 今月ここまで {monthCount} 回
-          </span>
-        }
-      >
-        <Stepper
-          label="1 日の上限回数"
-          value={s?.dailyCritiqueLimit ?? 3}
-          min={1}
-          max={20}
-          onChange={(v) => void saveSettings({ dailyCritiqueLimit: v })}
-        />
-      </Row>
-    </Card>
+      </ListRow>
+      <ListRow title="1日の上限回数">
+        <Stepper label="1日の上限回数" value={s?.dailyCritiqueLimit ?? 3} min={1} max={20} onChange={(v) => void saveSettings({ dailyCritiqueLimit: v })} />
+      </ListRow>
+      <ListRow title="費用の目安">
+        <span class="set-value">
+          1回 約¥<span class="num">{perCall}</span> · 今月 <span class="num">¥{perCall * monthCount}</span>
+        </span>
+      </ListRow>
+    </Group>
   );
 }
 
-function ScoringSection() {
+// ---------------------------------------------------------------------------
+// 採点
+// ---------------------------------------------------------------------------
+
+function ScoringGroup() {
   const prefs = uiPrefs.value;
   const cal = profile.value?.calibration;
   return (
-    <Card class="set-card">
-      <Row
-        title="校正"
-        desc={cal ? `前回 ${formatDate(cal.calibratedAt)}。直線・円・楕円を数本描いて基準を作ります。` : 'まだ校正していません。数本描くだけで OK。'}
-      >
-        <Button variant="primary" onClick={() => navigate(href.calibrate())}>
-          校正をやり直す
+    <Group id="scoring" label="採点">
+      <ListRow title="校正モード" desc={`直線・円・楕円を数本描いて基準を作る${cal ? ` · 前回 ${md(cal.calibratedAt)}` : ' · まだです'}`}>
+        <Button variant="secondary" size="md" onClick={() => navigate(href.calibrate())}>
+          {cal ? '再実行' : '始める'}
         </Button>
-      </Row>
-      <Row title="合格ラインの厳しさ" desc="点数で足止めはしません。目安の線だけ変わります。">
-        <Segment<'easy' | 'normal'>
+      </ListRow>
+      <ListRow title="合格ラインの厳しさ" desc="点数で足止めはしません。目安の線だけ変わります">
+        <Segment<Strictness>
+          size="sm"
           label="合格ラインの厳しさ"
           value={prefs.strictness}
           options={[
-            { value: 'easy', label: 'やさしめ' },
             { value: 'normal', label: 'ふつう' },
+            { value: 'easy', label: 'やさしめ' },
           ]}
-          onChange={(v) => void saveUiPrefs({ strictness: v })}
+          onChange={(v) => void saveSettings({ strictness: v })}
         />
-      </Row>
-    </Card>
+      </ListRow>
+    </Group>
   );
 }
 
-function PracticeSection() {
+// ---------------------------------------------------------------------------
+// 練習
+// ---------------------------------------------------------------------------
+
+function PracticeGroup() {
   const s = settings.value;
   const prefs = uiPrefs.value;
+  const lastTime = useRef(prefs.notifyTime ?? '20:00');
+  if (prefs.notifyTime) lastTime.current = prefs.notifyTime;
   return (
-    <Card class="set-card">
-      <Row title="1 日の目標" desc="休日は追加ドリルか自由枠をどうぞ。">
-        <span class="set-value">1 レッスン</span>
-      </Row>
-      <Row title="通知時刻" desc="この時刻に、今日のレッスンをお知らせします。">
-        <TextField
-          type="time"
-          label="通知時刻"
-          value={prefs.notifyTime ?? ''}
-          width={140}
-          onChange={(v) => void saveUiPrefs({ notifyTime: v || null })}
+    <Group id="practice" label="練習">
+      <ListRow title="1日の目標">
+        <span class="set-value set-value--chev">
+          平日15分・休日30分
+          <Icon name="chevron" size={18} class="faint" />
+        </span>
+      </ListRow>
+      <ListRow title="通知">
+        {prefs.notifyTime !== null && (
+          <TextField type="time" label="通知時刻" value={prefs.notifyTime} width={150} onChange={(v) => v && void saveSettings({ notifyTime: v })} />
+        )}
+        <Toggle
+          label="通知"
+          checked={prefs.notifyTime !== null}
+          onChange={(on) => void saveSettings({ notifyTime: on ? lastTime.current : null })}
         />
-      </Row>
-      <Row title="左利き" desc="キャンバスの道具を右側に置きます。">
-        <Toggle label="左利き" checked={prefs.leftHanded} onChange={(v) => void saveUiPrefs({ leftHanded: v })} />
-      </Row>
-      <Row title="ペン専用" desc="オンのとき、指では線を描きません。">
-        <Toggle label="ペン専用" checked={prefs.penOnly} onChange={(v) => void saveUiPrefs({ penOnly: v })} />
-      </Row>
-      <Row title="外部お絵描きアプリ" desc="ステージ 7 から使います。">
+      </ListRow>
+      <ListRow title="利き手" desc="ツールバーと完了ボタンの位置が入れ替わります">
+        <Segment<'right' | 'left'>
+          size="sm"
+          label="利き手"
+          value={prefs.leftHanded ? 'left' : 'right'}
+          options={[
+            { value: 'right', label: '右' },
+            { value: 'left', label: '左' },
+          ]}
+          onChange={(v) => void saveSettings({ leftHanded: v === 'left' })}
+        />
+      </ListRow>
+      <ListRow title="ペン専用モード" desc="オンのとき、指では線を描きません">
+        <Toggle label="ペン専用モード" checked={prefs.penOnly} onChange={(v) => void saveSettings({ penOnly: v })} />
+      </ListRow>
+      <ListRow title="外部お絵描きアプリ" desc="ステージ 7 から使います">
         <TextField
           label="外部お絵描きアプリ名"
           value={s?.externalAppName ?? ''}
-          placeholder="例: ibisPaint"
-          width={220}
+          placeholder="例: Krita"
+          width={180}
           onChange={(v) => void saveSettings({ externalAppName: v.trim() === '' ? null : v.trim() })}
         />
-      </Row>
-    </Card>
+      </ListRow>
+    </Group>
   );
 }
 
-function DataSection({ storage, refreshStorage }: { storage: StorageInfo; refreshStorage: () => void }) {
+// ---------------------------------------------------------------------------
+// データ
+// ---------------------------------------------------------------------------
+
+function DataGroup({ storage, refreshStorage }: { storage: StorageInfo; refreshStorage: () => void }) {
   const prefs = uiPrefs.value;
   const fileRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<Uint8Array | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const since = prefs.lastBackupAt ? daysSince(prefs.lastBackupAt) : null;
+  const stale = since === null || since >= 30;
+  const ratio = storage.usage !== null && storage.quota ? Math.min(1, storage.usage / storage.quota) : 0;
 
   const doExport = async () => {
     setBusy(true);
@@ -274,7 +320,7 @@ function DataSection({ storage, refreshStorage }: { storage: StorageInfo; refres
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      await saveUiPrefs({ lastBackupAt: new Date().toISOString() });
+      await saveSettings({ lastBackupAt: new Date().toISOString() });
       showToast('バックアップを書き出しました');
     } catch (e) {
       showToast(`書き出せませんでした: ${e instanceof Error ? e.message : String(e)}`, 'danger', 4000);
@@ -308,30 +354,49 @@ function DataSection({ storage, refreshStorage }: { storage: StorageInfo; refres
   };
 
   return (
-    <Card class="set-card">
-      <Row
-        title="バックアップ"
-        desc={prefs.lastBackupAt ? `最終 ${formatDate(prefs.lastBackupAt)}。zip で端末に保存します。` : 'まだ書き出していません。zip で端末に保存します。'}
-      >
-        <div class="set-inline">
-          <Button variant="primary" size="md" disabled={busy} onClick={() => void doExport()}>
-            書き出す
-          </Button>
-          <Button variant="secondary" disabled={busy} onClick={() => fileRef.current?.click()}>
-            読み込む
-          </Button>
-          <input ref={fileRef} type="file" accept=".zip,application/zip" hidden onChange={(e) => void onPick(e)} />
+    <Group id="data" label="データ">
+      <div class="set-storage">
+        <div class="set-storage__head">
+          <span>ストレージ</span>
+          <span class="num set-mono">
+            {storage.usage !== null ? formatBytes(storage.usage) : '—'}
+            {storage.quota !== null && ` / ${formatBytes(storage.quota)}`}
+          </span>
         </div>
-      </Row>
-      <Row title="使用容量" desc="絵とバックアップ前のデータを含みます。">
-        <span class="set-value num">
-          {storage.usage !== null ? formatBytes(storage.usage) : '—'}
-          {storage.quota !== null && <span class="faint"> / {formatBytes(storage.quota)}</span>}
+        <span class="set-storage__bar" aria-hidden="true">
+          <span style={{ width: `${Math.max(ratio * 100, storage.usage ? 1 : 0)}%` }} />
         </span>
-      </Row>
-      <Row title="永続ストレージ" desc="オンなら、端末が勝手にデータを消しません。">
-        <span class="set-value">{persisted.value === null ? '確認中' : persisted.value ? 'オン' : 'オフ'}</span>
-      </Row>
+        <span class="set-storage__note">
+          永続ストレージ {persisted.value === null ? '確認中' : persisted.value ? 'オン（端末が勝手に消しません）' : 'オフ'}
+        </span>
+      </div>
+      <ListRow
+        title="バックアップ"
+        descTone={stale ? 'danger' : 'default'}
+        desc={
+          prefs.lastBackupAt ? (
+            <>
+              最終 <span class="num">{md(prefs.lastBackupAt)}</span>
+              {since !== null && since >= 30 && (
+                <>
+                  {' '}
+                  · <span class="num">{since}</span>日経過
+                </>
+              )}
+            </>
+          ) : (
+            'まだ書き出していません'
+          )
+        }
+      >
+        <Button variant="secondary" size="md" disabled={busy} onClick={() => fileRef.current?.click()}>
+          読み込む
+        </Button>
+        <Button variant="primary" size="md" disabled={busy} onClick={() => void doExport()}>
+          zip で書き出す
+        </Button>
+        <input ref={fileRef} type="file" accept=".zip,application/zip" hidden onChange={(e) => void onPick(e)} />
+      </ListRow>
 
       <Modal
         open={pending !== null}
@@ -350,57 +415,60 @@ function DataSection({ storage, refreshStorage }: { storage: StorageInfo; refres
       >
         <p>今のデータは消え、バックアップの内容になります。先に書き出しておくと安心です。</p>
       </Modal>
-    </Card>
+    </Group>
   );
 }
 
-function AppearanceSection() {
+// ---------------------------------------------------------------------------
+// 外観・このアプリについて
+// ---------------------------------------------------------------------------
+
+function AppearanceGroup() {
   const s = settings.value;
   const prefs = uiPrefs.value;
   return (
-    <Card class="set-card">
-      <Row title="テーマ" desc="夜は暗めにすると目が楽です。">
+    <Group id="appearance" label="外観">
+      <ListRow title="テーマ" desc="ダークでは描く紙も暗くなります">
         <Segment<Theme>
+          size="sm"
           label="テーマ"
           value={s?.theme ?? 'system'}
           options={[
             { value: 'light', label: 'ライト' },
             { value: 'dark', label: 'ダーク' },
-            { value: 'system', label: '端末に合わせる' },
+            { value: 'system', label: '端末' },
           ]}
           onChange={(v) => void saveSettings({ theme: v })}
         />
-      </Row>
-      <Row title="文字サイズ" desc="画面全体の文字が大きくなります。">
-        <Segment<'normal' | 'large'>
+      </ListRow>
+      <ListRow title="文字サイズ">
+        <Segment<FontScale>
+          size="sm"
           label="文字サイズ"
           value={prefs.fontScale}
           options={[
             { value: 'normal', label: '標準' },
             { value: 'large', label: '大きめ' },
           ]}
-          onChange={(v) => void saveUiPrefs({ fontScale: v })}
+          onChange={(v) => void saveSettings({ fontScale: v })}
         />
-      </Row>
-    </Card>
+      </ListRow>
+    </Group>
   );
 }
 
-function AboutSection() {
+function AboutGroup() {
   return (
-    <Card class="set-card">
-      <Row title="成長通（せいちょうつう）" desc="毎日 15 分、一本道を 1 歩ずつ。">
-        <span class="set-value num">版 {APP_VERSION}</span>
-      </Row>
+    <Group id="about" label="このアプリについて">
+      <ListRow title="成長通（せいちょうつう）" desc="毎日 15 分、一本道を 1 歩ずつ">
+        <span class="num set-mono">v{APP_VERSION}</span>
+      </ListRow>
       <div class="set-about">
-        <h3 class="set-about__title">点数の考え方</h3>
-        <p>
-          点数は線の精度だけを見ています。まっすぐさ、ブレ、狙った所に届いたか、といった測れるものだけです。
-        </p>
+        <p>点数は線の精度だけを見ています。まっすぐさ、ブレ、狙った所に届いたか、といった測れるものだけです。</p>
         <p>絵全体の良し悪しは点数にしません。AI の先生が言葉で見ます。</p>
         <p>次へ進むのは「やったか」で決まります。点数で足止めはしません。</p>
       </div>
-    </Card>
+    </Group>
   );
 }
 
@@ -411,57 +479,67 @@ function AboutSection() {
 export function Settings({ section }: { section?: string }) {
   const [active, setActive] = useState<SectionId>(isSection(section) ? section : 'ai');
   const [storage, refreshStorage] = useStorageInfo();
+  const detailRef = useRef<HTMLDivElement>(null);
   const prefs = uiPrefs.value;
 
+  const jump = (id: SectionId, smooth: boolean) => {
+    setActive(id);
+    const host = detailRef.current;
+    const el = host?.querySelector<HTMLElement>(`#set-${id}`);
+    if (host && el) {
+      host.scrollTo({ top: Math.max(0, el.offsetTop - 32), behavior: smooth ? 'smooth' : 'auto' });
+    }
+  };
+
   useEffect(() => {
-    if (isSection(section)) setActive(section);
+    if (isSection(section)) jump(section, false);
   }, [section]);
 
-  const current = SECTIONS.find((s) => s.id === active)!;
+  const since = prefs.lastBackupAt ? daysSince(prefs.lastBackupAt) : null;
 
   return (
     <div class="settings">
       <aside class="settings__nav">
-        <h1 class="settings__heading display">設定</h1>
-        <ul class="settings__groups" role="tablist" aria-orientation="vertical">
+        <h1 class="settings__heading">設定</h1>
+        <ul class="settings__groups">
           {SECTIONS.map((s) => (
             <li key={s.id}>
               <button
                 type="button"
-                role="tab"
-                aria-selected={s.id === active}
+                aria-current={s.id === active ? 'true' : undefined}
                 class={s.id === active ? 'settings__group is-active' : 'settings__group'}
-                onClick={() => setActive(s.id)}
+                onClick={() => jump(s.id, true)}
               >
                 {s.label}
               </button>
             </li>
           ))}
         </ul>
-        <dl class="settings__status">
-          <div>
-            <dt>最終バックアップ</dt>
-            <dd class="num">{prefs.lastBackupAt ? formatDate(prefs.lastBackupAt) : 'まだありません'}</dd>
-          </div>
-          <div>
-            <dt>使用容量</dt>
-            <dd class="num">{storage.usage !== null ? formatBytes(storage.usage) : '—'}</dd>
-          </div>
-          <div>
-            <dt>永続ストレージ</dt>
-            <dd>{persisted.value === null ? '確認中' : persisted.value ? 'オン' : 'オフ'}</dd>
-          </div>
-        </dl>
+        <p class="settings__foot">
+          成長通 <span class="num">v{APP_VERSION}</span>
+          <br />
+          最終バックアップ{' '}
+          {prefs.lastBackupAt ? (
+            <>
+              <span class="num">{md(prefs.lastBackupAt)}</span>（<span class="num">{since}</span>日前）
+            </>
+          ) : (
+            'まだありません'
+          )}
+        </p>
       </aside>
-      <section class="settings__detail" role="tabpanel" aria-label={current.label}>
-        <h2 class="settings__title display">{current.label}</h2>
-        {active === 'ai' && <AiSection />}
-        {active === 'scoring' && <ScoringSection />}
-        {active === 'practice' && <PracticeSection />}
-        {active === 'data' && <DataSection storage={storage} refreshStorage={refreshStorage} />}
-        {active === 'appearance' && <AppearanceSection />}
-        {active === 'about' && <AboutSection />}
-      </section>
+      <div class="settings__detail" ref={detailRef}>
+        <div class="settings__col">
+          <AiGroup />
+          <ScoringGroup />
+          <AppearanceGroup />
+        </div>
+        <div class="settings__col">
+          <PracticeGroup />
+          <DataGroup storage={storage} refreshStorage={refreshStorage} />
+          <AboutGroup />
+        </div>
+      </div>
     </div>
   );
 }

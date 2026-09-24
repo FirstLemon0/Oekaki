@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <ellipse cx="150" cy="230" rx="80" ry="115" stroke-width="4"/>
+  <path d="M150,115 Q240,150 225,250 Q210,345 150,345" opacity="0"/>
+  <text x="150" y="400" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">卵形：片方が少し細い</text>
+  <path d="M150,115 C215,115 235,190 228,240 C220,300 195,345 150,345 C105,345 76,300 72,240 C66,180 90,115 150,115 Z" opacity="0"/>
+  <path d="M400,120 C470,110 500,170 470,215 C455,240 470,265 490,290 C520,340 470,370 420,360 C350,345 320,300 330,240 C338,190 330,130 400,120 Z" stroke-width="4"/>
+  <path d="M470,215 C455,240 470,265 490,290" stroke="#7BB661" stroke-width="3"/>
+  <text x="410" y="400" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">豆形：片側がくびれる</text>
+  <path d="M640,110 C700,110 740,170 720,230 C700,290 640,300 620,360 C605,400 560,370 570,320 C580,270 600,250 590,200 C580,150 590,110 640,110 Z" stroke-width="4"/>
+  <text x="650" y="400" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">しずく・ひねり</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">生き物や手の形は、角のない「有機形」で大づかみにする</text>
+</svg>

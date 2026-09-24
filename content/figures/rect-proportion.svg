@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M80,110 L280,110 L280,310 L80,310 Z" stroke-width="4"/>
+  <text x="180" y="360" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">正方形：4辺が同じ</text>
+  <path d="M360,150 L720,150 L720,300 L360,300 Z" stroke-width="4"/>
+  <text x="540" y="360" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">長方形：横と縦の比を見る</text>
+  <line x1="360" y1="140" x2="510" y2="140" stroke="#7BB661" stroke-width="2"/>
+  <line x1="510" y1="140" x2="660" y2="140" stroke="#7BB661" stroke-width="2"/>
+  <line x1="372" y1="310" x2="372" y2="310"/>
+  <text x="540" y="125" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">縦の長さ何本分？</text>
+  <line x1="350" y1="150" x2="350" y2="300" stroke="#7BB661" stroke-width="2"/>
+  <line x1="510" y1="150" x2="510" y2="300" stroke-dasharray="8 8" opacity="0.6"/>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">角を先に点で決め、辺は2点を結ぶ直線で</text>
+</svg>

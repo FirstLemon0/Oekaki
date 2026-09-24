@@ -2,12 +2,14 @@
  * 重ねる部品: Modal / Sheet / Toast
  *
  * Modal: 幕＋カード。Esc・幕クリックで閉じる。role="dialog" aria-modal。
- * Sheet: 下からせり上がるシート（240ms）。
+ * Sheet: 下からせり上がるシート（240ms、上角 20、背景は暗くしない指定は scrim=false）。
+ * Modal の出現は stPop（.35s）。
  * Toast: 画面下中央に短く出す。キャンバス画面では出さない（呼び出し側の責務）。
  */
 import type { ComponentChildren } from 'preact';
 import { useEffect, useId, useRef } from 'preact/hooks';
 import { signal } from '@preact/signals';
+import { Icon } from './Icon';
 
 function useEscape(open: boolean, onClose: () => void) {
   useEffect(() => {
@@ -66,7 +68,7 @@ export function Modal({ open, onClose, title, children, actions, width = 480 }: 
         style={{ width: `min(${width}px, calc(100vw - 32px))` }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id={titleId} class="modal__title display">
+        <h2 id={titleId} class="modal__title">
           {title}
         </h2>
         {children && <div class="modal__body">{children}</div>}
@@ -129,7 +131,8 @@ export function Sheet({ open, onClose, title, children, scrim = true }: SheetPro
 interface ToastState {
   id: number;
   text: string;
-  tone: 'default' | 'danger';
+  /** default = 先頭にチェック、info = アイコンなし、danger = 警告 */
+  tone: 'default' | 'info' | 'danger';
 }
 
 export const toastSignal = signal<ToastState | null>(null);
@@ -151,7 +154,8 @@ export function ToastHost() {
     <div class="toast-host" aria-live="polite" role="status">
       {t && (
         <div key={t.id} class={t.tone === 'danger' ? 'toast toast--danger' : 'toast'}>
-          {t.text}
+          {t.tone === 'default' && <Icon name="check" size={18} strokeWidth={2.5} class="toast__icon" />}
+          <span>{t.text}</span>
         </div>
       )}
     </div>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M40,120 L120,60 L330,60 L250,120 Z" fill="none"/>
+  <text x="350" y="98" font-size="20" fill="currentColor" stroke="none" text-anchor="start">線画</text>
+  <path d="M40,210 L120,150 L330,150 L250,210 Z" fill="#5A4A78"/>
+  <text x="350" y="188" font-size="20" fill="currentColor" stroke="none" text-anchor="start">髪</text>
+  <path d="M40,300 L120,240 L330,240 L250,300 Z" fill="#4F7FB8"/>
+  <text x="350" y="278" font-size="20" fill="currentColor" stroke="none" text-anchor="start">服</text>
+  <path d="M40,390 L120,330 L330,330 L250,390 Z" fill="#F6D7C3"/>
+  <text x="350" y="368" font-size="20" fill="currentColor" stroke="none" text-anchor="start">肌</text>
+  <path d="M445.5,397 Q471,318.8 566.2,308.6 L613.8,308.6 Q709,318.8 734.5,397 Z" fill="#4F7FB8" stroke="none"/>
+  <path d="M569.6,271.2 L566.2,315.4 L613.8,315.4 L610.4,271.2 Z" fill="#F6D7C3" stroke="none"/>
+  <path d="M525.4,196.4 Q522,121.6 590,118.2 Q658,121.6 654.6,196.4 Q647.8,257.6 590,284.8 Q532.2,257.6 525.4,196.4 Z" fill="#F6D7C3" stroke="none"/>
+  <path d="M515.2,261 Q498.2,101.2 590,94.4 Q681.8,101.2 664.8,261 L651.2,193 L637.6,148.8 L620.6,179.4 L600.2,145.4 L579.8,182.8 L559.4,145.4 L542.4,186.2 L528.8,193 Z" fill="#5A4A78" stroke="none"/>
+  <ellipse cx="562.8" cy="213.4" rx="8.5" ry="11.9" fill="#3A6EA5" stroke="none"/>
+  <ellipse cx="617.2" cy="213.4" rx="8.5" ry="11.9" fill="#3A6EA5" stroke="none"/>
+  <path d="M525.4,196.4 Q522,121.6 590,118.2 Q658,121.6 654.6,196.4 Q647.8,257.6 590,284.8 Q532.2,257.6 525.4,196.4 Z"/>
+  <path d="M518.6,203.2 Q505,104.6 590,97.8 Q675,104.6 661.4,203.2 M539,142 L559.4,179.4 L576.4,148.8 L596.8,182.8 L613.8,145.4 L630.8,179.4 L644.4,148.8"/>
+  <path d="M569.6,278 L566.2,315.4 M610.4,278 L613.8,315.4 M566.2,315.4 Q488,322.2 454,380 M613.8,315.4 Q692,322.2 726,380"/>
+  <text x="590" y="430" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">線画は一番上、色はその下にパーツごと</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">1パーツ＝1レイヤー。はみ出しても他のパーツに影響しない</text>
+</svg>

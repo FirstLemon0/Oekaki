@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M150,100 L310,100 Q335,105 330,130 L300,250 Q292,265 295,290 L300,330 Q300,380 230,395 Q160,380 160,330 L165,290 Q168,265 160,250 L130,130 Q125,105 150,100 Z"/>
+  <path d="M505,100 L635,100 Q655,105 650,125 L622,225 Q615,240 625,265 Q660,310 655,335 Q645,385 570,395 Q495,385 485,335 Q480,310 515,265 Q525,240 518,225 L490,125 Q485,105 505,100 Z"/>
+  <line x1="212" y1="100" x2="212" y2="86"/>
+  <line x1="248" y1="100" x2="248" y2="86"/>
+  <line x1="557" y1="100" x2="557" y2="86"/>
+  <line x1="583" y1="100" x2="583" y2="86"/>
+  <line x1="130" y1="70" x2="330" y2="70" stroke="#45702A"/>
+  <path d="M321,74.3 L330,70 L321,65.7" stroke="#45702A"/>
+  <line x1="330" y1="70" x2="130" y2="70" stroke="#45702A"/>
+  <path d="M139,65.7 L130,70 L139,74.3" stroke="#45702A"/>
+  <line x1="490" y1="70" x2="650" y2="70" stroke="#45702A"/>
+  <path d="M641,74.3 L650,70 L641,65.7" stroke="#45702A"/>
+  <line x1="650" y1="70" x2="490" y2="70" stroke="#45702A"/>
+  <path d="M499,65.7 L490,70 L499,74.3" stroke="#45702A"/>
+  <text x="230" y="50" font-size="22" fill="#45702A" stroke="none" text-anchor="middle">肩幅 広め</text>
+  <text x="570" y="50" font-size="22" fill="#45702A" stroke="none" text-anchor="middle">肩幅 せまめ</text>
+  <line x1="145" y1="255" x2="315" y2="255" stroke="#45702A" stroke-dasharray="6 6"/>
+  <line x1="500" y1="230" x2="640" y2="230" stroke="#45702A" stroke-dasharray="6 6"/>
+  <text x="400" y="250" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">くびれ</text>
+  <line x1="160" y1="420" x2="300" y2="420" stroke="#45702A"/>
+  <path d="M291,424.3 L300,420 L291,415.7" stroke="#45702A"/>
+  <line x1="300" y1="420" x2="160" y2="420" stroke="#45702A"/>
+  <path d="M169,415.7 L160,420 L169,424.3" stroke="#45702A"/>
+  <line x1="485" y1="420" x2="655" y2="420" stroke="#45702A"/>
+  <path d="M646,424.3 L655,420 L646,415.7" stroke="#45702A"/>
+  <line x1="655" y1="420" x2="485" y2="420" stroke="#45702A"/>
+  <path d="M494,415.7 L485,420 L494,424.3" stroke="#45702A"/>
+  <text x="230" y="460" font-size="22" fill="#45702A" stroke="none" text-anchor="middle">腰幅 せまめ</text>
+  <text x="570" y="460" font-size="22" fill="#45702A" stroke="none" text-anchor="middle">腰幅 広め</text>
+  <text x="400" y="490" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">記号として：肩と腰の幅の比と、くびれの高さ</text>
+</svg>

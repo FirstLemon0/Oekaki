@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <line x1="20" y1="170" x2="780" y2="170" stroke-width="1.5" opacity="0.45"/>
+  <line x1="610" y1="270" x2="610" y2="380" stroke-width="3.5"/>
+  <line x1="520" y1="260.1" x2="520" y2="359.2" stroke-width="3.5"/>
+  <line x1="740" y1="243.5" x2="740" y2="324.3" stroke-width="3.5"/>
+  <line x1="610" y1="270" x2="520" y2="260.1" stroke-width="3.5"/>
+  <line x1="610" y1="270" x2="740" y2="243.5" stroke-width="3.5"/>
+  <line x1="610" y1="380" x2="520" y2="359.2" stroke-width="3.5"/>
+  <line x1="610" y1="380" x2="740" y2="324.3" stroke-width="3.5"/>
+  <line x1="520" y1="260.1" x2="662.4" y2="238" stroke-width="3.5"/>
+  <line x1="740" y1="243.5" x2="662.4" y2="238" stroke-width="3.5"/>
+  <ellipse cx="230" cy="250" rx="70" ry="18" stroke-width="3.5"/>
+  <path d="M160,250 L160,380 A70,20 0 0 0 300,380 L300,250" stroke-width="3.5"/>
+  <path d="M300,285 C350,285 350,350 300,355" stroke-width="3.5"/>
+  <ellipse cx="420" cy="110" rx="14" ry="4"/>
+  <path d="M406,110 L406,130 C406,160 380,170 380,200 L380,395 A40,11 0 0 0 460,395 L460,200 C460,170 434,160 434,130 L434,110" stroke-width="3.5"/>
+  <ellipse cx="420" cy="200" rx="40" ry="10" stroke-dasharray="8 8" opacity="0.6"/>
+  <ellipse cx="230" cy="380" rx="70" ry="20" stroke="#7BB661" stroke-width="2"/>
+  <ellipse cx="420" cy="395" rx="40" ry="11" stroke="#7BB661" stroke-width="2"/>
+  <text x="230" y="440" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">円柱</text>
+  <text x="420" y="440" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">円柱＋円錐</text>
+  <text x="630" y="440" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">箱</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">3つを同じ目の高さで。楕円の度合いと消失点をそろえる</text>
+</svg>

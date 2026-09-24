@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <rect x="315" y="60" width="170" height="60" rx="30" stroke-width="2.5"/>
+  <text x="400" y="97" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">提出</text>
+  <rect x="535" y="220" width="170" height="60" rx="30" stroke-width="2.5"/>
+  <text x="620" y="257" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">批評を読む</text>
+  <rect x="315" y="380" width="170" height="60" rx="30" stroke="#7BB661" stroke-width="3"/>
+  <text x="400" y="417" font-size="20" fill="#7BB661" stroke="none" text-anchor="middle">1つだけ直す</text>
+  <rect x="95" y="220" width="170" height="60" rx="30" stroke-width="2.5"/>
+  <text x="180" y="257" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">再提出</text>
+  <line x1="490" y1="110" x2="600" y2="215"/>
+  <path d="M586.7,210.7 L600,215 L595.1,201.9"/>
+  <line x1="600" y1="285" x2="490" y2="390"/>
+  <path d="M494.9,376.9 L490,390 L503.3,385.7"/>
+  <line x1="310" y1="390" x2="200" y2="285"/>
+  <path d="M213.3,289.3 L200,285 L204.9,298.1"/>
+  <line x1="200" y1="215" x2="310" y2="110"/>
+  <path d="M305.1,123.1 L310,110 L296.7,114.3"/>
+  <text x="400" y="245" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">全部は直さない</text>
+  <text x="400" y="275" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">「次の1つ」だけ</text>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <rect x="150" y="40" width="500" height="400" rx="4" stroke-width="2.5"/>
+  <path d="M269.2,177.2 Q266,106.8 330,103.6 Q394,106.8 390.8,177.2 Q384.4,234.8 330,260.4 Q275.6,234.8 269.2,177.2 Z"/>
+  <path d="M262.8,183.6 Q250,90.8 330,84.4 Q410,90.8 397.2,183.6 M282,126 L301.2,161.2 L317.2,132.4 L336.4,164.4 L352.4,129.2 L368.4,161.2 L381.2,132.4"/>
+  <path d="M310.8,254 L307.6,289.2 M349.2,254 L352.4,289.2 M307.6,289.2 Q234,295.6 202,350 M352.4,289.2 Q426,295.6 458,350"/>
+  <path d="M298,190 l16,0 M346,190 l16,0 M322,228.4 l16,0"/>
+  <circle cx="330" cy="190" r="70" stroke="#7BB661" stroke-width="3"/>
+  <circle cx="250" cy="118" r="15" stroke="#7BB661" stroke-width="2"/>
+  <text x="250" y="125" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">1</text>
+  <path d="M400,215 Q500,240 535,322" stroke="#7BB661" stroke-dasharray="8 6"/>
+  <circle cx="560" cy="350" r="22"/>
+  <circle cx="603" cy="318" r="15" stroke="#7BB661" stroke-width="2"/>
+  <text x="603" y="325" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">2</text>
+  <path d="M535,375 Q420,420 335,385" stroke="#7BB661" stroke-dasharray="8 6"/>
+  <circle cx="305" cy="400" r="15" stroke="#7BB661" stroke-width="2"/>
+  <text x="305" y="407" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">3</text>
+  <text x="720" y="195" font-size="17" fill="#7BB661" stroke="none" text-anchor="middle">顔（主役）</text>
+  <text x="560" y="400" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">小物</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">明るい所・細かい所・顔に目が行く。主役→脇→主役と巡らせる</text>
+</svg>

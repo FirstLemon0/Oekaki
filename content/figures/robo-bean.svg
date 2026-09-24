@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <ellipse cx="200" cy="160" rx="70" ry="90" stroke-width="2" opacity="0.5"/>
+  <ellipse cx="200" cy="305" rx="62" ry="50" stroke-width="2" opacity="0.5"/>
+  <text x="200" y="420" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">Bean（豆）</text>
+  <line x1="290" y1="240" x2="330" y2="240" stroke="#7BB661" stroke-width="3"/>
+  <path d="M317.4,246.1 L330,240 L317.4,233.9" stroke="#7BB661" stroke-width="3"/>
+  <line x1="420" y1="70" x2="420" y2="250" stroke-width="3.5"/>
+  <line x1="330" y1="82.7" x2="330" y2="245.1" stroke-width="3.5"/>
+  <line x1="500" y1="81.8" x2="500" y2="245.5" stroke-width="3.5"/>
+  <line x1="420" y1="70" x2="330" y2="82.7" stroke-width="3.5"/>
+  <line x1="420" y1="70" x2="500" y2="81.8" stroke-width="3.5"/>
+  <line x1="420" y1="250" x2="330" y2="245.1" stroke-width="3.5"/>
+  <line x1="420" y1="250" x2="500" y2="245.5" stroke-width="3.5"/>
+  <line x1="330" y1="82.7" x2="410.3" y2="92.4" stroke-width="3.5"/>
+  <line x1="500" y1="81.8" x2="410.3" y2="92.4" stroke-width="3.5"/>
+  <line x1="410.3" y1="92.4" x2="410.3" y2="241.4" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="330" y1="245.1" x2="410.3" y2="241.4" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="500" y1="245.5" x2="410.3" y2="241.4" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="420" y1="290" x2="420" y2="380" stroke-width="3.5"/>
+  <line x1="345" y1="282.7" x2="345" y2="365.3" stroke-width="3.5"/>
+  <line x1="490" y1="282.8" x2="490" y2="365.7" stroke-width="3.5"/>
+  <line x1="420" y1="290" x2="345" y2="282.7" stroke-width="3.5"/>
+  <line x1="420" y1="290" x2="490" y2="282.8" stroke-width="3.5"/>
+  <line x1="420" y1="380" x2="345" y2="365.3" stroke-width="3.5"/>
+  <line x1="420" y1="380" x2="490" y2="365.7" stroke-width="3.5"/>
+  <line x1="345" y1="282.7" x2="415.2" y2="276.6" stroke-width="3.5"/>
+  <line x1="490" y1="282.8" x2="415.2" y2="276.6" stroke-width="3.5"/>
+  <line x1="415.2" y1="276.6" x2="415.2" y2="353.2" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="345" y1="365.3" x2="415.2" y2="353.2" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="490" y1="365.7" x2="415.2" y2="353.2" stroke-dasharray="8 8" opacity="0.6"/>
+  <path d="M420,214 L420,299" stroke="#7BB661" stroke-width="3"/>
+  <text x="420" y="440" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">Robo Bean（箱）</text>
+  <text x="640" y="150" font-size="18" fill="currentColor" stroke="none" text-anchor="start">胸の箱</text>
+  <text x="640" y="330" font-size="18" fill="currentColor" stroke="none" text-anchor="start">腰の箱</text>
+  <text x="640" y="240" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">面の向きが見える</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">豆を箱に置きかえると、正面・側面・上面がはっきりする</text>
+</svg>

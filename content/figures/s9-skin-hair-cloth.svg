@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <text x="70" y="105" font-size="26" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">肌</text>
+  <rect x="120" y="70" width="64" height="56" fill="#FBE3D3" rx="6" stroke-width="1.5"/>
+  <rect x="200" y="70" width="64" height="56" fill="#F6D7C3" rx="6" stroke-width="1.5"/>
+  <rect x="280" y="70" width="64" height="56" fill="#EFC3A4" rx="6" stroke-width="1.5"/>
+  <rect x="360" y="70" width="64" height="56" fill="#D9A27C" rx="6" stroke-width="1.5"/>
+  <text x="460" y="105" font-size="17" fill="currentColor" stroke="none" text-anchor="start">少し黄み・赤みのある明るい色</text>
+  <text x="70" y="235" font-size="26" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">髪</text>
+  <rect x="120" y="200" width="64" height="56" fill="#2E2A3A" rx="6" stroke-width="1.5"/>
+  <rect x="200" y="200" width="64" height="56" fill="#5A4A78" rx="6" stroke-width="1.5"/>
+  <rect x="280" y="200" width="64" height="56" fill="#A8743E" rx="6" stroke-width="1.5"/>
+  <rect x="360" y="200" width="64" height="56" fill="#E9D38A" rx="6" stroke-width="1.5"/>
+  <text x="460" y="235" font-size="17" fill="currentColor" stroke="none" text-anchor="start">キャラの個性。肌と明るさの差を</text>
+  <text x="70" y="365" font-size="26" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">服</text>
+  <rect x="120" y="330" width="64" height="56" fill="#4F7FB8" rx="6" stroke-width="1.5"/>
+  <rect x="200" y="330" width="64" height="56" fill="#F4F4F4" rx="6" stroke-width="1.5"/>
+  <rect x="280" y="330" width="64" height="56" fill="#B8433F" rx="6" stroke-width="1.5"/>
+  <rect x="360" y="330" width="64" height="56" fill="#3E5E3A" rx="6" stroke-width="1.5"/>
+  <text x="460" y="365" font-size="17" fill="currentColor" stroke="none" text-anchor="start">面積が大きい。彩度は控えめから</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">まずは各パーツ1色。影や光はステージ10で足す</text>
+</svg>

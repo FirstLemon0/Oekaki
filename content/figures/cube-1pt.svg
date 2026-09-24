@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <line x1="40" y1="120" x2="760" y2="120" stroke-width="1.5" opacity="0.45"/>
+  <text x="740" y="108" font-size="16" fill="currentColor" stroke="none" text-anchor="end">地平線（目の高さ）</text>
+  <circle cx="560" cy="120" r="7" fill="#7BB661" stroke="none"/>
+  <text x="560" y="102" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">消失点</text>
+  <line x1="170" y1="190" x2="560" y2="120" stroke="#7BB661" stroke-width="1.5" stroke-dasharray="4 6"/>
+  <line x1="360" y1="190" x2="560" y2="120" stroke="#7BB661" stroke-width="1.5" stroke-dasharray="4 6"/>
+  <line x1="360" y1="380" x2="560" y2="120" stroke="#7BB661" stroke-width="1.5" stroke-dasharray="4 6"/>
+  <line x1="170" y1="380" x2="560" y2="120" stroke="#7BB661" stroke-width="1.5" stroke-dasharray="4 6"/>
+  <path d="M170,190 L360,190 L360,380 L170,380 Z" stroke-width="4"/>
+  <line x1="170" y1="190" x2="287" y2="169" stroke-width="4"/>
+  <line x1="360" y1="190" x2="420" y2="169" stroke-width="4"/>
+  <line x1="360" y1="380" x2="420" y2="302" stroke-width="4"/>
+  <line x1="170" y1="380" x2="287" y2="302" stroke-width="4"/>
+  <path d="M287,169 L420,169 L420,302 L287,302 Z" stroke-dasharray="8 8" opacity="0.6"/>
+  <circle cx="150" cy="170" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="150" y="177" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">1</text>
+  <circle cx="300" cy="160" r="15" stroke="#7BB661" stroke-width="2"/>
+  <text x="300" y="167" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">2</text>
+  <circle cx="470" cy="280" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="470" y="287" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">3</text>
+  <text x="265" y="420" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">① 正面の四角 → ② 角から消失点へ → ③ 奥の辺で閉じる</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">1点透視：正面の面はそのまま、奥行きの線は1点に集まる</text>
+</svg>

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <rect x="60" y="70" width="200" height="250" rx="6" stroke-width="2"/>
+  <text x="160" y="348" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">① 自分のラフ</text>
+  <path d="M120,182 Q118,138 158,136 Q198,138 196,182 Q192,218 158,234 Q124,218 120,182 Z" opacity="0.35"/>
+  <path d="M116,186 Q108,128 158,124 Q208,128 200,186 M128,150 L140,172 L150,154 L162,174 L172,152 L182,172 L190,154" opacity="0.35"/>
+  <path d="M146,230 L144,252 M170,230 L172,252 M144,252 Q98,256 78,290 M172,252 Q218,256 238,290" opacity="0.35"/>
+  <path d="M138,190 l10,0 M168,190 l10,0 M153,214 l10,0" opacity="0.35"/>
+  <path d="M122,183 Q120,139 160,137 Q200,139 198,183 Q194,219 160,235 Q126,219 122,183 Z" opacity="0.35"/>
+  <path d="M118,187 Q110,129 160,125 Q210,129 202,187 M130,151 L142,173 L152,155 L164,175 L174,153 L184,173 L192,155" opacity="0.35"/>
+  <path d="M148,231 L146,253 M172,231 L174,253 M146,253 Q100,257 80,291 M174,253 Q220,257 240,291" opacity="0.35"/>
+  <path d="M140,191 l10,0 M170,191 l10,0 M155,215 l10,0" opacity="0.35"/>
+  <path d="M124,184 Q122,140 162,138 Q202,140 200,184 Q196,220 162,236 Q128,220 124,184 Z" opacity="0.35"/>
+  <path d="M120,188 Q112,130 162,126 Q212,130 204,188 M132,152 L144,174 L154,156 L166,176 L176,154 L186,174 L194,156" opacity="0.35"/>
+  <path d="M150,232 L148,254 M174,232 L176,254 M148,254 Q102,258 82,292 M176,254 Q222,258 242,292" opacity="0.35"/>
+  <path d="M142,192 l10,0 M172,192 l10,0 M157,216 l10,0" opacity="0.35"/>
+  <line x1="275" y1="195" x2="315" y2="195" stroke="#7BB661"/>
+  <path d="M302.4,201.1 L315,195 L302.4,188.9" stroke="#7BB661"/>
+  <rect x="330" y="70" width="200" height="250" rx="6" stroke-width="2"/>
+  <text x="430" y="348" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">② 不透明度 20〜30%</text>
+  <path d="M392,183 Q390,139 430,137 Q470,139 468,183 Q464,219 430,235 Q396,219 392,183 Z" opacity="0.2"/>
+  <path d="M388,187 Q380,129 430,125 Q480,129 472,187 M400,151 L412,173 L422,155 L434,175 L444,153 L454,173 L462,155" opacity="0.2"/>
+  <path d="M418,231 L416,253 M442,231 L444,253 M416,253 Q370,257 350,291 M444,253 Q490,257 510,291" opacity="0.2"/>
+  <path d="M410,191 l10,0 M440,191 l10,0 M425,215 l10,0" opacity="0.2"/>
+  <line x1="545" y1="195" x2="585" y2="195" stroke="#7BB661"/>
+  <path d="M572.4,201.1 L585,195 L572.4,188.9" stroke="#7BB661"/>
+  <rect x="600" y="70" width="150" height="250" rx="6" stroke="#7BB661" stroke-width="2"/>
+  <text x="675" y="348" font-size="19" fill="#7BB661" stroke="none" text-anchor="middle">③ 上に線画</text>
+  <path d="M644.6,184.6 Q643,149.4 675,147.8 Q707,149.4 705.4,184.6 Q702.2,213.4 675,226.2 Q647.8,213.4 644.6,184.6 Z" stroke="#7BB661" stroke-width="3"/>
+  <path d="M641.4,187.8 Q635,141.4 675,138.2 Q715,141.4 708.6,187.8 M651,159 L660.6,176.6 L668.6,162.2 L678.2,178.2 L686.2,160.6 L694.2,176.6 L700.6,162.2" stroke="#7BB661" stroke-width="3"/>
+  <path d="M665.4,223 L663.8,240.6 M684.6,223 L686.2,240.6 M663.8,240.6 Q627,243.8 611,271 M686.2,240.6 Q723,243.8 739,271" stroke="#7BB661" stroke-width="3"/>
+  <path d="M659,191 l8,0 M683,191 l8,0 M671,210.2 l8,0" stroke="#7BB661" stroke-width="3"/>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">ラフの「勢い」を残したまま、線だけを選び直す</text>
+</svg>

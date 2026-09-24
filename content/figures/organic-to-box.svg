@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M190,140 C270,120 320,180 310,250 C300,330 250,370 190,360 C120,350 90,300 95,240 C100,180 120,150 190,140 Z" stroke-width="4"/>
+  <text x="200" y="410" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">有機形</text>
+  <line x1="350" y1="250" x2="430" y2="250" stroke="#7BB661" stroke-width="3"/>
+  <path d="M417.4,256.1 L430,250 L417.4,243.9" stroke="#7BB661" stroke-width="3"/>
+  <line x1="560" y1="150" x2="560" y2="360" stroke-width="1.8" opacity="0.55"/>
+  <line x1="460" y1="144.2" x2="460" y2="329.8" stroke-width="1.8" opacity="0.55"/>
+  <line x1="690" y1="138" x2="690" y2="297.4" stroke-width="1.8" opacity="0.55"/>
+  <line x1="560" y1="150" x2="460" y2="144.2" stroke-width="1.8" opacity="0.55"/>
+  <line x1="560" y1="150" x2="690" y2="138" stroke-width="1.8" opacity="0.55"/>
+  <line x1="560" y1="360" x2="460" y2="329.8" stroke-width="1.8" opacity="0.55"/>
+  <line x1="560" y1="360" x2="690" y2="297.4" stroke-width="1.8" opacity="0.55"/>
+  <line x1="460" y1="144.2" x2="600.1" y2="134.5" stroke-width="1.8" opacity="0.55"/>
+  <line x1="690" y1="138" x2="600.1" y2="134.5" stroke-width="1.8" opacity="0.55"/>
+  <path d="M470,149.18604651162792 Q560,125 682,140.96296296296296 Q708,217.68518518518516 684,292.4074074074074 Q560,382 466,325.7674418604651 Q442,236.97674418604652 470,149.18604651162792 Z" stroke="#7BB661" stroke-width="4"/>
+  <text x="575" y="410" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">箱に入れると、面の向きがわかる</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">丸い形も箱で考えると、光の当たる面と陰の面を決めやすい</text>
+</svg>

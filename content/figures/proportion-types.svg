@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <ellipse cx="150" cy="171.3" rx="33" ry="41.3" stroke-width="3"/>
+  <line x1="150" y1="212.5" x2="150" y2="237.3" stroke-width="3"/>
+  <path d="M110.8,237.3 L189.2,237.3 L177.4,229 L179.4,268.6 L120.6,268.6 L122.6,229 Z" stroke-width="3"/>
+  <line x1="133.8" y1="268.6" x2="135.3" y2="458" stroke-width="3"/>
+  <line x1="166.2" y1="268.6" x2="164.7" y2="458" stroke-width="3"/>
+  <line x1="110.8" y1="237.3" x2="104.8" y2="276.9" stroke-width="3"/>
+  <line x1="189.2" y1="237.3" x2="195.2" y2="276.9" stroke-width="3"/>
+  <line x1="85.8" y1="268.6" x2="214.2" y2="268.6" stroke="#7BB661" stroke-width="1.5" stroke-dasharray="4 6"/>
+  <text x="150" y="490" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">子ども（4頭身）</text>
+  <ellipse cx="400" cy="63.1" rx="26.5" ry="33.1" stroke-width="3"/>
+  <line x1="400" y1="96.2" x2="400" y2="116" stroke-width="3"/>
+  <path d="M352.9,116 L447.1,116 L433,193.4 L447.1,245 L352.9,245 L367,193.4 Z" stroke-width="3"/>
+  <line x1="374.1" y1="245" x2="376.4" y2="458" stroke-width="3"/>
+  <line x1="425.9" y1="245" x2="423.6" y2="458" stroke-width="3"/>
+  <line x1="352.9" y1="116" x2="346.9" y2="251.6" stroke-width="3"/>
+  <line x1="447.1" y1="116" x2="453.1" y2="251.6" stroke-width="3"/>
+  <line x1="327.9" y1="245" x2="472.1" y2="245" stroke="#7BB661" stroke-width="1.5" stroke-dasharray="4 6"/>
+  <text x="400" y="490" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">女性（6.5頭身）</text>
+  <ellipse cx="640" cy="51.4" rx="25.1" ry="31.4" stroke-width="3"/>
+  <line x1="640" y1="82.9" x2="640" y2="101.7" stroke-width="3"/>
+  <path d="M583.3,101.7 L696.7,101.7 L679.7,187.2 L682.5,240 L597.5,240 L600.3,187.2 Z" stroke-width="3"/>
+  <line x1="616.6" y1="240" x2="618.7" y2="458" stroke-width="3"/>
+  <line x1="663.4" y1="240" x2="661.3" y2="458" stroke-width="3"/>
+  <line x1="583.3" y1="101.7" x2="577.3" y2="246.3" stroke-width="3"/>
+  <line x1="696.7" y1="101.7" x2="702.7" y2="246.3" stroke-width="3"/>
+  <line x1="558.3" y1="240" x2="721.7" y2="240" stroke="#7BB661" stroke-width="1.5" stroke-dasharray="4 6"/>
+  <text x="640" y="490" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">男性（7頭身）</text>
+  <text x="150" y="110" font-size="16" fill="#7BB661" stroke="none" text-anchor="middle">頭が大きく手足が短い</text>
+  <text x="400" y="20" font-size="16" fill="#7BB661" stroke="none" text-anchor="middle">肩はせまめ・腰は広め</text>
+  <text x="660" y="20" font-size="16" fill="#7BB661" stroke="none" text-anchor="middle">肩が広い</text>
+</svg>

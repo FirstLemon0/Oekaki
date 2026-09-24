@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <rect x="60" y="60" width="110" height="150" rx="4" stroke-width="2"/>
+  <circle cx="96.3" cy="105.5" r="12.1"/>
+  <path d="M74.3,210 Q96.3,123.1 118.3,210"/>
+  <text x="72" y="80" font-size="14" fill="#7BB661" stroke="none" text-anchor="start">1</text>
+  <rect x="200" y="60" width="110" height="150" rx="4" stroke-width="2"/>
+  <circle cx="255" cy="120" r="16.5"/>
+  <path d="M225,210 Q255,144 285,210"/>
+  <text x="212" y="80" font-size="14" fill="#7BB661" stroke="none" text-anchor="start">2</text>
+  <rect x="340" y="60" width="110" height="150" rx="4" stroke-width="2"/>
+  <circle cx="412.6" cy="117" r="9.9"/>
+  <path d="M394.6,210 Q412.6,131.4 430.6,210"/>
+  <text x="352" y="80" font-size="14" fill="#7BB661" stroke="none" text-anchor="start">3</text>
+  <rect x="480" y="60" width="110" height="150" rx="4" stroke-width="2"/>
+  <circle cx="513" cy="139" r="14.3"/>
+  <path d="M487,210 Q513,159.8 539,210"/>
+  <text x="492" y="80" font-size="14" fill="#7BB661" stroke="none" text-anchor="start">4</text>
+  <rect x="620" y="60" width="110" height="150" rx="4" stroke-width="2"/>
+  <circle cx="675" cy="106" r="7.7"/>
+  <path d="M661,210 Q675,117.2 689,210"/>
+  <text x="632" y="80" font-size="14" fill="#7BB661" stroke="none" text-anchor="start">5</text>
+  <rect x="60" y="250" width="110" height="150" rx="4" stroke-width="2"/>
+  <circle cx="137" cy="306" r="18.7"/>
+  <path d="M103,400 Q137,333.2 168,400"/>
+  <text x="72" y="270" font-size="14" fill="#7BB661" stroke="none" text-anchor="start">6</text>
+  <rect x="200" y="250" width="110" height="150" rx="4" stroke-width="2"/>
+  <circle cx="244" cy="312.5" r="11"/>
+  <path d="M224,400 Q244,328.5 264,400"/>
+  <text x="212" y="270" font-size="14" fill="#7BB661" stroke="none" text-anchor="start">7</text>
+  <rect x="340" y="250" width="110" height="150" rx="4" stroke-width="2"/>
+  <circle cx="406" cy="293.5" r="13.2"/>
+  <path d="M382,400 Q406,312.7 430,400"/>
+  <text x="352" y="270" font-size="14" fill="#7BB661" stroke="none" text-anchor="start">8</text>
+  <rect x="480" y="250" width="110" height="150" rx="4" stroke-width="2"/>
+  <circle cx="518.5" cy="312" r="15.4"/>
+  <path d="M490.5,400 Q518.5,334.4 546.5,400"/>
+  <text x="492" y="270" font-size="14" fill="#7BB661" stroke="none" text-anchor="start">9</text>
+  <rect x="620" y="250" width="110" height="150" rx="4" stroke-width="2"/>
+  <circle cx="675" cy="346.5" r="8.8"/>
+  <path d="M659,400 Q675,359.3 691,400"/>
+  <text x="632" y="270" font-size="14" fill="#7BB661" stroke="none" text-anchor="start">10</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">切手サイズで10個。1個1分、上手さより「配置の違い」を出す</text>
+</svg>

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M300,40 Q205,110 205,215 Q205,250 222,280 Q232,330 290,410 Q330,455 380,470" stroke-width="3"/>
+  <path d="M300,40 Q560,-5 660,150 Q700,260 640,380" stroke-width="3"/>
+  <path d="M395,40 Q322,230 368,470" stroke="#45702A" stroke-width="3" stroke-dasharray="10 8"/>
+  <line x1="215" y1="240" x2="640" y2="240" stroke-dasharray="6 6" opacity="0.55" stroke-width="1.5"/>
+  <path d="M322,222 Q290,178 230,196 L222,206" stroke-width="5"/>
+  <ellipse cx="270" cy="245" rx="22" ry="42"/>
+  <ellipse cx="266" cy="252" rx="10" ry="20" fill="currentColor" opacity="0.35" stroke="none"/>
+  <circle cx="262" cy="228" r="5" stroke-width="2"/>
+  <path d="M300,290 Q275,296 240,284" stroke-width="1.8"/>
+  <path d="M420,222 Q487.5,168 570,210 L579,228" stroke-width="5"/>
+  <path d="M472.5,290 Q517.5,295 562.5,278" stroke-width="1.8"/>
+  <ellipse cx="478.8" cy="246" rx="36" ry="44"/>
+  <ellipse cx="478.8" cy="252" rx="16.5" ry="22" fill="currentColor" opacity="0.35" stroke="none"/>
+  <circle cx="466.8" cy="228" r="9" stroke-width="2"/>
+  <path d="M352,315 L338,340 L352,344" stroke-width="2.2"/>
+  <path d="M340,390 Q365,398 395,388"/>
+  <line x1="228" y1="330" x2="322" y2="330" stroke="#45702A" stroke-width="2.5"/>
+  <path d="M313.9,333.9 L322,330 L313.9,326.1" stroke="#45702A" stroke-width="2.5"/>
+  <path d="M236.1,326.1 L228,330 L236.1,333.9" stroke="#45702A" stroke-width="2.5"/>
+  <line x1="420" y1="330" x2="572" y2="330" stroke-width="2"/>
+  <path d="M563.9,333.9 L572,330 L563.9,326.1" stroke-width="2"/>
+  <path d="M428.1,326.1 L420,330 L428.1,333.9" stroke-width="2"/>
+  <text x="110" y="150" font-size="20" fill="#45702A" stroke="none" text-anchor="middle" font-weight="700">遠い目</text>
+  <text x="110" y="178" font-size="20" fill="#45702A" stroke="none" text-anchor="middle">（幅が狭い）</text>
+  <line x1="150" y1="185" x2="230" y2="215" stroke="#45702A" stroke-width="1.5"/>
+  <text x="720" y="330" font-size="20" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">手前の目</text>
+  <line x1="680" y1="320" x2="575" y2="280" stroke-width="1.5"/>
+  <text x="330" y="26" font-size="18" fill="#45702A" stroke="none" text-anchor="end">中心線</text>
+  <line x1="334" y1="24" x2="388" y2="56" stroke="#45702A" stroke-width="1.5"/>
+  <text x="110" y="440" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">目じり側は輪郭に</text>
+  <text x="110" y="466" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">近づき、隠れる</text>
+</svg>

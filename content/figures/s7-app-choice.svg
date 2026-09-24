@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <rect x="40" y="70" width="220" height="290" rx="6" stroke-width="2"/>
+  <text x="150" y="115" font-size="21" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">ibisPaint X</text>
+  <line x1="60" y1="135" x2="240" y2="135" opacity="0.4"/>
+  <text x="150" y="185" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">無料（広告あり）</text>
+  <text x="150" y="235" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">タブレットで軽い</text>
+  <text x="150" y="285" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">はじめてでも迷いにくい</text>
+  <rect x="290" y="70" width="220" height="290" rx="6" stroke-width="2"/>
+  <text x="400" y="115" font-size="21" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">CLIP STUDIO PAINT</text>
+  <line x1="310" y1="135" x2="490" y2="135" opacity="0.4"/>
+  <text x="400" y="185" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">有料（無料期間あり）</text>
+  <text x="400" y="235" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">3Dデッサン人形</text>
+  <text x="400" y="285" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">線画・漫画に強い</text>
+  <rect x="540" y="70" width="220" height="290" rx="6" stroke-width="2"/>
+  <text x="650" y="115" font-size="21" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">Krita</text>
+  <line x1="560" y1="135" x2="740" y2="135" opacity="0.4"/>
+  <text x="650" y="185" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">無料</text>
+  <text x="650" y="235" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">PC・Android</text>
+  <text x="650" y="285" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">厚塗りに強い</text>
+  <text x="400" y="410" font-size="20" fill="#7BB661" stroke="none" text-anchor="middle">どれを選んでも、ステージ7〜10は同じ手順で進められます</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">迷ったら「今の端末に入れやすいもの」を1つ</text>
+</svg>

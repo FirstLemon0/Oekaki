@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <circle cx="80" cy="70" r="18" stroke="#7BB661" stroke-width="3"/>
+  <line x1="106" y1="70" x2="116" y2="70" stroke="#7BB661" stroke-width="3"/>
+  <line x1="98.4" y1="88.4" x2="105.5" y2="95.5" stroke="#7BB661" stroke-width="3"/>
+  <line x1="80" y1="96" x2="80" y2="106" stroke="#7BB661" stroke-width="3"/>
+  <line x1="61.6" y1="88.4" x2="54.5" y2="95.5" stroke="#7BB661" stroke-width="3"/>
+  <line x1="54" y1="70" x2="44" y2="70" stroke="#7BB661" stroke-width="3"/>
+  <line x1="61.6" y1="51.6" x2="54.5" y2="44.5" stroke="#7BB661" stroke-width="3"/>
+  <line x1="80" y1="44" x2="80" y2="34" stroke="#7BB661" stroke-width="3"/>
+  <line x1="98.4" y1="51.6" x2="105.5" y2="44.5" stroke="#7BB661" stroke-width="3"/>
+  <path d="M260,110 L300,110 L300,380 L260,380 Z" fill="currentColor" fill-opacity="0.05" stroke="none"/>
+  <path d="M340,110 L380,110 L380,380 L340,380 Z" fill="currentColor" fill-opacity="0.06" stroke="none"/>
+  <path d="M380,110 L420,110 L420,380 L380,380 Z" fill="currentColor" fill-opacity="0.15" stroke="none"/>
+  <path d="M420,110 L460,110 L460,380 L420,380 Z" fill="currentColor" fill-opacity="0.28" stroke="none"/>
+  <path d="M460,110 L500,110 L500,380 L460,380 Z" fill="currentColor" fill-opacity="0.42" stroke="none"/>
+  <path d="M500,110 L540,110 L540,380 L500,380 Z" fill="currentColor" fill-opacity="0.36" stroke="none"/>
+  <ellipse cx="400" cy="110" rx="140" ry="40" stroke-width="3.5"/>
+  <path d="M260,110 L260,380 A140,40 0 0 0 540,380 L540,110" stroke-width="3.5"/>
+  <text x="290" y="440" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">明</text>
+  <text x="420" y="440" font-size="20" fill="#7BB661" stroke="none" text-anchor="middle">境界</text>
+  <text x="525" y="440" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">暗</text>
+  <line x1="400" y1="150" x2="400" y2="420" stroke="#7BB661" stroke-width="2" stroke-dasharray="6 6"/>
+  <text x="650" y="250" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">縦の帯で</text>
+  <text x="650" y="276" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">少しずつ変わる</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">円柱の明暗は、軸にそった帯。境界から暗い側へなだらかに</text>
+</svg>

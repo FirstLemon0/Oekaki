@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <text x="220" y="60" font-size="19" fill="#7BB661" stroke="none" text-anchor="middle">3Dデッサン人形（CLIP STUDIO）</text>
+  <circle cx="220" cy="112" r="22"/>
+  <line x1="220" y1="138.4" x2="220" y2="178" stroke-width="3"/>
+  <line x1="220" y1="178" x2="220" y2="244" stroke-width="3"/>
+  <line x1="187" y1="151.6" x2="253" y2="151.6" stroke-width="3"/>
+  <line x1="187" y1="151.6" x2="171.6" y2="204.4" stroke-width="3"/>
+  <line x1="171.6" y1="204.4" x2="169.4" y2="255" stroke-width="3"/>
+  <line x1="253" y1="151.6" x2="261.8" y2="200" stroke-width="3"/>
+  <line x1="261.8" y1="200" x2="283.8" y2="167" stroke-width="3"/>
+  <line x1="202.4" y1="250.6" x2="237.6" y2="250.6" stroke-width="3"/>
+  <line x1="202.4" y1="250.6" x2="200.2" y2="310" stroke-width="3"/>
+  <line x1="200.2" y1="310" x2="193.6" y2="376" stroke-width="3"/>
+  <line x1="237.6" y1="250.6" x2="242" y2="310" stroke-width="3"/>
+  <line x1="242" y1="310" x2="250.8" y2="376" stroke-width="3"/>
+  <circle cx="187" cy="151.6" r="5.5" fill="currentColor" stroke="none"/>
+  <circle cx="253" cy="151.6" r="5.5" fill="currentColor" stroke="none"/>
+  <circle cx="171.6" cy="204.4" r="5.5" fill="currentColor" stroke="none"/>
+  <circle cx="261.8" cy="200" r="5.5" fill="currentColor" stroke="none"/>
+  <circle cx="200.2" cy="310" r="5.5" fill="currentColor" stroke="none"/>
+  <circle cx="242" cy="310" r="5.5" fill="currentColor" stroke="none"/>
+  <circle cx="202.4" cy="250.6" r="5.5" fill="currentColor" stroke="none"/>
+  <circle cx="237.6" cy="250.6" r="5.5" fill="currentColor" stroke="none"/>
+  <ellipse cx="220" cy="385" rx="90" ry="18" stroke="#7BB661" stroke-dasharray="6 6"/>
+  <line x1="300" y1="390" x2="312" y2="380" stroke="#7BB661"/>
+  <path d="M306.2,392.7 L312,380 L298.4,383.4" stroke="#7BB661"/>
+  <text x="220" y="440" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">ポーズと角度を自由に変えられる</text>
+  <text x="590" y="60" font-size="19" fill="#7BB661" stroke="none" text-anchor="middle">または写真参照（どのアプリでも）</text>
+  <rect x="470" y="90" width="240" height="300" rx="6"/>
+  <circle cx="590" cy="128" r="18" opacity="0.35"/>
+  <line x1="590" y1="149.6" x2="590" y2="182" opacity="0.35" stroke-width="3"/>
+  <line x1="590" y1="182" x2="590" y2="236" opacity="0.35" stroke-width="3"/>
+  <line x1="563" y1="160.4" x2="617" y2="160.4" opacity="0.35" stroke-width="3"/>
+  <line x1="563" y1="160.4" x2="550.4" y2="203.6" opacity="0.35" stroke-width="3"/>
+  <line x1="550.4" y1="203.6" x2="548.6" y2="245" opacity="0.35" stroke-width="3"/>
+  <line x1="617" y1="160.4" x2="624.2" y2="200" opacity="0.35" stroke-width="3"/>
+  <line x1="624.2" y1="200" x2="642.2" y2="173" opacity="0.35" stroke-width="3"/>
+  <line x1="575.6" y1="241.4" x2="604.4" y2="241.4" opacity="0.35" stroke-width="3"/>
+  <line x1="575.6" y1="241.4" x2="573.8" y2="290" opacity="0.35" stroke-width="3"/>
+  <line x1="573.8" y1="290" x2="568.4" y2="344" opacity="0.35" stroke-width="3"/>
+  <line x1="604.4" y1="241.4" x2="608" y2="290" opacity="0.35" stroke-width="3"/>
+  <line x1="608" y1="290" x2="615.2" y2="344" opacity="0.35" stroke-width="3"/>
+  <circle cx="563" cy="160.4" r="4.5" fill="currentColor" stroke="none" opacity="0.35"/>
+  <circle cx="617" cy="160.4" r="4.5" fill="currentColor" stroke="none" opacity="0.35"/>
+  <circle cx="550.4" cy="203.6" r="4.5" fill="currentColor" stroke="none" opacity="0.35"/>
+  <circle cx="624.2" cy="200" r="4.5" fill="currentColor" stroke="none" opacity="0.35"/>
+  <circle cx="573.8" cy="290" r="4.5" fill="currentColor" stroke="none" opacity="0.35"/>
+  <circle cx="608" cy="290" r="4.5" fill="currentColor" stroke="none" opacity="0.35"/>
+  <circle cx="575.6" cy="241.4" r="4.5" fill="currentColor" stroke="none" opacity="0.35"/>
+  <circle cx="604.4" cy="241.4" r="4.5" fill="currentColor" stroke="none" opacity="0.35"/>
+  <line x1="470" y1="190" x2="710" y2="190" stroke="#7BB661" stroke-dasharray="6 6"/>
+  <line x1="590" y1="90" x2="590" y2="390" stroke="#7BB661" stroke-dasharray="6 6"/>
+  <text x="590" y="430" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">別レイヤーに置いて不透明度を下げる</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">どちらも「形の下敷き」。上に新しいレイヤーで自分の線を描く</text>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M220,120 L320,60 L620,60 L520,120 Z" stroke="#7BB661" stroke-width="3"/>
+  <text x="660" y="98" font-size="21" fill="#7BB661" stroke="none" text-anchor="start">線画</text>
+  <path d="M220,215 L320,155 L620,155 L520,215 Z" stroke-width="2"/>
+  <text x="660" y="193" font-size="21" fill="currentColor" stroke="none" text-anchor="start">下描き</text>
+  <path d="M220,310 L320,250 L620,250 L520,310 Z" stroke-width="2"/>
+  <text x="660" y="288" font-size="21" fill="currentColor" stroke="none" text-anchor="start">ラフ</text>
+  <path d="M220,405 L320,345 L620,345 L520,405 Z" stroke-width="2" opacity="0.6"/>
+  <text x="660" y="383" font-size="21" fill="currentColor" stroke="none" text-anchor="start">用紙（白）</text>
+  <line x1="120" y1="360" x2="120" y2="70" stroke-width="2"/>
+  <path d="M126.1,82.6 L120,70 L113.9,82.6" stroke-width="2"/>
+  <text x="120" y="390" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">上ほど手前</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">透明なシートを重ねるイメージ。上のレイヤーが手前に見える</text>
+</svg>

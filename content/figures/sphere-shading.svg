@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <circle cx="110" cy="80" r="18" stroke="#7BB661" stroke-width="3"/>
+  <line x1="136" y1="80" x2="146" y2="80" stroke="#7BB661" stroke-width="3"/>
+  <line x1="128.4" y1="98.4" x2="135.5" y2="105.5" stroke="#7BB661" stroke-width="3"/>
+  <line x1="110" y1="106" x2="110" y2="116" stroke="#7BB661" stroke-width="3"/>
+  <line x1="91.6" y1="98.4" x2="84.5" y2="105.5" stroke="#7BB661" stroke-width="3"/>
+  <line x1="84" y1="80" x2="74" y2="80" stroke="#7BB661" stroke-width="3"/>
+  <line x1="91.6" y1="61.6" x2="84.5" y2="54.5" stroke="#7BB661" stroke-width="3"/>
+  <line x1="110" y1="54" x2="110" y2="44" stroke="#7BB661" stroke-width="3"/>
+  <line x1="128.4" y1="61.6" x2="135.5" y2="54.5" stroke="#7BB661" stroke-width="3"/>
+  <ellipse cx="470" cy="395" rx="170" ry="34" fill="currentColor" fill-opacity="0.2" stroke="none"/>
+  <path d="M506.1,123.9 A150,150 0 0 1 293.9,336.1 A150,67.5 -45 0 0 506.1,123.9 Z" fill="currentColor" fill-opacity="0.3" stroke="none"/>
+  <circle cx="400" cy="230" r="150" stroke-width="3.5"/>
+  <path d="M293.9,336.1 A150,67.5 -45 0 0 506.1,123.9" stroke="#7BB661" stroke-width="3"/>
+  <ellipse cx="330" cy="165" rx="26" ry="16" transform="rotate(-45 330 165)" stroke-width="2" opacity="0.8"/>
+  <text x="250" y="115" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">ハイライト</text>
+  <line x1="270" y1="125" x2="312" y2="155" stroke-width="1.5" opacity="0.45"/>
+  <text x="640" y="110" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">明暗の境界</text>
+  <line x1="600" y1="118" x2="525" y2="150" stroke="#7BB661" stroke-width="1.5"/>
+  <text x="650" y="280" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">陰</text>
+  <text x="650" y="306" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">（光が当たらない側）</text>
+  <text x="660" y="380" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">照り返しで</text>
+  <text x="660" y="402" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">ふちがほんのり明るい</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">光源の反対側が陰。明と暗の境目は楕円の線で描ける</text>
+</svg>

@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <ellipse cx="260" cy="72" rx="22" ry="28" transform="rotate(6 260 72)"/>
+  <line x1="255" y1="110" x2="250" y2="162"/>
+  <ellipse cx="250" cy="162" rx="34" ry="42" transform="rotate(5 250 162)"/>
+  <ellipse cx="245" cy="242" rx="30" ry="24" transform="rotate(-7 245 242)"/>
+  <path d="M187.1,130.4 L175.1,208.8 A7,7 0 0 0 188.9,211.2 L204.9,133.6 A9,9 0 0 0 187.1,130.4"/>
+  <path d="M175,210.2 L179,266.2 A5,5 0 0 0 189,265.8 L189,209.8 A7,7 0 0 0 175,210.2"/>
+  <path d="M295.2,121.8 L313.1,199.4 A7,7 0 0 0 326.9,196.6 L312.8,118.2 A9,9 0 0 0 295.2,121.8"/>
+  <path d="M313.1,197 L307,255.3 A5,5 0 0 0 317,256.7 L326.9,199 A7,7 0 0 0 313.1,197"/>
+  <path d="M209.1,256.4 L201.1,353.9 A9,9 0 0 0 218.9,356.1 L234.9,259.6 A13,13 0 0 0 209.1,256.4"/>
+  <path d="M201.1,356.3 L216.1,440.8 A6,6 0 0 0 227.9,439.2 L218.9,353.7 A9,9 0 0 0 201.1,356.3"/>
+  <path d="M257,245.4 L256,351.6 A9,9 0 0 0 274,352.4 L283,246.6 A13,13 0 0 0 257,245.4"/>
+  <path d="M256,351.5 L254,447.7 A6,6 0 0 0 266,448.3 L274,352.5 A9,9 0 0 0 256,351.5"/>
+  <circle cx="196" cy="132" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="304" cy="120" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="182" cy="210" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="320" cy="198" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="210" cy="355" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="265" cy="352" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="222" cy="258" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="270" cy="246" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <line x1="222" y1="440" x2="206" y2="454" stroke-width="5"/>
+  <line x1="260" y1="448" x2="278" y2="458" stroke-width="5"/>
+  <line x1="245" y1="40" x2="245" y2="470" stroke="#7BB661" stroke-width="2"/>
+  <circle cx="260" cy="458" r="7" fill="#7BB661" stroke="none"/>
+  <line x1="190" y1="130" x2="310" y2="116" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="215" y1="256" x2="275" y2="244" stroke-dasharray="8 8" opacity="0.6"/>
+  <text x="470" y="110" font-size="18" fill="currentColor" stroke="none" text-anchor="start">肩の線</text>
+  <text x="470" y="140" font-size="18" fill="currentColor" stroke="none" text-anchor="start">腰の線</text>
+  <text x="470" y="170" font-size="18" fill="currentColor" stroke="none" text-anchor="start">→ 反対に傾く</text>
+  <text x="470" y="250" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">体重がかかる脚の上に</text>
+  <text x="470" y="278" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">首の付け根がくる</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">片脚に体重をのせた立ちポーズ（コントラポスト）</text>
+</svg>

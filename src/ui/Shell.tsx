@@ -1,10 +1,10 @@
 /**
- * 共通の枠: 左レール（横向き）／下ナビ（縦向き・幅 < 1000px）。
+ * 共通の枠: 左レール 96px（横向き）／下ナビ 88px（縦向き・幅 < 1000px）。
  */
 import type { ComponentChildren } from 'preact';
 import { Icon, type IconName } from './components/Icon';
 import { href, type NavTab } from './router';
-import { Logo } from './Logo';
+import { Logo } from './components/Logo';
 
 const TABS: { tab: NavTab; label: string; icon: IconName; to: string }[] = [
   { tab: 'home', label: 'ホーム', icon: 'home', to: href.home() },
@@ -17,7 +17,7 @@ export function Shell({ active, children }: { active: NavTab | null; children: C
     <div class="shell">
       <nav class="nav" aria-label="メイン">
         <a class="nav__logo" href={href.home()} aria-label="成長通 ホーム">
-          <Logo size={44} />
+          <Logo size={40} />
         </a>
         <ul class="nav__list">
           {TABS.map((t) => (
@@ -27,7 +27,7 @@ export function Shell({ active, children }: { active: NavTab | null; children: C
                 href={t.to}
                 aria-current={active === t.tab ? 'page' : undefined}
               >
-                <Icon name={t.icon} size={26} />
+                <Icon name={t.icon} size={24} />
                 <span class="nav__label">{t.label}</span>
               </a>
             </li>

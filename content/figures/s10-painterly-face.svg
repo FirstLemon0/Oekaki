@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <clipPath id="s10-painterly-face-ball9"><circle cx="260" cy="230" r="150"/></clipPath>
+  <g clip-path="url(#s10-painterly-face-ball9)"><circle cx="260" cy="230" r="150" fill="#B9806A" stroke="none"/><circle cx="209" cy="179" r="157.5" fill="#E7B99C" stroke="none"/></g>
+  <ellipse cx="210" cy="225" rx="22" ry="14" fill="#6A4A40" stroke="none"/>
+  <ellipse cx="310" cy="225" rx="22" ry="14" fill="#6A4A40" stroke="none"/>
+  <ellipse cx="205" cy="220" rx="5" ry="4" fill="#FFFFFF" stroke="none"/>
+  <ellipse cx="305" cy="220" rx="5" ry="4" fill="#FFFFFF" stroke="none"/>
+  <ellipse cx="200" cy="270" rx="26" ry="12" fill="#F0A0A0" stroke="none" opacity="0.6"/>
+  <circle cx="260" cy="230" r="170" stroke="#7BB661" stroke-dasharray="6 6"/>
+  <text x="560" y="170" font-size="20" fill="currentColor" stroke="none" text-anchor="start">描き込むのは</text>
+  <text x="560" y="205" font-size="22" fill="#7BB661" stroke="none" text-anchor="start" font-weight="700">顔まわりだけ</text>
+  <text x="560" y="270" font-size="18" fill="currentColor" stroke="none" text-anchor="start">他は大きな筆のまま</text>
+  <text x="560" y="300" font-size="18" fill="currentColor" stroke="none" text-anchor="start">残してOK</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">描き込みに差をつけると、見てほしい所がはっきりする</text>
+</svg>

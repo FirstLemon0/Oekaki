@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <ellipse cx="240" cy="72" rx="42" ry="50" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="266" y1="190" x2="264" y2="118"/>
+  <line x1="214" y1="190" x2="216" y2="118"/>
+  <ellipse cx="240" cy="305" rx="100" ry="125"/>
+  <path d="M240,192 Q200,196 148,178" stroke="#45702A" stroke-width="5"/>
+  <path d="M240,192 Q280,196 332,178" stroke="#45702A" stroke-width="5"/>
+  <line x1="214" y1="150" x2="140" y2="186"/>
+  <line x1="266" y1="150" x2="340" y2="186"/>
+  <circle cx="140" cy="200" r="20"/>
+  <circle cx="340" cy="200" r="20"/>
+  <text x="240" y="245" font-size="22" fill="#45702A" stroke="none" text-anchor="middle">鎖骨</text>
+  <text x="92" y="138" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">肩の斜面</text>
+  <text x="240" y="480" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">正面</text>
+  <ellipse cx="535" cy="72" rx="42" ry="50" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="603" y1="185.2" x2="569.2" y2="111"/>
+  <line x1="557" y1="204.8" x2="526.8" y2="129"/>
+  <ellipse cx="585" cy="305" rx="78" ry="125" transform="rotate(10 585 305)"/>
+  <path d="M572,196 Q545,200 530,195" stroke="#45702A" stroke-width="5"/>
+  <text x="705" y="130" font-size="22" fill="#45702A" stroke="none" text-anchor="middle">首は少し</text>
+  <text x="705" y="158" font-size="22" fill="#45702A" stroke="none" text-anchor="middle">前へ傾く</text>
+  <text x="585" y="480" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">横</text>
+</svg>

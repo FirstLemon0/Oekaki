@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M81,354 Q102,289.6 180.4,281.2 L219.6,281.2 Q298,289.6 319,354 Z" fill="#4F7FB8" stroke="none"/>
+  <path d="M183.2,250.4 L180.4,286.8 L219.6,286.8 L216.8,250.4 Z" fill="#F6D7C3" stroke="none"/>
+  <path d="M146.8,188.8 Q144,127.2 200,124.4 Q256,127.2 253.2,188.8 Q247.6,239.2 200,261.6 Q152.4,239.2 146.8,188.8 Z" fill="#F6D7C3" stroke="none"/>
+  <path d="M138.4,242 Q124.4,110.4 200,104.8 Q275.6,110.4 261.6,242 L250.4,186 L239.2,149.6 L225.2,174.8 L208.4,146.8 L191.6,177.6 L174.8,146.8 L160.8,180.4 L149.6,186 Z" fill="#5A4A78" stroke="none"/>
+  <ellipse cx="177.6" cy="202.8" rx="7" ry="9.8" fill="#3A6EA5" stroke="none"/>
+  <ellipse cx="222.4" cy="202.8" rx="7" ry="9.8" fill="#3A6EA5" stroke="none"/>
+  <path d="M146.8,188.8 Q144,127.2 200,124.4 Q256,127.2 253.2,188.8 Q247.6,239.2 200,261.6 Q152.4,239.2 146.8,188.8 Z"/>
+  <path d="M141.2,194.4 Q130,113.2 200,107.6 Q270,113.2 258.8,194.4 M158,144 L174.8,174.8 L188.8,149.6 L205.6,177.6 L219.6,146.8 L233.6,174.8 L244.8,149.6"/>
+  <path d="M183.2,256 L180.4,286.8 M216.8,256 L219.6,286.8 M180.4,286.8 Q116,292.4 88,340 M219.6,286.8 Q284,292.4 312,340"/>
+  <rect x="90" y="380" width="45" height="28" fill="#F6D7C3" stroke-width="1"/>
+  <rect x="145" y="380" width="45" height="28" fill="#5A4A78" stroke-width="1"/>
+  <rect x="200" y="380" width="45" height="28" fill="#4F7FB8" stroke-width="1"/>
+  <rect x="255" y="380" width="45" height="28" fill="#3A6EA5" stroke-width="1"/>
+  <text x="200" y="440" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">4色：まとまって見える</text>
+  <path d="M461,354 Q482,289.6 560.4,281.2 L599.6,281.2 Q678,289.6 699,354 Z" fill="#2FB5A3" stroke="none"/>
+  <path d="M563.2,250.4 L560.4,286.8 L599.6,286.8 L596.8,250.4 Z" fill="#F7D4C0" stroke="none"/>
+  <path d="M526.8,188.8 Q524,127.2 580,124.4 Q636,127.2 633.2,188.8 Q627.6,239.2 580,261.6 Q532.4,239.2 526.8,188.8 Z" fill="#F7D4C0" stroke="none"/>
+  <path d="M518.4,242 Q504.4,110.4 580,104.8 Q655.6,110.4 641.6,242 L630.4,186 L619.2,149.6 L605.2,174.8 L588.4,146.8 L571.6,177.6 L554.8,146.8 L540.8,180.4 L529.6,186 Z" fill="#E0443A" stroke="none"/>
+  <ellipse cx="557.6" cy="202.8" rx="7" ry="9.8" fill="#F2C200" stroke="none"/>
+  <ellipse cx="602.4" cy="202.8" rx="7" ry="9.8" fill="#F2C200" stroke="none"/>
+  <rect x="515" y="262" width="30" height="40" fill="#9B59B6" stroke="none"/>
+  <rect x="610" y="268" width="30" height="34" fill="#F39C12" stroke="none"/>
+  <rect x="560" y="130" width="40" height="14" fill="#FF66CC" stroke="none"/>
+  <path d="M526.8,188.8 Q524,127.2 580,124.4 Q636,127.2 633.2,188.8 Q627.6,239.2 580,261.6 Q532.4,239.2 526.8,188.8 Z"/>
+  <path d="M521.2,194.4 Q510,113.2 580,107.6 Q650,113.2 638.8,194.4 M538,144 L554.8,174.8 L568.8,149.6 L585.6,177.6 L599.6,146.8 L613.6,174.8 L624.8,149.6"/>
+  <path d="M563.2,256 L560.4,286.8 M596.8,256 L599.6,286.8 M560.4,286.8 Q496,292.4 468,340 M599.6,286.8 Q664,292.4 692,340"/>
+  <rect x="460" y="380" width="28" height="28" fill="#F7D4C0" stroke-width="1"/>
+  <rect x="495" y="380" width="28" height="28" fill="#E0443A" stroke-width="1"/>
+  <rect x="530" y="380" width="28" height="28" fill="#2FB5A3" stroke-width="1"/>
+  <rect x="565" y="380" width="28" height="28" fill="#F2C200" stroke-width="1"/>
+  <rect x="600" y="380" width="28" height="28" fill="#9B59B6" stroke-width="1"/>
+  <rect x="635" y="380" width="28" height="28" fill="#F39C12" stroke-width="1"/>
+  <rect x="670" y="380" width="28" height="28" fill="#FF66CC" stroke-width="1"/>
+  <text x="580" y="440" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">7色：どこを見ればいいか迷う</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">ベタ塗りの色は3〜5色に絞る</text>
+</svg>

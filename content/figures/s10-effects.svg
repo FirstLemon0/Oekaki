@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <defs><filter id="s10-glow"><feGaussianBlur stdDeviation="10"/></filter></defs>
+  <circle cx="150" cy="200" r="60" fill="#FFE08A" stroke="none" filter="url(#s10-glow)"/>
+  <circle cx="150" cy="200" r="30" fill="#FFF6D5" stroke="none"/>
+  <text x="150" y="330" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">グロー（発光）</text>
+  <text x="150" y="356" font-size="15" fill="currentColor" stroke="none" text-anchor="middle">加算・発光レイヤー</text>
+  <path d="M358.2,201.2 Q356,152.8 400,150.6 Q444,152.8 441.8,201.2 Q437.4,240.8 400,258.4 Q362.6,240.8 358.2,201.2 Z" stroke="#E0443A" opacity="0.7"/>
+  <path d="M353.8,205.6 Q345,141.8 400,137.4 Q455,141.8 446.2,205.6 M367,166 L380.2,190.2 L391.2,170.4 L404.4,192.4 L415.4,168.2 L426.4,190.2 L435.2,170.4" stroke="#E0443A" opacity="0.7"/>
+  <path d="M386.8,254 L384.6,278.2 M413.2,254 L415.4,278.2 M384.6,278.2 Q334,282.6 312,320 M415.4,278.2 Q466,282.6 488,320" stroke="#E0443A" opacity="0.7"/>
+  <path d="M378,210 l11,0 M411,210 l11,0 M394.5,236.4 l11,0" stroke="#E0443A" opacity="0.7"/>
+  <g transform="translate(6 0)"><path d="M358.2,201.2 Q356,152.8 400,150.6 Q444,152.8 441.8,201.2 Q437.4,240.8 400,258.4 Q362.6,240.8 358.2,201.2 Z" stroke="#2FA3E0" opacity="0.7"/><path d="M353.8,205.6 Q345,141.8 400,137.4 Q455,141.8 446.2,205.6 M367,166 L380.2,190.2 L391.2,170.4 L404.4,192.4 L415.4,168.2 L426.4,190.2 L435.2,170.4" stroke="#2FA3E0" opacity="0.7"/><path d="M386.8,254 L384.6,278.2 M413.2,254 L415.4,278.2 M384.6,278.2 Q334,282.6 312,320 M415.4,278.2 Q466,282.6 488,320" stroke="#2FA3E0" opacity="0.7"/><path d="M378,210 l11,0 M411,210 l11,0 M394.5,236.4 l11,0" stroke="#2FA3E0" opacity="0.7"/></g>
+  <text x="400" y="330" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">色収差</text>
+  <text x="400" y="356" font-size="15" fill="currentColor" stroke="none" text-anchor="middle">赤と青を少しずらす</text>
+  <rect x="560" y="130" width="170" height="150" fill="#E8DCC4" stroke="none"/>
+  <circle cx="570" cy="140" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="607" cy="193" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="644" cy="246" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="681" cy="169" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="718" cy="222" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="595" cy="145" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="632" cy="198" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="669" cy="251" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="706" cy="174" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="583" cy="227" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="620" cy="150" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="657" cy="203" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="694" cy="256" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="571" cy="179" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="608" cy="232" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="645" cy="155" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="682" cy="208" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="719" cy="261" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="596" cy="184" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="633" cy="237" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="670" cy="160" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="707" cy="213" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="584" cy="266" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="621" cy="189" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="658" cy="242" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="695" cy="165" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="572" cy="218" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="609" cy="141" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="646" cy="194" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="683" cy="247" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="720" cy="170" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="597" cy="223" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="634" cy="146" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="671" cy="199" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="708" cy="252" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="585" cy="175" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="622" cy="228" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="659" cy="151" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="696" cy="204" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <circle cx="573" cy="257" r="1.8" fill="#8A7A5A" stroke="none" opacity="0.6"/>
+  <text x="645" y="330" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">テクスチャ</text>
+  <text x="645" y="356" font-size="15" fill="currentColor" stroke="none" text-anchor="middle">紙・ノイズをオーバーレイ</text>
+  <text x="400" y="420" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">効果は「ひとつまみ」。入れすぎたら不透明度を下げる</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">効果は最後に、別レイヤーで。いつでも消せるようにする</text>
+</svg>

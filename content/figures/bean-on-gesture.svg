@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M470,40 C470,120 420,170 420,240 C420,300 440,360 430,455" stroke="#7BB661" stroke-width="4"/>
+  <ellipse cx="470" cy="70" rx="22" ry="28" transform="rotate(10 470 70)" stroke-width="3"/>
+  <ellipse cx="440" cy="160" rx="55" ry="70" transform="rotate(12 440 160)" stroke-width="3.5"/>
+  <ellipse cx="420" cy="270" rx="50" ry="40" transform="rotate(-5 420 270)" stroke-width="3.5"/>
+  <path d="M400,220 C405,240 400,250 390,258" stroke-width="2.5"/>
+  <circle cx="530" cy="60" r="15" stroke="#7BB661" stroke-width="2"/>
+  <text x="530" y="67" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">1</text>
+  <circle cx="520" cy="160" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="520" y="167" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">2</text>
+  <circle cx="500" cy="280" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="500" y="287" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">3</text>
+  <text x="620" y="60" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">① 動きの線</text>
+  <text x="620" y="90" font-size="18" fill="currentColor" stroke="none" text-anchor="start">② 線に沿って胸の豆</text>
+  <text x="620" y="120" font-size="18" fill="currentColor" stroke="none" text-anchor="start">③ 腰の豆</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">ジェスチャーの線の上に豆を乗せる。線からはみ出さない</text>
+</svg>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <rect x="230" y="40" width="340" height="400" rx="6"/>
+  <path d="M320.2,183.2 Q316,90.8 400,86.6 Q484,90.8 479.8,183.2 Q471.4,258.8 400,292.4 Q328.6,258.8 320.2,183.2 Z"/>
+  <path d="M311.8,191.6 Q295,69.8 400,61.4 Q505,69.8 488.2,191.6 M337,116 L362.2,162.2 L383.2,124.4 L408.4,166.4 L429.4,120.2 L450.4,162.2 L467.2,124.4"/>
+  <path d="M374.8,284 L370.6,330.2 M425.2,284 L429.4,330.2 M370.6,330.2 Q274,338.6 232,410 M429.4,330.2 Q526,338.6 568,410"/>
+  <path d="M358,200 l21,0 M421,200 l21,0 M389.5,250.4 l21,0"/>
+  <line x1="230" y1="200" x2="570" y2="200" stroke="#7BB661" stroke-dasharray="6 6"/>
+  <text x="590" y="205" font-size="17" fill="#7BB661" stroke="none" text-anchor="start">目の高さ</text>
+  <line x1="230" y1="380" x2="570" y2="380" stroke="#7BB661" stroke-dasharray="6 6"/>
+  <text x="590" y="385" font-size="17" fill="#7BB661" stroke="none" text-anchor="start">胸の上あたりで切る</text>
+  <text x="120" y="120" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">頭の上に</text>
+  <text x="120" y="145" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">少し余白</text>
+  <line x1="160" y1="160" x2="225" y2="60" stroke-width="2"/>
+  <path d="M223.2,73.9 L225,60 L213,67.3" stroke-width="2"/>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">バストアップ＝頭から胸まで。首と肩が入ると人物らしくなる</text>
+</svg>

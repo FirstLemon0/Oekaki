@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <line x1="230" y1="230" x2="230" y2="380" stroke-width="3.5"/>
+  <line x1="110" y1="199.3" x2="110" y2="307.4" stroke-width="3.5"/>
+  <line x1="360" y1="211.4" x2="360" y2="336.1" stroke-width="3.5"/>
+  <line x1="230" y1="230" x2="110" y2="199.3" stroke-width="3.5"/>
+  <line x1="230" y1="230" x2="360" y2="211.4" stroke-width="3.5"/>
+  <line x1="230" y1="380" x2="110" y2="307.4" stroke-width="3.5"/>
+  <line x1="230" y1="380" x2="360" y2="336.1" stroke-width="3.5"/>
+  <line x1="110" y1="199.3" x2="223.7" y2="189.2" stroke-width="3.5"/>
+  <line x1="360" y1="211.4" x2="223.7" y2="189.2" stroke-width="3.5"/>
+  <line x1="223.7" y1="189.2" x2="223.7" y2="283.5" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="110" y1="307.4" x2="223.7" y2="283.5" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="360" y1="336.1" x2="223.7" y2="283.5" stroke-dasharray="8 8" opacity="0.6"/>
+  <ellipse cx="235" cy="150" rx="45" ry="14"/>
+  <line x1="190" y1="150" x2="190" y2="262"/>
+  <line x1="280" y1="150" x2="280" y2="262"/>
+  <path d="M190,262 Q235,285 280,262" stroke="#7BB661" stroke-width="4"/>
+  <text x="240" y="430" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">箱＋円柱：交わる線を描く</text>
+  <line x1="590" y1="230" x2="590" y2="380" stroke-width="3.5" opacity="0.35"/>
+  <line x1="470" y1="213.3" x2="470" y2="340.5" stroke-width="3.5" opacity="0.35"/>
+  <line x1="720" y1="195.1" x2="720" y2="297.6" stroke-width="3.5" opacity="0.35"/>
+  <line x1="590" y1="230" x2="470" y2="213.3" stroke-width="3.5" opacity="0.35"/>
+  <line x1="590" y1="230" x2="720" y2="195.1" stroke-width="3.5" opacity="0.35"/>
+  <line x1="590" y1="380" x2="470" y2="340.5" stroke-width="3.5" opacity="0.35"/>
+  <line x1="590" y1="380" x2="720" y2="297.6" stroke-width="3.5" opacity="0.35"/>
+  <line x1="470" y1="213.3" x2="619.7" y2="186.9" stroke-width="3.5" opacity="0.35"/>
+  <line x1="720" y1="195.1" x2="619.7" y2="186.9" stroke-width="3.5" opacity="0.35"/>
+  <line x1="619.7" y1="186.9" x2="619.7" y2="278.2" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="470" y1="340.5" x2="619.7" y2="278.2" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="720" y1="297.6" x2="619.7" y2="278.2" stroke-dasharray="8 8" opacity="0.6"/>
+  <path d="M530,221.6 L476,328.6 L578,376.1 L590,380 L603,371.8 L713.5,289.1 L655,212.6 Z" stroke="#7BB661" stroke-width="4"/>
+  <path d="M530,221.6 L590,230 L655,212.6 Z" fill="currentColor" fill-opacity="0.15" stroke="none"/>
+  <text x="590" y="430" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">箱を切る：切り口も面</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">くっつける・切るで、立体の組み合わせに慣れる</text>
+</svg>

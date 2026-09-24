@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M230,440 Q260,348 372,336 L428,336 Q540,348 570,440 Z" fill="#7C8AA0" stroke="none"/>
+  <path d="M376,292 L372,344 L428,344 L424,292 Z" fill="#E8DAD0" stroke="none"/>
+  <path d="M324,204 Q320,116 400,112 Q480,116 476,204 Q468,276 400,308 Q332,276 324,204 Z" fill="#E8DAD0" stroke="none"/>
+  <path d="M312,280 Q292,92 400,84 Q508,92 488,280 L472,200 L456,148 L436,184 L412,144 L388,188 L364,144 L344,192 L328,200 Z" fill="#9A7A80" stroke="none"/>
+  <ellipse cx="368" cy="224" rx="10" ry="14" fill="#9A7A80" stroke="none"/>
+  <ellipse cx="432" cy="224" rx="10" ry="14" fill="#9A7A80" stroke="none"/>
+  <path d="M324,204 Q320,116 400,112 Q480,116 476,204 Q468,276 400,308 Q332,276 324,204 Z"/>
+  <path d="M316,212 Q300,96 400,88 Q500,96 484,212 M340,140 L364,184 L384,148 L408,188 L428,144 L448,184 L464,148"/>
+  <path d="M376,300 L372,344 M424,300 L428,344 M372,344 Q280,352 240,420 M428,344 Q520,352 560,420"/>
+</svg>

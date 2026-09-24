@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <clipPath id="s10-painterly-steps-ball6"><circle cx="140" cy="200" r="80"/></clipPath>
+  <g clip-path="url(#s10-painterly-steps-ball6)"><circle cx="140" cy="200" r="80" fill="#555555" stroke="none"/><circle cx="112.8" cy="172.8" r="84" fill="#9A9A9A" stroke="none"/></g>
+  <text x="140" y="330" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">① 白黒で明暗</text>
+  <clipPath id="s10-painterly-steps-ball7"><circle cx="400" cy="200" r="80"/></clipPath>
+  <g clip-path="url(#s10-painterly-steps-ball7)"><circle cx="400" cy="200" r="80" fill="#B9806A" stroke="none"/><circle cx="372.8" cy="172.8" r="84" fill="#E7B99C" stroke="none"/></g>
+  <text x="400" y="330" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">② 色をのせる</text>
+  <clipPath id="s10-painterly-steps-ball8"><circle cx="660" cy="200" r="80"/></clipPath>
+  <g clip-path="url(#s10-painterly-steps-ball8)"><circle cx="660" cy="200" r="80" fill="#B9806A" stroke="none"/><circle cx="632.8" cy="172.8" r="84" fill="#E7B99C" stroke="none"/></g>
+  <path d="M588,230 A80,80 0 0 0 720,210" stroke="#D29C84" stroke-width="26" opacity="0.8"/>
+  <ellipse cx="632" cy="160" rx="16" ry="10" fill="#FFF1E6" stroke="none"/>
+  <text x="660" y="330" font-size="19" fill="#7BB661" stroke="none" text-anchor="middle">③ 境目をなじませる</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">厚塗りの3ステップ。明暗を先に決めると色で迷わない</text>
+</svg>

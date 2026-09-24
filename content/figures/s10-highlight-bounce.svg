@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <circle cx="110" cy="90" r="22" stroke="#7BB661" stroke-width="3"/>
+  <line x1="140" y1="90" x2="152" y2="90" stroke="#7BB661" stroke-width="3"/>
+  <line x1="131.2" y1="111.2" x2="139.7" y2="119.7" stroke="#7BB661" stroke-width="3"/>
+  <line x1="110" y1="120" x2="110" y2="132" stroke="#7BB661" stroke-width="3"/>
+  <line x1="88.8" y1="111.2" x2="80.3" y2="119.7" stroke="#7BB661" stroke-width="3"/>
+  <line x1="80" y1="90" x2="68" y2="90" stroke="#7BB661" stroke-width="3"/>
+  <line x1="88.8" y1="68.8" x2="80.3" y2="60.3" stroke="#7BB661" stroke-width="3"/>
+  <line x1="110" y1="60" x2="110" y2="48" stroke="#7BB661" stroke-width="3"/>
+  <line x1="131.2" y1="68.8" x2="139.7" y2="60.3" stroke="#7BB661" stroke-width="3"/>
+  <clipPath id="s10-highlight-bounce-ball5"><circle cx="400" cy="240" r="140"/></clipPath>
+  <g clip-path="url(#s10-highlight-bounce-ball5)"><circle cx="400" cy="240" r="140" fill="#5E7FA8" stroke="none"/><circle cx="352.4" cy="192.4" r="147" fill="#8FB3D9" stroke="none"/></g>
+  <path d="M330,360 A140,140 0 0 0 520,290 A150,150 0 0 1 330,360 Z" fill="#86A3C2" stroke="none"/>
+  <circle cx="400" cy="240" r="140"/>
+  <ellipse cx="345" cy="180" rx="34" ry="20" fill="#FFFFFF" stroke="none"/>
+  <text x="230" y="170" font-size="19" fill="currentColor" stroke="none" text-anchor="end">ハイライト</text>
+  <line x1="235" y1="172" x2="310" y2="180" stroke-width="1.5"/>
+  <text x="590" y="400" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">反射光</text>
+  <text x="590" y="424" font-size="15" fill="#7BB661" stroke="none" text-anchor="start">（影の縁が少し明るい）</text>
+  <line x1="585" y1="395" x2="500" y2="345" stroke="#7BB661" stroke-width="1.5"/>
+  <rect x="250" y="400" width="280" height="26" fill="#E9D38A" stroke="none"/>
+  <text x="390" y="455" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">床の色がはね返る</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">ハイライトは光源側に小さく、反射光は影の中にごく控えめに</text>
+</svg>

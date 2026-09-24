@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <circle cx="120" cy="180" r="50" stroke-width="3"/>
+  <text x="120" y="188" font-size="21" fill="currentColor" stroke="none" text-anchor="middle">ラフ</text>
+  <text x="120" y="270" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">1日目〜</text>
+  <line x1="178" y1="180" x2="252" y2="180"/>
+  <path d="M239.4,186.1 L252,180 L239.4,173.9"/>
+  <text x="120" y="305" font-size="16" fill="#7BB661" stroke="none" text-anchor="middle">提出</text>
+  <circle cx="310" cy="180" r="50" stroke-width="3"/>
+  <text x="310" y="188" font-size="21" fill="currentColor" stroke="none" text-anchor="middle">線画</text>
+  <text x="310" y="270" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">2日目〜</text>
+  <line x1="368" y1="180" x2="442" y2="180"/>
+  <path d="M429.4,186.1 L442,180 L429.4,173.9"/>
+  <text x="310" y="305" font-size="16" fill="#7BB661" stroke="none" text-anchor="middle">提出</text>
+  <circle cx="500" cy="180" r="50" stroke-width="3"/>
+  <text x="500" y="188" font-size="21" fill="currentColor" stroke="none" text-anchor="middle">塗り</text>
+  <text x="500" y="270" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">3日目〜</text>
+  <line x1="558" y1="180" x2="632" y2="180"/>
+  <path d="M619.4,186.1 L632,180 L619.4,173.9"/>
+  <text x="500" y="305" font-size="16" fill="#7BB661" stroke="none" text-anchor="middle">提出</text>
+  <circle cx="690" cy="180" r="50" stroke="#7BB661" stroke-width="3"/>
+  <text x="690" y="188" font-size="21" fill="#7BB661" stroke="none" text-anchor="middle">仕上げ</text>
+  <text x="690" y="270" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">最後</text>
+  <text x="400" y="380" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">1日で終わらなくてOK。工程ごとに提出して区切る</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">最終課題は複数日。いまどの工程かだけ分かれば迷わない</text>
+</svg>

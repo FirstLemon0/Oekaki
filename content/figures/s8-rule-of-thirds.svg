@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <rect x="80" y="50" width="280" height="380" rx="4" stroke-width="2.5"/>
+  <line x1="173.3" y1="50" x2="173.3" y2="430" stroke="#7BB661" stroke-dasharray="6 6"/>
+  <line x1="80" y1="176.7" x2="360" y2="176.7" stroke="#7BB661" stroke-dasharray="6 6"/>
+  <line x1="266.7" y1="50" x2="266.7" y2="430" stroke="#7BB661" stroke-dasharray="6 6"/>
+  <line x1="80" y1="303.3" x2="360" y2="303.3" stroke="#7BB661" stroke-dasharray="6 6"/>
+  <circle cx="173.3" cy="176.7" r="7" fill="#7BB661" stroke="none"/>
+  <circle cx="266.7" cy="176.7" r="7" fill="#7BB661" stroke="none"/>
+  <circle cx="173.3" cy="303.3" r="7" fill="#7BB661" stroke="none"/>
+  <circle cx="266.7" cy="303.3" r="7" fill="#7BB661" stroke="none"/>
+  <path d="M133.1,168.6 Q131,122.4 173,120.3 Q215,122.4 212.9,168.6 Q208.7,206.4 173,223.2 Q137.3,206.4 133.1,168.6 Z"/>
+  <path d="M128.9,172.8 Q120.5,111.9 173,107.7 Q225.5,111.9 217.1,172.8 M141.5,135 L154.1,158.1 L164.6,139.2 L177.2,160.2 L187.7,137.1 L198.2,158.1 L206.6,139.2"/>
+  <path d="M160.4,219 L158.3,242.1 M185.6,219 L187.7,242.1 M158.3,242.1 Q110,246.3 89,282 M187.7,242.1 Q236,246.3 257,282"/>
+  <path d="M152,177 l10.5,0 M183.5,177 l10.5,0 M167.8,202.2 l10.5,0"/>
+  <text x="220" y="462" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">三分割：交点に顔</text>
+  <rect x="420" y="50" width="150" height="190" rx="4" stroke-width="2.5"/>
+  <path d="M472.2,125.2 Q471,98.8 495,97.6 Q519,98.8 517.8,125.2 Q515.4,146.8 495,156.4 Q474.6,146.8 472.2,125.2 Z"/>
+  <path d="M469.8,127.6 Q465,92.8 495,90.4 Q525,92.8 520.2,127.6 M477,106 L484.2,119.2 L490.2,108.4 L497.4,120.4 L503.4,107.2 L509.4,119.2 L514.2,108.4"/>
+  <path d="M487.8,154 L486.6,167.2 M502.2,154 L503.4,167.2 M486.6,167.2 Q459,169.6 447,190 M503.4,167.2 Q531,169.6 543,190"/>
+  <path d="M483,130 l6,0 M501,130 l6,0 M492,144.4 l6,0"/>
+  <text x="495" y="272" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">中央：正面・力強い</text>
+  <rect x="600" y="50" width="150" height="190" rx="4" stroke-width="2.5"/>
+  <line x1="600" y1="240" x2="750" y2="50" stroke="#7BB661" stroke-dasharray="6 6"/>
+  <g transform="rotate(-25 675 150)"><path d="M654.1,135.6 Q653,111.4 675,110.3 Q697,111.4 695.9,135.6 Q693.7,155.4 675,164.2 Q656.3,155.4 654.1,135.6 Z"/><path d="M651.9,137.8 Q647.5,105.9 675,103.7 Q702.5,105.9 698.1,137.8 M658.5,118 L665.1,130.1 L670.6,120.2 L677.2,131.2 L682.7,119.1 L688.2,130.1 L692.6,120.2"/><path d="M668.4,162 L667.3,174.1 M681.6,162 L682.7,174.1 M667.3,174.1 Q642,176.3 631,195 M682.7,174.1 Q708,176.3 719,195"/><path d="M664,140 l5.5,0 M680.5,140 l5.5,0 M672.3,153.2 l5.5,0"/></g>
+  <text x="675" y="272" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">対角：動き・勢い</text>
+  <text x="585" y="350" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">主役の位置を先に決めてから描く</text>
+</svg>

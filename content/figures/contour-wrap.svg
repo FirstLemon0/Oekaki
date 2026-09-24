@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <ellipse cx="360" cy="240" rx="130" ry="190" stroke-width="4"/>
+  <path d="M259.2,120 Q360,149.5 460.8,120" stroke="#7BB661" stroke-width="2.5"/>
+  <path d="M236.7,180 Q360,216.1 483.3,180" stroke="#7BB661" stroke-width="2.5"/>
+  <path d="M230,240 Q360,278 490,240" stroke="#7BB661" stroke-width="2.5"/>
+  <path d="M236.7,300 Q360,336.1 483.3,300" stroke="#7BB661" stroke-width="2.5"/>
+  <path d="M259.2,360 Q360,389.5 460.8,360" stroke="#7BB661" stroke-width="2.5"/>
+  <path d="M360,50 Q430,240 360,430" stroke-dasharray="8 8" opacity="0.6"/>
+  <text x="530" y="180" font-size="18" fill="currentColor" stroke="none" text-anchor="start">胴に巻いたテープのように</text>
+  <text x="530" y="208" font-size="18" fill="currentColor" stroke="none" text-anchor="start">端は輪郭に沿って曲がる</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">輪郭線（コンター）を巻くと、平面の形に厚みが出る</text>
+</svg>

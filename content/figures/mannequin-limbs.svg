@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <ellipse cx="230" cy="70" rx="22" ry="28"/>
+  <line x1="230" y1="108" x2="230" y2="160"/>
+  <ellipse cx="230" cy="160" rx="34" ry="42"/>
+  <ellipse cx="230" cy="240" rx="30" ry="24"/>
+  <path d="M166.1,123.9 L158.1,204.1 A7,7 0 0 0 171.9,205.9 L183.9,126.1 A9,9 0 0 0 166.1,123.9"/>
+  <path d="M158,204.4 L155,261.6 A5,5 0 0 0 165,262.4 L172,205.6 A7,7 0 0 0 158,204.4"/>
+  <path d="M276.1,126.1 L288.1,205.9 A7,7 0 0 0 301.9,204.1 L293.9,123.9 A9,9 0 0 0 276.1,126.1"/>
+  <path d="M288,205.6 L295,262.4 A5,5 0 0 0 305,261.6 L302,204.4 A7,7 0 0 0 288,205.6"/>
+  <path d="M192,251.6 L193,354.7 A9,9 0 0 0 211,355.3 L218,252.4 A13,13 0 0 0 192,251.6"/>
+  <path d="M193,354.8 L194,444.9 A6,6 0 0 0 206,445.1 L211,355.2 A9,9 0 0 0 193,354.8"/>
+  <path d="M242,252.4 L249,355.3 A9,9 0 0 0 267,354.7 L268,251.6 A13,13 0 0 0 242,252.4"/>
+  <path d="M249,355.2 L254,445.1 A6,6 0 0 0 266,444.9 L267,354.8 A9,9 0 0 0 249,355.2"/>
+  <circle cx="175" cy="125" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="285" cy="125" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="165" cy="205" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="295" cy="205" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="202" cy="355" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="258" cy="355" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="205" cy="252" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <circle cx="255" cy="252" r="4" fill="currentColor" stroke="none" opacity="0.5"/>
+  <line x1="200" y1="445" x2="182" y2="458" stroke-width="5"/>
+  <line x1="260" y1="445" x2="278" y2="458" stroke-width="5"/>
+  <path d="M506.3,137.2 L610,212.5 A16,16 0 0 0 630,187.5 L533.7,102.8 A22,22 0 0 0 506.3,137.2" stroke-width="3.5"/>
+  <ellipse cx="520" cy="120" rx="12" ry="22" transform="rotate(51 520 120)" stroke="#7BB661" stroke-width="2.5"/>
+  <ellipse cx="620" cy="200" rx="9" ry="16" transform="rotate(51 620 200)" stroke="#7BB661" stroke-width="2.5"/>
+  <path d="M607.5,210 L691.4,306.9 A11,11 0 0 0 708.6,293.1 L632.5,190 A16,16 0 0 0 607.5,210" stroke-width="3.5"/>
+  <ellipse cx="700" cy="300" rx="7" ry="11" transform="rotate(51 700 300)" stroke="#7BB661" stroke-width="2.5"/>
+  <circle cx="620" cy="200" r="16" stroke-width="2" stroke-dasharray="4 5"/>
+  <text x="610" y="360" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">腕・脚＝先細りの円柱</text>
+  <text x="610" y="388" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">関節は球でつなぐ</text>
+  <text x="680" y="170" font-size="16" fill="#7BB661" stroke="none" text-anchor="middle">切り口の楕円で</text>
+  <text x="680" y="192" font-size="16" fill="#7BB661" stroke="none" text-anchor="middle">向きがわかる</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">円柱の楕円が、手前に来るか奥へ行くかを伝える</text>
+</svg>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M200,380 Q120,200 250,110 Q400,40 550,110 Q680,200 600,380 Z" fill="#5A4A78" stroke="none"/>
+  <path d="M230,330 Q200,240 270,200 L300,260 L330,190 L360,270 L400,200 L440,270 L470,190 L500,260 L530,200 Q600,240 570,330 Z" fill="#3E3258" stroke="none"/>
+  <path d="M260,150 Q400,110 540,150 Q400,135 260,165 Z" fill="#B7A6D8" stroke="none"/>
+  <path d="M200,380 Q120,200 250,110 Q400,40 550,110 Q680,200 600,380"/>
+  <text x="640" y="110" font-size="17" fill="#7BB661" stroke="none" text-anchor="start">ハイライト</text>
+  <text x="640" y="134" font-size="15" fill="#7BB661" stroke="none" text-anchor="start">（天使の輪）</text>
+  <line x1="635" y1="118" x2="545" y2="145" stroke="#7BB661" stroke-width="1.5"/>
+  <text x="640" y="300" font-size="17" fill="currentColor" stroke="none" text-anchor="start">毛先側に影</text>
+  <line x1="635" y1="295" x2="575" y2="300" stroke-width="1.5"/>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">髪は「頭の丸み」に沿って影とハイライトを帯状に置く</text>
+</svg>

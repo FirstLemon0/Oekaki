@@ -1,48 +1,231 @@
 /*
- * 成長通 デザイントークン（案A 和紙と若葉）
+ * 成長通 デザイントークン（正典: DESIGN_SYSTEM.md §1 / Claude Design 版 v1）
  * ライトが既定。ダークは [data-theme="dark"] または prefers-color-scheme: dark
- * （[data-theme="light"] で上書き可）。
+ * （[data-theme="light"] で上書き可）。ダークでは「描く紙」も暗くする。
  */
 
 :root {
   color-scheme: light;
 
-  /* 色 */
-  --color-paper: #F4EFE4;
-  --color-card: #FBF8F1;
-  --color-canvas: #F7F3EA;
-  --color-ink: #2A2722;
-  --color-ink-2: #5E5850;
-  --color-ink-3: #8C846F;
-  --color-line: #D9D1C2;
-  --color-groove: #E6DFD0;
-  --color-accent: #45702A;
-  --color-accent-press: #365A20;
-  --color-accent-soft: #E3ECD8;
-  --color-on-accent: #FBF8F1;
-  --score-good: #3B6FB6;
-  --score-mid: #C98A1B;
-  --score-off: #B5432F;
-  --color-overlay: #B8C9E8;
-  --color-danger: #B5432F;
-  --color-focus: #3B6FB6;
+  /* ---- 色（ライト） ---- */
+  --color-paper: #F2EFE8;
+  --color-surface: #FAF8F3;
+  --color-canvas: #EDEAE2;
+  --color-line: #DCD7CC;
+  --color-ink: #2B2A28;
+  --color-ink-2: #6B6862;
+  --color-ink-3: #9B978E;
+  --color-ink-inverse: #FAF8F3;
+  /* 墨地（ステージバナー・危機カード・「次にやる1つ」）。ダークでも暗いまま */
+  --color-sumi: #2B2A28;
+  --color-on-sumi: #FAF8F3;
+  --color-accent: #7BB661;
+  --color-accent-press: #68A34F;
+  --color-accent-text: #4F8A33;
+  --color-accent-soft: #E4EFD9;
+  --color-accent-on-dark: #A7D48C;
+  /* 若葉地の上の文字・アイコン（主ボタン・完了ノード）。ダークでも暗い墨 */
+  --color-on-accent: #2B2A28;
+  --color-danger: #C8553D;
+  --color-danger-soft: #F6E3DE;
+  --color-danger-on-dark: #E0A797;
+  --color-locked: #E3DFD5;
+  --color-chip: #F2EFE8;
+  --color-mannequin-bg: #E6E2D8;
+  --color-dash: #C4BFB4;
+  --score-good: #3E8E7E;
+  --score-mid: #D9A441;
+  --score-bad: #C8553D;
+  --good-bg: #E6F0EC;
+  --good-line: #BBD9D1;
+  --good-text: #2E6E62;
+  --color-overlay: rgba(123, 182, 97, 0.8);
+  --glass: rgba(250, 248, 243, 0.88);
+  --glass-line: rgba(220, 215, 204, 0.9);
+  --scrim: rgba(43, 42, 40, 0.28);
+  --scrim-strong: rgba(43, 42, 40, 0.32);
+  /* 墨地の上の薄い面（ステージバナーの進捗バー地など） */
+  --on-ink-track: rgba(250, 248, 243, 0.2);
+  --on-ink-line: rgba(250, 248, 243, 0.3);
+  --grid-line: rgba(43, 42, 40, 0.12);
+  --tile-chip: rgba(43, 42, 40, 0.75);
 
-  /* 文字 */
-  --font-display: 'Shippori Mincho B1', 'Hiragino Mincho ProN', serif;
+  /* ---- 文字 ---- */
   --font-body: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic', sans-serif;
-  --text-xs: 0.75rem;    /* 12 */
-  --text-sm: 0.8125rem;  /* 13 */
-  --text-base: 1rem;     /* 16 */
-  --text-md: 1.125rem;   /* 18 */
-  --text-lg: 1.25rem;    /* 20 */
-  --text-xl: 1.5rem;     /* 24 */
-  --text-2xl: 1.875rem;  /* 30 */
-  --text-score: 2.5rem;  /* 40 */
-  --text-timer: 6rem;    /* 96 */
+  --font-mono: 'Azeret Mono', ui-monospace, monospace;
+  /* rem 基準（文字サイズ「大きめ」で全体が拡大する） */
+  --text-display: 6rem;      /* 96 タイマー */
+  --text-score-xl: 7.5rem;   /* 120 採点シート */
+  --text-score-sm: 4.5rem;   /* 72 */
+  --text-num-lg: 2.5rem;     /* 40 */
+  --text-h1: 1.75rem;        /* 28 */
+  --text-h2: 1.375rem;       /* 22 */
+  --text-h3: 1.125rem;       /* 18 */
+  --text-body: 1.0625rem;    /* 17 */
+  --text-small: 0.875rem;    /* 14 */
+  --text-label: 0.75rem;     /* 12 */
   --leading-body: 1.7;
-  --leading-head: 1.2;
+  --leading-head: 1.3;
 
-  /* 余白 */
+  /* ---- 余白 ---- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+
+  /* ---- 角丸 ---- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+  --radius-sheet: 20px;
+  --radius-modal: 20px;
+  --radius-glass: 14px;
+
+  /* ---- 線 ---- */
+  --border-hair: 1px;
+  --border-secondary: 1.5px;
+  --border-node: 3px;
+
+  /* ---- 影 ---- */
+  --shadow-1: 0 1px 2px rgba(43, 42, 40, 0.08);
+  --shadow-2: 0 4px 12px rgba(43, 42, 40, 0.1);
+  --shadow-3: 0 12px 32px rgba(43, 42, 40, 0.16);
+  --shadow-sheet: 0 -8px 32px rgba(43, 42, 40, 0.14);
+
+  /* ---- 操作目標 ---- */
+  --tap-min: 48px;
+  --tap-pen: 36px;
+  --btn-primary-h: 56px;
+  --btn-secondary-h: 48px;
+  --chip-h: 44px;
+  --row-h: 56px;
+
+  /* ---- モーション ---- */
+  --motion-press: 80ms;
+  --motion-state: 160ms;
+  --motion-path: 400ms;
+  --motion-sheet: 240ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ---- レイアウト ---- */
+  --rail-w: 96px;
+  --bottomnav-h: 88px;
+  --panel-w: 400px;
+  --path-w: 520px;
+}
+
+/* ---- ダーク ---- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-paper: #2A2926;
+    --color-surface: #35332F;
+    --color-canvas: #3A3833;
+    --color-line: #4A473F;
+    --color-ink: #EDE9E0;
+    --color-ink-2: #B5B0A6;
+    --color-ink-3: #7E7A71;
+    --color-ink-inverse: #2A2926;
+    --color-accent: #8FC56F;
+    --color-accent-press: #7FB35F;
+    --color-accent-text: #A7D48C;
+    --color-accent-soft: #3B4A33;
+    --color-accent-on-dark: #A7D48C;
+    --color-sumi: #1D1C1A;
+    --color-on-sumi: #EDE9E0;
+    --color-on-accent: #22211F;
+    --color-danger: #E07A62;
+    --color-danger-soft: #4A302A;
+    --color-danger-on-dark: #E0A797;
+    --color-locked: #45423C;
+    --color-chip: #2F2E2A;
+    --color-mannequin-bg: #312F2B;
+    --color-dash: #5E5A51;
+    --score-good: #5FAE9E;
+    --score-mid: #E2B45C;
+    --score-bad: #E07A62;
+    --good-bg: #2E3B37;
+    --good-line: #41584F;
+    --good-text: #8FCBBE;
+    --color-overlay: rgba(143, 197, 111, 0.8);
+    --glass: rgba(53, 51, 47, 0.88);
+    --glass-line: rgba(74, 71, 63, 0.9);
+    --scrim: rgba(0, 0, 0, 0.45);
+    --scrim-strong: rgba(0, 0, 0, 0.5);
+    --on-ink-track: rgba(237, 233, 224, 0.2);
+    --on-ink-line: rgba(237, 233, 224, 0.3);
+    --grid-line: rgba(237, 233, 224, 0.12);
+    --tile-chip: rgba(20, 20, 18, 0.75);
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --shadow-3: 0 12px 32px rgba(0, 0, 0, 0.4);
+    --shadow-sheet: 0 -8px 32px rgba(0, 0, 0, 0.35);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-paper: #2A2926;
+  --color-surface: #35332F;
+  --color-canvas: #3A3833;
+  --color-line: #4A473F;
+  --color-ink: #EDE9E0;
+  --color-ink-2: #B5B0A6;
+  --color-ink-3: #7E7A71;
+  --color-ink-inverse: #2A2926;
+  --color-accent: #8FC56F;
+  --color-accent-press: #7FB35F;
+  --color-accent-text: #A7D48C;
+  --color-accent-soft: #3B4A33;
+  --color-accent-on-dark: #A7D48C;
+  --color-sumi: #1D1C1A;
+  --color-on-sumi: #EDE9E0;
+  --color-on-accent: #22211F;
+  --color-danger: #E07A62;
+  --color-danger-soft: #4A302A;
+  --color-danger-on-dark: #E0A797;
+  --color-locked: #45423C;
+  --color-chip: #2F2E2A;
+  --color-mannequin-bg: #312F2B;
+  --color-dash: #5E5A51;
+  --score-good: #5FAE9E;
+  --score-mid: #E2B45C;
+  --score-bad: #E07A62;
+  --good-bg: #2E3B37;
+  --good-line: #41584F;
+  --good-text: #8FCBBE;
+  --color-overlay: rgba(143, 197, 111, 0.8);
+  --glass: rgba(53, 51, 47, 0.88);
+  --glass-line: rgba(74, 71, 63, 0.9);
+  --scrim: rgba(0, 0, 0, 0.45);
+  --scrim-strong: rgba(0, 0, 0, 0.5);
+  --on-ink-track: rgba(237, 233, 224, 0.2);
+  --on-ink-line: rgba(237, 233, 224, 0.3);
+  --grid-line: rgba(237, 233, 224, 0.12);
+  --tile-chip: rgba(20, 20, 18, 0.75);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-3: 0 12px 32px rgba(0, 0, 0, 0.4);
+  --shadow-sheet: 0 -8px 32px rgba(0, 0, 0, 0.35);
+}
+
+/*
+ * 互換エイリアス（非推奨）: 旧トークン（案A）名で書かれた並行作業中のコードが
+ * 壊れないよう、新トークンへ向けておく。新規コードでは使わない。統合後に削除する。
+ */
+:root {
+  --color-card: var(--color-surface);
+  --color-groove: var(--color-locked);
+  --score-off: var(--score-bad);
+  --color-focus: var(--color-accent-text);
+  --color-scrim: var(--scrim);
+  --font-display: var(--font-body);
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -51,84 +234,17 @@
   --space-6: 24px;
   --space-8: 32px;
   --space-10: 40px;
-
-  /* 角丸 */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 14px;
-  --radius-card: 18px;
-  --radius-pill: 999px;
-
-  /* 線 */
-  --border-secondary: 2px;
-  --border-node: 3px;
-
-  /* 影 */
-  --shadow-sheet: 0 -8px 30px rgba(42, 39, 34, 0.14);
-  --shadow-modal: 0 16px 40px rgba(42, 39, 34, 0.22);
-  --color-scrim: rgba(42, 39, 34, 0.45);
-
-  /* 操作目標 */
-  --tap-min: 48px;
-  --btn-primary-h: 56px;
-  --btn-secondary-h: 48px;
-
-  /* モーション */
-  --motion-state: 160ms;
-  --motion-path: 400ms;
-  --motion-sheet: 240ms;
-  --ease: cubic-bezier(0.2, 0, 0, 1);
-
-  /* レイアウト */
-  --rail-w: 88px;
-  --bottomnav-h: 84px;
-  --panel-w: 372px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --color-paper: #23221F;
-    --color-card: #2C2B27;
-    --color-canvas: #F2EEE4;
-    --color-ink: #EDE8DC;
-    --color-ink-2: #A9A296;
-    --color-ink-3: #6B675E;
-    --color-line: #3F3D37;
-    --color-groove: #35342F;
-    --color-accent: #8FBF6A;
-    --color-accent-press: #A7D186;
-    --color-accent-soft: #2F3D27;
-    --color-on-accent: #23221F;
-    --score-good: #6FA3E8;
-    --score-mid: #E0B04A;
-    --score-off: #E0705C;
-    --color-overlay: #5A7AB0;
-    --color-danger: #E0705C;
-    --color-focus: #6FA3E8;
-  }
-}
-
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --color-paper: #23221F;
-  --color-card: #2C2B27;
-  --color-canvas: #F2EEE4;
-  --color-ink: #EDE8DC;
-  --color-ink-2: #A9A296;
-  --color-ink-3: #6B675E;
-  --color-line: #3F3D37;
-  --color-groove: #35342F;
-  --color-accent: #8FBF6A;
-  --color-accent-press: #A7D186;
-  --color-accent-soft: #2F3D27;
-  --color-on-accent: #23221F;
-  --score-good: #6FA3E8;
-  --score-mid: #E0B04A;
-  --score-off: #E0705C;
-  --color-overlay: #5A7AB0;
-  --color-danger: #E0705C;
-  --color-focus: #6FA3E8;
+  --radius-card: var(--radius-lg);
+  --shadow-modal: var(--shadow-3);
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 1rem;
+  --text-md: 1.125rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 1.875rem;
+  --text-timer: var(--text-display);
+  --text-score: var(--text-num-lg);
 }
 
 /* 文字サイズ「大きめ」 */
@@ -147,41 +263,48 @@ body {
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-body);
-  font-size: var(--text-base);
+  font-size: var(--text-body);
   line-height: var(--leading-body);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
 }
 
 #app { height: 100%; }
 
-h1, h2, h3, h4 { margin: 0; line-height: var(--leading-head); }
+h1, h2, h3, h4 { margin: 0; line-height: var(--leading-head); font-weight: 700; }
 p { margin: 0; }
 
 button, input, select, textarea { font: inherit; color: inherit; }
 
 :focus { outline: none; }
 :focus-visible {
-  outline: 2px solid var(--color-focus);
+  outline: 2px solid var(--color-accent-text);
   outline-offset: 2px;
 }
 
-.num { font-variant-numeric: tabular-nums; }
+/* 数字は mono（DESIGN_SYSTEM.md §8） */
+.num, .mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
 
+/* 見出し（明朝は廃止。本文と同じ書体の 700） */
 .display {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-weight: 700;
   line-height: var(--leading-head);
 }
 
 .label {
-  font-size: var(--text-xs);
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  font-size: var(--text-label);
+  font-weight: 500;
+  letter-spacing: 0.06em;
   line-height: 1.4;
   color: var(--color-ink-2);
 }
+.label--accent { color: var(--color-accent-text); }
 
 .muted { color: var(--color-ink-2); }
 .faint { color: var(--color-ink-3); }
@@ -199,5 +322,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
   *, *::before, *::after {
     transition-duration: 0ms !important;
     animation-duration: 0ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M290,250 L480,250 L470,400 L300,400 Z"/>
+  <path d="M480,250 L498,242 L488,392 L470,400" opacity="0.7"/>
+  <ellipse cx="305" cy="352" rx="45" ry="60" transform="rotate(18 305 352)" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="324.8" y1="241.2" x2="312.6" y2="179.4"/>
+  <line x1="293.2" y1="246.8" x2="283.6" y2="184.5"/>
+  <ellipse cx="309" cy="244" rx="5.6" ry="16" transform="rotate(-100 309 244)"/>
+  <ellipse cx="298.1" cy="182" rx="5.2" ry="14.7" transform="rotate(-100 298.1 182)"/>
+  <line x1="312.6" y1="179.4" x2="303.5" y2="135.3"/>
+  <line x1="283.6" y1="184.5" x2="277" y2="140"/>
+  <ellipse cx="298.1" cy="182" rx="5.2" ry="14.7" transform="rotate(-100 298.1 182)"/>
+  <ellipse cx="290.2" cy="137.6" rx="4.7" ry="13.4" transform="rotate(-100 290.2 137.6)"/>
+  <line x1="303.5" y1="135.3" x2="294.9" y2="94.2"/>
+  <line x1="277" y1="140" x2="271" y2="98.4"/>
+  <ellipse cx="290.2" cy="137.6" rx="4.7" ry="13.4" transform="rotate(-100 290.2 137.6)"/>
+  <ellipse cx="283" cy="96.3" rx="4.3" ry="12.2" transform="rotate(-100 283 96.3)"/>
+  <line x1="377" y1="233.4" x2="373.2" y2="164.2"/>
+  <line x1="343" y1="234.6" x2="342" y2="165.3"/>
+  <ellipse cx="360" cy="234" rx="5.9" ry="17" transform="rotate(-92 360 234)"/>
+  <ellipse cx="357.6" cy="164.7" rx="5.5" ry="15.6" transform="rotate(-92 357.6 164.7)"/>
+  <line x1="373.2" y1="164.2" x2="370.1" y2="114.8"/>
+  <line x1="342" y1="165.3" x2="341.6" y2="115.8"/>
+  <ellipse cx="357.6" cy="164.7" rx="5.5" ry="15.6" transform="rotate(-92 357.6 164.7)"/>
+  <ellipse cx="355.9" cy="115.3" rx="5" ry="14.3" transform="rotate(-92 355.9 115.3)"/>
+  <line x1="370.1" y1="114.8" x2="367.2" y2="68.6"/>
+  <line x1="341.6" y1="115.8" x2="341.3" y2="69.6"/>
+  <ellipse cx="355.9" cy="115.3" rx="5" ry="14.3" transform="rotate(-92 355.9 115.3)"/>
+  <ellipse cx="354.2" cy="69.1" rx="4.5" ry="12.9" transform="rotate(-92 354.2 69.1)"/>
+  <line x1="425.9" y1="235.4" x2="430.3" y2="170.4"/>
+  <line x1="394.1" y1="232.6" x2="401" y2="167.9"/>
+  <ellipse cx="410" cy="234" rx="5.6" ry="16" transform="rotate(-85 410 234)"/>
+  <ellipse cx="415.7" cy="169.1" rx="5.2" ry="14.7" transform="rotate(-85 415.7 169.1)"/>
+  <line x1="430.3" y1="170.4" x2="433.1" y2="124"/>
+  <line x1="401" y1="167.9" x2="406.3" y2="121.7"/>
+  <ellipse cx="415.7" cy="169.1" rx="5.2" ry="14.7" transform="rotate(-85 415.7 169.1)"/>
+  <ellipse cx="419.7" cy="122.8" rx="4.7" ry="13.4" transform="rotate(-85 419.7 122.8)"/>
+  <line x1="433.1" y1="124" x2="435.6" y2="80.6"/>
+  <line x1="406.3" y1="121.7" x2="411.4" y2="78.5"/>
+  <ellipse cx="419.7" cy="122.8" rx="4.7" ry="13.4" transform="rotate(-85 419.7 122.8)"/>
+  <ellipse cx="423.5" cy="79.6" rx="4.3" ry="12.2" transform="rotate(-85 423.5 79.6)"/>
+  <line x1="474.6" y1="247.1" x2="484.9" y2="197.8"/>
+  <line x1="447.4" y1="240.9" x2="459.8" y2="192"/>
+  <ellipse cx="461" cy="244" rx="4.9" ry="14" transform="rotate(-77 461 244)"/>
+  <ellipse cx="472.3" cy="194.9" rx="4.5" ry="12.9" transform="rotate(-77 472.3 194.9)"/>
+  <line x1="484.9" y1="197.8" x2="491.9" y2="162.5"/>
+  <line x1="459.8" y1="192" x2="469" y2="157.2"/>
+  <ellipse cx="472.3" cy="194.9" rx="4.5" ry="12.9" transform="rotate(-77 472.3 194.9)"/>
+  <ellipse cx="480.4" cy="159.8" rx="4.1" ry="11.8" transform="rotate(-77 480.4 159.8)"/>
+  <line x1="491.9" y1="162.5" x2="498.4" y2="129.5"/>
+  <line x1="469" y1="157.2" x2="477.6" y2="124.7"/>
+  <ellipse cx="480.4" cy="159.8" rx="4.1" ry="11.8" transform="rotate(-77 480.4 159.8)"/>
+  <ellipse cx="488" cy="127.1" rx="3.7" ry="10.6" transform="rotate(-77 488 127.1)"/>
+  <line x1="292.9" y1="317" x2="256.7" y2="288.3"/>
+  <line x1="271.1" y1="343" x2="236.6" y2="312.3"/>
+  <ellipse cx="282" cy="330" rx="5.9" ry="17" transform="rotate(-140 282 330)"/>
+  <ellipse cx="246.6" cy="300.3" rx="5.5" ry="15.6" transform="rotate(-140 246.6 300.3)"/>
+  <line x1="256.7" y1="288.3" x2="230.5" y2="268.2"/>
+  <line x1="236.6" y1="312.3" x2="212.2" y2="290"/>
+  <ellipse cx="246.6" cy="300.3" rx="5.5" ry="15.6" transform="rotate(-140 246.6 300.3)"/>
+  <ellipse cx="221.3" cy="279.1" rx="5" ry="14.3" transform="rotate(-140 221.3 279.1)"/>
+  <line x1="230.5" y1="268.2" x2="206" y2="249.4"/>
+  <line x1="212.2" y1="290" x2="189.4" y2="269.2"/>
+  <ellipse cx="221.3" cy="279.1" rx="5" ry="14.3" transform="rotate(-140 221.3 279.1)"/>
+  <ellipse cx="197.7" cy="259.3" rx="4.5" ry="12.9" transform="rotate(-140 197.7 259.3)"/>
+  <path d="M290,250 Q385,215 480,250" stroke="#45702A" stroke-width="5"/>
+  <text x="530" y="120" font-size="22" fill="currentColor" stroke="none" text-anchor="start">指＝円柱（3節）</text>
+  <text x="530" y="225" font-size="22" fill="#45702A" stroke="none" text-anchor="start">付け根は弧を描く</text>
+  <text x="530" y="340" font-size="22" fill="currentColor" stroke="none" text-anchor="start">手のひら＝箱</text>
+  <text x="250" y="450" font-size="18" fill="currentColor" stroke="none" text-anchor="end">親指の付け根のふくらみ</text>
+</svg>

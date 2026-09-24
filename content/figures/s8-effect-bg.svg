@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <clipPath id="s8-effect-clip"><rect x="60" y="70" width="280" height="360"/></clipPath>
+  <rect x="60" y="70" width="280" height="360" rx="4" stroke-width="2.5"/>
+  <g clip-path="url(#s8-effect-clip)"><line x1="390" y1="250" x2="295" y2="250" stroke-width="1.8"/><line x1="385.2" y1="292.3" x2="304.3" y2="273.8" stroke-width="1.8"/><line x1="371.2" y1="332.4" x2="307.2" y2="301.6" stroke-width="1.8"/><line x1="348.5" y1="368.5" x2="274.3" y2="309.2" stroke-width="1.8"/><line x1="318.5" y1="398.5" x2="266.7" y2="333.7" stroke-width="1.8"/><line x1="282.4" y1="421.2" x2="251.6" y2="357.2" stroke-width="1.8"/><line x1="242.3" y1="435.2" x2="221.1" y2="342.6" stroke-width="1.8"/><line x1="200" y1="440" x2="200" y2="357" stroke-width="1.8"/><line x1="157.7" y1="435.2" x2="173.5" y2="366" stroke-width="1.8"/><line x1="117.6" y1="421.2" x2="158.8" y2="335.6" stroke-width="1.8"/><line x1="81.5" y1="398.5" x2="133.3" y2="333.7" stroke-width="1.8"/><line x1="51.5" y1="368.5" x2="107" y2="324.2" stroke-width="1.8"/><line x1="28.8" y1="332.4" x2="114.4" y2="291.2" stroke-width="1.8"/><line x1="14.8" y1="292.3" x2="95.7" y2="273.8" stroke-width="1.8"/><line x1="10" y1="250" x2="81" y2="250" stroke-width="1.8"/><line x1="14.8" y1="207.7" x2="107.4" y2="228.9" stroke-width="1.8"/><line x1="28.8" y1="167.6" x2="103.6" y2="203.6" stroke-width="1.8"/><line x1="51.5" y1="131.5" x2="107" y2="175.8" stroke-width="1.8"/><line x1="81.5" y1="101.5" x2="140.8" y2="175.7" stroke-width="1.8"/><line x1="117.6" y1="78.8" x2="153.6" y2="153.6" stroke-width="1.8"/><line x1="157.7" y1="64.8" x2="173.5" y2="134" stroke-width="1.8"/><line x1="200" y1="60" x2="200" y2="155" stroke-width="1.8"/><line x1="242.3" y1="64.8" x2="223.8" y2="145.7" stroke-width="1.8"/><line x1="282.4" y1="78.8" x2="251.6" y2="142.8" stroke-width="1.8"/><line x1="318.5" y1="101.5" x2="259.2" y2="175.7" stroke-width="1.8"/><line x1="348.5" y1="131.5" x2="283.7" y2="183.3" stroke-width="1.8"/><line x1="371.2" y1="167.6" x2="307.2" y2="198.4" stroke-width="1.8"/><line x1="385.2" y1="207.7" x2="292.6" y2="228.9" stroke-width="1.8"/></g>
+  <path d="M173.4,244.4 Q172,213.6 200,212.2 Q228,213.6 226.6,244.4 Q223.8,269.6 200,280.8 Q176.2,269.6 173.4,244.4 Z"/>
+  <path d="M170.6,247.2 Q165,206.6 200,203.8 Q235,206.6 229.4,247.2 M179,222 L187.4,237.4 L194.4,224.8 L202.8,238.8 L209.8,223.4 L216.8,237.4 L222.4,224.8"/>
+  <path d="M191.6,278 L190.2,293.4 M208.4,278 L209.8,293.4 M190.2,293.4 Q158,296.2 144,320 M209.8,293.4 Q242,296.2 256,320"/>
+  <path d="M186,250 l7,0 M207,250 l7,0 M196.5,266.8 l7,0"/>
+  <text x="200" y="462" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">集中線：驚き・勢い</text>
+  <rect x="370" y="70" width="170" height="360" rx="4" stroke-width="2.5"/>
+  <circle cx="400" cy="110" r="18" opacity="0.3" stroke-width="6"/>
+  <circle cx="430" cy="180" r="28" opacity="0.3" stroke-width="6"/>
+  <circle cx="460" cy="250" r="18" opacity="0.3" stroke-width="6"/>
+  <circle cx="490" cy="320" r="28" opacity="0.3" stroke-width="6"/>
+  <circle cx="520" cy="390" r="18" opacity="0.3" stroke-width="6"/>
+  <path d="M432.2,245.2 Q431,218.8 455,217.6 Q479,218.8 477.8,245.2 Q475.4,266.8 455,276.4 Q434.6,266.8 432.2,245.2 Z"/>
+  <path d="M429.8,247.6 Q425,212.8 455,210.4 Q485,212.8 480.2,247.6 M437,226 L444.2,239.2 L450.2,228.4 L457.4,240.4 L463.4,227.2 L469.4,239.2 L474.2,228.4"/>
+  <path d="M447.8,274 L446.6,287.2 M462.2,274 L463.4,287.2 M446.6,287.2 Q419,289.6 407,310 M463.4,287.2 Q491,289.6 503,310"/>
+  <path d="M443,250 l6,0 M461,250 l6,0 M452,264.4 l6,0"/>
+  <text x="455" y="462" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">ぼかし：やわらかい</text>
+  <rect x="570" y="70" width="170" height="360" rx="4" fill="#7BB661" fill-opacity="0.25" stroke="#7BB661"/>
+  <path d="M632.2,245.2 Q631,218.8 655,217.6 Q679,218.8 677.8,245.2 Q675.4,266.8 655,276.4 Q634.6,266.8 632.2,245.2 Z"/>
+  <path d="M629.8,247.6 Q625,212.8 655,210.4 Q685,212.8 680.2,247.6 M637,226 L644.2,239.2 L650.2,228.4 L657.4,240.4 L663.4,227.2 L669.4,239.2 L674.2,228.4"/>
+  <path d="M647.8,274 L646.6,287.2 M662.2,274 L663.4,287.2 M646.6,287.2 Q619,289.6 607,310 M663.4,287.2 Q691,289.6 703,310"/>
+  <path d="M643,250 l6,0 M661,250 l6,0 M652,264.4 l6,0"/>
+  <text x="655" y="462" font-size="17" fill="#7BB661" stroke="none" text-anchor="middle">単色：主役が目立つ</text>
+</svg>

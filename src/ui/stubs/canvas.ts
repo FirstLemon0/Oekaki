@@ -1,77 +1,12 @@
 /**
- * スタブ: src/canvas（ARCHITECTURE.md 契約 1）がまだ無いあいだの最小代替。
- *
- * 統合時は UI 側の import を `@/canvas` に差し替え、このファイルを消す。
- * UI は `canvasAvailable` が false のあいだ「描いた順に再生」を押せない表示にする。
+ * 旧スタブの入口。実物（src/canvas）を同じ名前で再エクスポートする。
+ * 使っている画面（GalleryDetail）が import 先を @/canvas に変えたら、このファイルは消してよい。
  */
-import type { Drawing, Stroke } from '@/scoring/types';
+export * from '@/canvas';
 
-export type Tool = 'pen' | 'eraser';
-
-export interface OverlaySpec {
-  kind: 'svg' | 'image' | 'strokes';
-  src: string | Blob | Drawing;
-  opacity: number;
-}
-
-export interface CanvasOptions {
-  penOnly: boolean;
-  leftHanded: boolean;
-  paperColor: string;
-  inkColor: string;
-  baseWidth: number;
-  grid: 'none' | 'thirds' | 'quarters';
-  flipped: boolean;
-  silhouette: boolean;
-}
-
-export interface CanvasEngine {
-  attach(host: HTMLElement): void;
-  detach(): void;
-  setTool(t: Tool): void;
-  setOptions(patch: Partial<CanvasOptions>): void;
-  setOverlay(o: OverlaySpec | null): void;
-  undo(): void;
-  redo(): void;
-  clear(): void;
-  canUndo(): boolean;
-  canRedo(): boolean;
-  getStrokes(): Drawing;
-  loadStrokes(d: Drawing): void;
-  replay(opts: { speed: number }): Promise<void>;
-  cancelReplay(): void;
-  toWebp(maxEdge: number, quality?: number): Promise<Blob>;
-  size(): { width: number; height: number };
-  on(event: 'strokeend', cb: (s: Stroke) => void): () => void;
-  on(event: 'change', cb: () => void): () => void;
-}
-
-/** 本物のエンジンが入ったら true になる（スタブでは常に false）。 */
+/**
+ * エンジン自体は本物だが、GalleryDetail の「描いた順に再生」ボタンにまだ onClick が無い
+ * （別担当の編集中）。押しても何も起きないボタンを有効にしないよう、配線されるまで false にしておく。
+ * GalleryDetail 側で createCanvasEngine + CanvasView + replay() を配線したら true にする。
+ */
 export const canvasAvailable = false;
-
-export function createCanvasEngine(_opts?: Partial<CanvasOptions>): CanvasEngine {
-  let strokes: Drawing = [];
-  return {
-    attach() {},
-    detach() {},
-    setTool() {},
-    setOptions() {},
-    setOverlay() {},
-    undo() {},
-    redo() {},
-    clear() {
-      strokes = [];
-    },
-    canUndo: () => false,
-    canRedo: () => false,
-    getStrokes: () => strokes,
-    loadStrokes(d) {
-      strokes = d;
-    },
-    replay: async () => {},
-    cancelReplay() {},
-    toWebp: async () => new Blob([], { type: 'image/webp' }),
-    size: () => ({ width: 0, height: 0 }),
-    on: () => () => {},
-  };
-}

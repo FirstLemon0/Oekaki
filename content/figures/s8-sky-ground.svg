@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <rect x="80" y="50" width="640" height="380" rx="4" stroke-width="2.5"/>
+  <line x1="80" y1="300" x2="720" y2="300" stroke="#7BB661" stroke-width="3"/>
+  <text x="700" y="290" font-size="17" fill="#7BB661" stroke="none" text-anchor="end">地平線</text>
+  <path d="M150,130 q20,-30 50,-10 q25,-25 55,0 q30,-5 30,20 q-10,20 -40,15 q-30,15 -60,0 q-35,5 -35,-25 Z" opacity="0.8"/>
+  <path d="M500,170 q15,-20 40,-8 q20,-15 40,5 q15,10 -5,20 l-70,0 q-15,-5 -5,-17 Z" opacity="0.6"/>
+  <path d="M362,242 Q360,198 400,196 Q440,198 438,242 Q434,278 400,294 Q366,278 362,242 Z"/>
+  <path d="M358,246 Q350,188 400,184 Q450,188 442,246 M370,210 L382,232 L392,214 L404,234 L414,212 L424,232 L432,214"/>
+  <path d="M388,290 L386,312 M412,290 L414,312 M386,312 Q340,316 320,350 M414,312 Q460,316 480,350"/>
+  <path d="M380,250 l10,0 M410,250 l10,0 M395,274 l10,0"/>
+  <line x1="120" y1="345" x2="180" y2="345" opacity="0.5"/>
+  <line x1="280" y1="359" x2="340" y2="359" opacity="0.5"/>
+  <line x1="440" y1="373" x2="500" y2="373" opacity="0.5"/>
+  <line x1="600" y1="387" x2="660" y2="387" opacity="0.5"/>
+  <text x="100" y="80" font-size="16" fill="currentColor" stroke="none" text-anchor="start">空：上ほど濃く、地平線近くは薄く</text>
+  <text x="400" y="470" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">地平線の高さ＝見ている人の目の高さ</text>
+</svg>

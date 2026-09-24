@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <rect x="62" y="62" width="296" height="170" fill="#BFD9EE" stroke="none"/>
+  <rect x="62" y="232" width="296" height="166" fill="#8FB07A" stroke="none"/>
+  <path d="M99.5,393 Q119,333.2 191.8,325.4 L228.2,325.4 Q301,333.2 320.5,393 Z" fill="#E8E2D0" stroke="none"/>
+  <path d="M194.4,296.8 L191.8,330.6 L228.2,330.6 L225.6,296.8 Z" fill="#F4D2BD" stroke="none"/>
+  <path d="M160.6,239.6 Q158,182.4 210,179.8 Q262,182.4 259.4,239.6 Q254.2,286.4 210,307.2 Q165.8,286.4 160.6,239.6 Z" fill="#F4D2BD" stroke="none"/>
+  <path d="M152.8,289 Q139.8,166.8 210,161.6 Q280.2,166.8 267.2,289 L256.8,237 L246.4,203.2 L233.4,226.6 L217.8,200.6 L202.2,229.2 L186.6,200.6 L173.6,231.8 L163.2,237 Z" fill="#6B4A3A" stroke="none"/>
+  <ellipse cx="189.2" cy="252.6" rx="6.5" ry="9.1" fill="#4A6B8A" stroke="none"/>
+  <ellipse cx="230.8" cy="252.6" rx="6.5" ry="9.1" fill="#4A6B8A" stroke="none"/>
+  <rect x="60" y="60" width="300" height="340" rx="6"/>
+  <circle cx="120" cy="110" r="10" stroke="#7BB661" stroke-width="3"/>
+  <line x1="130" y1="110" x2="425" y2="91" stroke="#7BB661" stroke-dasharray="4 5" stroke-width="1.5"/>
+  <circle cx="210" cy="190" r="10" stroke="#7BB661" stroke-width="3"/>
+  <line x1="220" y1="190" x2="425" y2="151" stroke="#7BB661" stroke-dasharray="4 5" stroke-width="1.5"/>
+  <circle cx="180" cy="360" r="10" stroke="#7BB661" stroke-width="3"/>
+  <line x1="190" y1="360" x2="425" y2="211" stroke="#7BB661" stroke-dasharray="4 5" stroke-width="1.5"/>
+  <circle cx="310" cy="360" r="10" stroke="#7BB661" stroke-width="3"/>
+  <line x1="320" y1="360" x2="425" y2="271" stroke="#7BB661" stroke-dasharray="4 5" stroke-width="1.5"/>
+  <circle cx="230" cy="265" r="10" stroke="#7BB661" stroke-width="3"/>
+  <line x1="240" y1="265" x2="425" y2="331" stroke="#7BB661" stroke-dasharray="4 5" stroke-width="1.5"/>
+  <rect x="430" y="70" width="70" height="42" fill="#BFD9EE" rx="4" stroke-width="1.5"/>
+  <text x="520" y="98" font-size="17" fill="currentColor" stroke="none" text-anchor="start">背景（空）</text>
+  <rect x="430" y="130" width="70" height="42" fill="#6B4A3A" rx="4" stroke-width="1.5"/>
+  <text x="520" y="158" font-size="17" fill="currentColor" stroke="none" text-anchor="start">髪</text>
+  <rect x="430" y="190" width="70" height="42" fill="#E8E2D0" rx="4" stroke-width="1.5"/>
+  <text x="520" y="218" font-size="17" fill="currentColor" stroke="none" text-anchor="start">服</text>
+  <rect x="430" y="250" width="70" height="42" fill="#8FB07A" rx="4" stroke-width="1.5"/>
+  <text x="520" y="278" font-size="17" fill="currentColor" stroke="none" text-anchor="start">地面</text>
+  <rect x="430" y="310" width="70" height="42" fill="#F4D2BD" rx="4" stroke-width="1.5"/>
+  <text x="520" y="338" font-size="17" fill="currentColor" stroke="none" text-anchor="start">肌</text>
+  <text x="680" y="200" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">スポイトで</text>
+  <text x="680" y="228" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">5色だけ拾う</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">好きな絵の色を「見本」にする。拾うのは面積の大きい色から</text>
+</svg>

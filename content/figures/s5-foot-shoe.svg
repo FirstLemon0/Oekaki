@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <line x1="185" y1="91.4" x2="195" y2="246.2" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="245" y1="88.6" x2="249" y2="243.8" stroke-dasharray="8 8" opacity="0.6"/>
+  <path d="M200,240 Q150,275 142,360 L142,385 L462,385 Q476,380 468,366 L350,310 Q282,276 262,255" stroke-dasharray="8 8" opacity="0.6"/>
+  <path d="M110,385 L520,385 Q540,388 535,405 Q530,420 510,420 L120,420 Q104,418 110,385 Z"/>
+  <path d="M128,385 L124,300 Q128,240 178,224 L262,228 Q282,262 362,300 L482,345 Q520,360 520,385"/>
+  <ellipse cx="220" cy="226" rx="44" ry="10"/>
+  <line x1="300" y1="262" x2="318" y2="280"/>
+  <line x1="318" y1="262" x2="300" y2="280"/>
+  <line x1="330" y1="278" x2="348" y2="296"/>
+  <line x1="348" y1="278" x2="330" y2="296"/>
+  <line x1="470" y1="372" x2="518" y2="372" stroke="#45702A" stroke-width="2.5"/>
+  <path d="M510.8,375.5 L518,372 L510.8,368.5" stroke="#45702A" stroke-width="2.5"/>
+  <line x1="518" y1="372" x2="470" y2="372" stroke="#45702A" stroke-width="2.5"/>
+  <path d="M477.2,368.5 L470,372 L477.2,375.5" stroke="#45702A" stroke-width="2.5"/>
+  <line x1="560" y1="385" x2="560" y2="420" stroke="#45702A" stroke-width="2.5"/>
+  <path d="M556.5,412.8 L560,420 L563.5,412.8" stroke="#45702A" stroke-width="2.5"/>
+  <line x1="560" y1="420" x2="560" y2="385" stroke="#45702A" stroke-width="2.5"/>
+  <path d="M563.5,392.2 L560,385 L556.5,392.2" stroke="#45702A" stroke-width="2.5"/>
+  <text x="560" y="340" font-size="22" fill="#45702A" stroke="none" text-anchor="start">つま先の余裕</text>
+  <text x="578" y="412" font-size="22" fill="#45702A" stroke="none" text-anchor="start">ソールの厚み</text>
+  <text x="400" y="470" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">足のくさび（破線）に、ひと回り大きな靴をかぶせる</text>
+</svg>

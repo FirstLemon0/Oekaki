@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M92.5,375 Q115,306 199,297 L241,297 Q325,306 347.5,375 Z" fill="#4F7FB8" stroke="none"/>
+  <path d="M202,264 L199,303 L241,303 L238,264 Z" fill="#F6D7C3" stroke="none"/>
+  <path d="M163,198 Q160,132 220,129 Q280,132 277,198 Q271,252 220,276 Q169,252 163,198 Z" fill="#F6D7C3" stroke="none"/>
+  <path d="M154,255 Q139,114 220,108 Q301,114 286,255 L274,195 L262,156 L247,183 L229,153 L211,186 L193,153 L178,189 L166,195 Z" fill="#5A4A78" stroke="none"/>
+  <ellipse cx="196" cy="213" rx="7.5" ry="10.5" fill="#3A6EA5" stroke="none"/>
+  <ellipse cx="244" cy="213" rx="7.5" ry="10.5" fill="#3A6EA5" stroke="none"/>
+  <path d="M165,190 Q185,240 220,275 L220,290 Q170,262 158,200 Z" fill="#E4AE95" stroke="none"/>
+  <path d="M187,106 L175,150 L200,130 L210,160 L225,120 L240,110 Z" fill="#3E3258" stroke="none"/>
+  <path d="M163,198 Q160,132 220,129 Q280,132 277,198 Q271,252 220,276 Q169,252 163,198 Z"/>
+  <path d="M157,204 Q145,117 220,111 Q295,117 283,204 M175,150 L193,183 L208,156 L226,186 L241,153 L256,183 L268,156"/>
+  <path d="M202,270 L199,303 M238,270 L241,303 M199,303 Q130,309 100,360 M241,303 Q310,309 340,360"/>
+  <text x="220" y="420" font-size="19" fill="#7BB661" stroke="none" text-anchor="middle">影の境目はくっきり</text>
+  <text x="420" y="110" font-size="18" fill="currentColor" stroke="none" text-anchor="start">① ベタの上に影用レイヤーを作る</text>
+  <text x="420" y="170" font-size="18" fill="currentColor" stroke="none" text-anchor="start">② クリッピング（下の色の中だけ塗れる）</text>
+  <text x="420" y="230" font-size="18" fill="currentColor" stroke="none" text-anchor="start">③ 影は「塗りつぶし」か硬いペンで面に</text>
+  <text x="420" y="290" font-size="18" fill="currentColor" stroke="none" text-anchor="start">④ 乗算レイヤーで少し暗い色</text>
+  <text x="420" y="350" font-size="15" fill="currentColor" stroke="none" text-anchor="start">例：ibisPaint・CLIP STUDIO「クリッピング」</text>
+  <text x="420" y="374" font-size="15" fill="currentColor" stroke="none" text-anchor="start">　　Krita「アルファを継承」</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">アニメ塗り＝境目をぼかさない2〜3段階の塗り</text>
+</svg>

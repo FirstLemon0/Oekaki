@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <ellipse cx="410" cy="72" rx="20" ry="25" transform="rotate(6 410 72)" opacity="0.45"/>
+  <path d="M405,110 L400,162 L395,242" opacity="0.45"/>
+  <path d="M346,132 L454,120" opacity="0.45"/>
+  <path d="M372,258 L420,246" opacity="0.45"/>
+  <path d="M346,132 L332,210 L334,266" opacity="0.45"/>
+  <path d="M454,120 L470,198 L462,256" opacity="0.45"/>
+  <path d="M372,258 L360,355 L372,440" opacity="0.45"/>
+  <path d="M420,246 L415,352 L410,448" opacity="0.45"/>
+  <path d="M418,45 C430,110 390,170 398,240 C404,300 425,360 412,455" stroke="#7BB661" stroke-width="5"/>
+  <path d="M340,140 C360,122 430,112 460,120" stroke="#7BB661" stroke-width="3"/>
+  <text x="560" y="90" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">頭から足まで1本の流れ</text>
+  <text x="560" y="118" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">（動きの線）</text>
+  <ellipse cx="188.5" cy="154.5" rx="20" ry="25" transform="rotate(20 188.5 154.5)" opacity="0.45"/>
+  <path d="M178,177.6 L164,210.5 L143,266.5" opacity="0.45"/>
+  <path d="M150,186 L181.5,193" opacity="0.45"/>
+  <path d="M130.4,273.5 L153.5,270" opacity="0.45"/>
+  <path d="M150,186 L171,151 L199,123" opacity="0.45"/>
+  <path d="M181.5,193 L220,179 L248,161.5" opacity="0.45"/>
+  <path d="M130.4,273.5 L108,336.5 L87,403" opacity="0.45"/>
+  <path d="M153.5,270 L164,340 L178,406.5" opacity="0.45"/>
+  <path d="M180,420 C150,340 170,240 230,160 C250,130 270,110 290,80" stroke="#7BB661" stroke-width="5"/>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">まず動きの線を1本。まっすぐより、C か S の曲線で</text>
+</svg>

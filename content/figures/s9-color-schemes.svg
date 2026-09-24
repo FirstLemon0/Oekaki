@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <circle cx="140" cy="200" r="90" opacity="0.35"/>
+  <circle cx="109.2" cy="284.6" r="22" fill="hsl(200,70%,55%)" stroke="none"/>
+  <circle cx="76.4" cy="263.6" r="22" fill="hsl(225,70%,55%)" stroke="none"/>
+  <circle cx="55.4" cy="230.8" r="22" fill="hsl(250,70%,55%)" stroke="none"/>
+  <text x="140" y="340" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">類似色</text>
+  <text x="140" y="370" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">となり同士：落ち着く</text>
+  <circle cx="400" cy="200" r="90" opacity="0.35"/>
+  <circle cx="445" cy="122.1" r="22" fill="hsl(30,70%,55%)" stroke="none"/>
+  <circle cx="355" cy="277.9" r="22" fill="hsl(210,70%,55%)" stroke="none"/>
+  <text x="400" y="340" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">補色</text>
+  <text x="400" y="370" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">反対同士：目立つ</text>
+  <circle cx="660" cy="200" r="90" opacity="0.35"/>
+  <circle cx="660" cy="110" r="22" fill="hsl(0,70%,55%)" stroke="none"/>
+  <circle cx="737.9" cy="245" r="22" fill="hsl(120,70%,55%)" stroke="none"/>
+  <circle cx="582.1" cy="245" r="22" fill="hsl(240,70%,55%)" stroke="none"/>
+  <text x="660" y="340" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">トライアド</text>
+  <text x="660" y="370" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">三角形：にぎやか</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">色相環の「どこから取るか」で雰囲気が決まる</text>
+</svg>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M140,90 L240,290 L40,290 Z" stroke-width="4"/>
+  <line x1="140" y1="90" x2="140" y2="290" stroke-dasharray="8 8" opacity="0.6"/>
+  <text x="140" y="340" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">三角形：頂点→底辺</text>
+  <circle cx="400" cy="195" r="100" stroke-dasharray="8 8" opacity="0.6"/>
+  <path d="M400,95 L495.1,164.1 L458.8,275.9 L341.2,275.9 L304.9,164.1 Z" stroke-width="4"/>
+  <circle cx="400" cy="95" r="6" fill="#7BB661" stroke="none"/>
+  <circle cx="495.1" cy="164.1" r="6" fill="#7BB661" stroke="none"/>
+  <circle cx="458.8" cy="275.9" r="6" fill="#7BB661" stroke="none"/>
+  <circle cx="341.2" cy="275.9" r="6" fill="#7BB661" stroke="none"/>
+  <circle cx="304.9" cy="164.1" r="6" fill="#7BB661" stroke="none"/>
+  <text x="400" y="340" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">五角形：円に点を等分</text>
+  <circle cx="650" cy="195" r="100" stroke-dasharray="8 8" opacity="0.6"/>
+  <path d="M750,195 L700,281.6 L600,281.6 L550,195 L600,108.4 L700,108.4 Z" stroke-width="4"/>
+  <circle cx="750" cy="195" r="6" fill="#7BB661" stroke="none"/>
+  <circle cx="700" cy="281.6" r="6" fill="#7BB661" stroke="none"/>
+  <circle cx="600" cy="281.6" r="6" fill="#7BB661" stroke="none"/>
+  <circle cx="550" cy="195" r="6" fill="#7BB661" stroke="none"/>
+  <circle cx="600" cy="108.4" r="6" fill="#7BB661" stroke="none"/>
+  <circle cx="700" cy="108.4" r="6" fill="#7BB661" stroke="none"/>
+  <text x="650" y="340" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">六角形：円に6つの点</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">多角形は「円の上に点を打ってから結ぶ」と形が整う</text>
+</svg>

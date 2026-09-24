@@ -9,6 +9,8 @@
  *   #/gallery/:id             galleryDetail
  *   #/settings                settings
  *   #/calibrate               calibrate
+ *   #/review/:drillType       review（復習: 該当ドリル 10 本）
+ *   #/critique/:drawingId     critique（批評の履歴・送信）
  *   それ以外                   notFound
  */
 import { signal } from '@preact/signals';
@@ -22,6 +24,8 @@ export type Route =
   | { name: 'galleryDetail'; id: string }
   | { name: 'settings'; section?: string }
   | { name: 'calibrate' }
+  | { name: 'review'; drillType: string }
+  | { name: 'critique'; id: string }
   | { name: 'notFound'; path: string };
 
 /** ナビ（レール／下ナビ）で選択中にするタブ */
@@ -68,6 +72,12 @@ export function parseHash(hash: string): Route {
     case 'calibrate':
       if (segs.length === 1) return { name: 'calibrate' };
       break;
+    case 'review':
+      if (a && segs.length === 2) return { name: 'review', drillType: a };
+      break;
+    case 'critique':
+      if (a && segs.length === 2) return { name: 'critique', id: a };
+      break;
   }
   return { name: 'notFound', path };
 }
@@ -82,6 +92,8 @@ export const href = {
   galleryDetail: (id: string) => `#/gallery/${encodeURIComponent(id)}`,
   settings: (section?: string) => (section ? `#/settings?section=${encodeURIComponent(section)}` : '#/settings'),
   calibrate: () => '#/calibrate',
+  review: (drillType: string) => `#/review/${encodeURIComponent(drillType)}`,
+  critique: (drawingId: string) => `#/critique/${encodeURIComponent(drawingId)}`,
 };
 
 export function navTabOf(route: Route): NavTab | null {

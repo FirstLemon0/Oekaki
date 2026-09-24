@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M105,200 A95,130 0 0 1 295,200 Q293,330 200,410 Q107,330 105,200 Z"/>
+  <path d="M139,238 Q158,226 177,238 Q158,247 139,238 Z"/>
+  <circle cx="158" cy="237" r="6"/>
+  <path d="M136,216 Q158,206 180,214" stroke-width="2.5"/>
+  <path d="M223,238 Q242,226 261,238 Q242,247 223,238 Z"/>
+  <circle cx="242" cy="237" r="6"/>
+  <path d="M220,216 Q242,206 264,214" stroke-width="2.5"/>
+  <path d="M195,262 L190,298 Q200,306 210,298" stroke-width="2"/>
+  <path d="M180,335 Q200,341 220,335"/>
+  <path d="M465,230 A115,150 0 0 1 695,230 Q690,350 580,400 Q470,350 465,230 Z"/>
+  <path d="M559,260.8 Q531.1,227.4 497,253.4 L493.3,264.6" stroke-width="4"/>
+  <path d="M537.3,303 Q518.7,306.1 500.1,295.6" stroke-width="1.8"/>
+  <ellipse cx="528" cy="275.7" rx="14.9" ry="27.3"/>
+  <ellipse cx="528" cy="279.4" rx="6.8" ry="13.6" fill="currentColor" opacity="0.35" stroke="none"/>
+  <circle cx="523" cy="264.6" r="3.7" stroke-width="2"/>
+  <path d="M601,260.8 Q628.9,227.4 663,253.4 L666.7,264.6" stroke-width="4"/>
+  <path d="M622.7,303 Q641.3,306.1 659.9,295.6" stroke-width="1.8"/>
+  <ellipse cx="632" cy="275.7" rx="14.9" ry="27.3"/>
+  <ellipse cx="632" cy="279.4" rx="6.8" ry="13.6" fill="currentColor" opacity="0.35" stroke="none"/>
+  <circle cx="627" cy="264.6" r="3.7" stroke-width="2"/>
+  <path d="M500,222 Q525,212 552,220"/>
+  <path d="M660,222 Q635,212 608,220"/>
+  <circle cx="582" cy="322" r="3" fill="currentColor" stroke="none"/>
+  <path d="M567,352 Q580,358 593,352"/>
+  <line x1="90" y1="238" x2="310" y2="238" stroke="#45702A" stroke-width="2" stroke-dasharray="6 6"/>
+  <line x1="450" y1="272" x2="710" y2="272" stroke="#45702A" stroke-width="2" stroke-dasharray="6 6"/>
+  <path d="M310,238 L450,272" stroke="#45702A" stroke-width="2"/>
+  <text x="400" y="225" font-size="18" fill="#45702A" stroke="none" text-anchor="middle">目の位置</text>
+  <text x="200" y="455" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">リアル</text>
+  <text x="580" y="455" font-size="22" fill="currentColor" stroke="none" text-anchor="middle" font-weight="700">アニメ</text>
+  <text x="580" y="60" font-size="20" fill="#45702A" stroke="none" text-anchor="middle">目を大きく</text>
+  <line x1="625" y1="68" x2="632" y2="225" stroke="#45702A" stroke-width="1.5"/>
+  <text x="792" y="330" font-size="20" fill="#45702A" stroke="none" text-anchor="end">鼻は省略</text>
+  <line x1="705" y1="324" x2="590" y2="322" stroke="#45702A" stroke-width="1.5"/>
+  <text x="580" y="488" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">目は大きく少し低め、鼻と口は小さく</text>
+</svg>

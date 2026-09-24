@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <defs><filter id="s10-wc-blur"><feGaussianBlur stdDeviation="4"/></filter></defs>
+  <circle cx="220" cy="230" r="110" fill="#9CC3E6" stroke="none" opacity="0.7" filter="url(#s10-wc-blur)"/>
+  <circle cx="250" cy="200" r="70" fill="#F2B8C6" stroke="none" opacity="0.6" filter="url(#s10-wc-blur)"/>
+  <circle cx="220" cy="230" r="110" stroke="#6E9CC6" stroke-width="3" opacity="0.8"/>
+  <text x="220" y="390" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">輪郭がにじみ、色が重なって透ける</text>
+  <text x="420" y="130" font-size="18" fill="currentColor" stroke="none" text-anchor="start">・薄い色から重ねる（明→暗）</text>
+  <text x="420" y="190" font-size="18" fill="currentColor" stroke="none" text-anchor="start">・乗算レイヤー、不透明度は低め</text>
+  <text x="420" y="250" font-size="18" fill="currentColor" stroke="none" text-anchor="start">・紙の質感を最後にのせる</text>
+  <text x="420" y="310" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">・白い所は「塗らずに残す」</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">水彩風＝透明感。塗りすぎないことがいちばんのコツ</text>
+</svg>

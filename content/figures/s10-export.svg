@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <rect x="80" y="60" width="200" height="280" rx="4"/>
+  <path d="M142,182 Q140,138 180,136 Q220,138 218,182 Q214,218 180,234 Q146,218 142,182 Z"/>
+  <path d="M138,186 Q130,128 180,124 Q230,128 222,186 M150,150 L162,172 L172,154 L184,174 L194,152 L204,172 L212,154"/>
+  <path d="M168,230 L166,252 M192,230 L194,252 M166,252 Q120,256 100,290 M194,252 Q240,256 260,290"/>
+  <path d="M160,190 l10,0 M190,190 l10,0 M175,214 l10,0"/>
+  <text x="250" y="322" font-size="16" fill="#7BB661" stroke="none" text-anchor="middle">sign</text>
+  <text x="180" y="380" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">サインは隅に小さく</text>
+  <text x="340" y="110" font-size="20" fill="currentColor" stroke="none" text-anchor="start" font-weight="700">保存（作業用）</text>
+  <text x="360" y="145" font-size="17" fill="currentColor" stroke="none" text-anchor="start">アプリ独自の形式（レイヤーが残る）</text>
+  <text x="360" y="175" font-size="16" fill="currentColor" stroke="none" text-anchor="start">例：.ipv ／ .clip ／ .kra</text>
+  <text x="340" y="235" font-size="20" fill="#7BB661" stroke="none" text-anchor="start" font-weight="700">書き出し（見せる用）</text>
+  <text x="360" y="270" font-size="17" fill="currentColor" stroke="none" text-anchor="start">PNG（または JPEG）</text>
+  <text x="360" y="300" font-size="17" fill="currentColor" stroke="none" text-anchor="start">長い辺 2000〜3000px が目安</text>
+  <text x="360" y="330" font-size="17" fill="#7BB661" stroke="none" text-anchor="start">成長通への提出も、この書き出し画像で</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">作業用は残し、見せる用を書き出す。2つは別物</text>
+</svg>

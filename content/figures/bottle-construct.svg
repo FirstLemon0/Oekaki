@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <line x1="400" y1="40" x2="400" y2="450" stroke="#7BB661" stroke-width="2"/>
+  <ellipse cx="400" cy="60" rx="22" ry="7"/>
+  <line x1="378" y1="60" x2="378" y2="90"/>
+  <line x1="422" y1="60" x2="422" y2="90"/>
+  <ellipse cx="400" cy="90" rx="22" ry="7" stroke-dasharray="8 8" opacity="0.6"/>
+  <path d="M378,95 C378,150 330,160 330,200" stroke-width="4"/>
+  <path d="M422,95 C422,150 470,160 470,200" stroke-width="4"/>
+  <line x1="330" y1="200" x2="330" y2="420" stroke-width="4"/>
+  <line x1="470" y1="200" x2="470" y2="420" stroke-width="4"/>
+  <path d="M330,420 A70,20 0 0 0 470,420" stroke-width="4"/>
+  <ellipse cx="400" cy="200" rx="70" ry="18" stroke-dasharray="8 8" opacity="0.6"/>
+  <ellipse cx="400" cy="300" rx="70" ry="19" stroke-dasharray="8 8" opacity="0.6"/>
+  <circle cx="300" cy="70" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="300" y="77" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">1</text>
+  <circle cx="290" cy="150" r="15" stroke="#7BB661" stroke-width="2"/>
+  <text x="290" y="157" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">2</text>
+  <circle cx="290" cy="310" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="290" y="317" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">3</text>
+  <text x="560" y="90" font-size="18" fill="currentColor" stroke="none" text-anchor="start">① キャップ：小さな円柱</text>
+  <text x="560" y="150" font-size="18" fill="currentColor" stroke="none" text-anchor="start">② 肩：円錐に近い曲面</text>
+  <text x="560" y="310" font-size="18" fill="currentColor" stroke="none" text-anchor="start">③ 胴：大きな円柱</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">ペットボトル＝円柱＋円錐＋円柱。すべて1本の軸に通す</text>
+</svg>

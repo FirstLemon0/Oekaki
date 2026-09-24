@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <ellipse cx="330" cy="150" rx="45" ry="60" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="342" y1="97.5" x2="340.5" y2="48" stroke-dasharray="8 8" opacity="0.6"/>
+  <line x1="318" y1="97.5" x2="319.5" y2="48" stroke-dasharray="8 8" opacity="0.6"/>
+  <path d="M360,90 L405,96 L408,111"/>
+  <path d="M405,96 L438,288 L408,294 L387,156 L390,327"/>
+  <path d="M436.5,273 L408,279" stroke-width="2"/>
+  <path d="M360,90 L375,135 L361.5,142.5 L372,162 L334.5,213" stroke="#45702A" stroke-width="3.5"/>
+  <path d="M360,90 L342,150" stroke-width="2" opacity="0.6"/>
+  <path d="M300,90 L255,96 L252,111"/>
+  <path d="M255,96 L222,288 L252,294 L273,156 L270,327"/>
+  <path d="M223.5,273 L252,279" stroke-width="2"/>
+  <path d="M300,90 L285,135 L298.5,142.5 L288,162 L325.5,213" stroke="#45702A" stroke-width="3.5"/>
+  <path d="M300,90 L318,150" stroke-width="2" opacity="0.6"/>
+  <path d="M300,90 Q330,78 360,90"/>
+  <path d="M316.5,94.5 L330,114 L343.5,94.5"/>
+  <path d="M336,213 L336,336 M270,327 L336,336 L390,327"/>
+  <circle cx="321" cy="240" r="4"/>
+  <circle cx="321" cy="282" r="4"/>
+  <line x1="415" y1="99" x2="500" y2="90" stroke-dasharray="8 8" opacity="0.6" stroke-width="1.5"/>
+  <text x="510" y="97" font-size="20" fill="currentColor" stroke="none" text-anchor="start">肩に厚み（角ばる）</text>
+  <line x1="382" y1="159" x2="500" y2="170" stroke-dasharray="8 8" opacity="0.6" stroke-width="1.5"/>
+  <text x="510" y="177" font-size="20" fill="currentColor" stroke="none" text-anchor="start">襟の折り返し</text>
+  <line x1="346" y1="300" x2="500" y2="300" stroke-dasharray="8 8" opacity="0.6" stroke-width="1.5"/>
+  <text x="510" y="307" font-size="20" fill="currentColor" stroke="none" text-anchor="start">前の合わせ（重なる）</text>
+  <text x="510" y="197" font-size="18" fill="#45702A" stroke="none" text-anchor="start">（緑の線）</text>
+  <text x="330" y="470" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">制服・ジャケット</text>
+</svg>

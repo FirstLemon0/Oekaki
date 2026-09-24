@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <circle cx="70" cy="250" r="22"/>
+  <line x1="90" y1="276" x2="230" y2="272"/>
+  <line x1="90" y1="224" x2="230" y2="228"/>
+  <ellipse cx="90" cy="250" rx="9.1" ry="26" transform="rotate(0.01 90 250)"/>
+  <ellipse cx="230" cy="250" rx="7.7" ry="22" transform="rotate(0.01 230 250)"/>
+  <circle cx="246" cy="250" r="15"/>
+  <line x1="260" y1="270" x2="370" y2="266"/>
+  <line x1="260" y1="230" x2="370" y2="234"/>
+  <ellipse cx="260" cy="250" rx="7" ry="20" transform="rotate(0.01 260 250)"/>
+  <ellipse cx="370" cy="250" rx="5.6" ry="16" transform="rotate(0.01 370 250)"/>
+  <ellipse cx="398" cy="250" rx="28" ry="16"/>
+  <text x="230" y="380" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">横から：長さがそのまま</text>
+  <line x1="440" y1="40" x2="440" y2="460" stroke-dasharray="8 8" opacity="0.6" stroke-width="1.5"/>
+  <circle cx="570" cy="170" r="18"/>
+  <line x1="551.4" y1="193.8" x2="561.8" y2="238"/>
+  <line x1="592.6" y1="178.2" x2="614.2" y2="218"/>
+  <ellipse cx="572" cy="186" rx="12.1" ry="22" transform="rotate(69.1 572 186)"/>
+  <ellipse cx="588" cy="228" rx="15.4" ry="28" transform="rotate(69.1 588 228)"/>
+  <line x1="565.8" y1="256.2" x2="574.4" y2="309.5"/>
+  <line x1="622.2" y1="235.8" x2="649.6" y2="282.5"/>
+  <ellipse cx="594" cy="246" rx="18" ry="30" transform="rotate(70.2 594 246)"/>
+  <ellipse cx="612" cy="296" rx="32" ry="40" transform="rotate(70.2 612 296)" stroke="#45702A" stroke-width="4"/>
+  <circle cx="622" cy="342" r="44"/>
+  <text x="545" y="180" font-size="18" fill="currentColor" stroke="none" text-anchor="end">奥</text>
+  <text x="680" y="300" font-size="18" fill="#45702A" stroke="none" text-anchor="start">手前ほど</text>
+  <text x="680" y="324" font-size="18" fill="#45702A" stroke="none" text-anchor="start">大きく丸い</text>
+  <text x="610" y="440" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">前から：重なって短く見える</text>
+</svg>

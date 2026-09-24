@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M66.5,321 Q83,270.4 144.6,263.8 L175.4,263.8 Q237,270.4 253.5,321 Z" fill="#4F7FB8" stroke="none"/>
+  <path d="M146.8,239.6 L144.6,268.2 L175.4,268.2 L173.2,239.6 Z" fill="#F6D7C3" stroke="none"/>
+  <path d="M118.2,191.2 Q116,142.8 160,140.6 Q204,142.8 201.8,191.2 Q197.4,230.8 160,248.4 Q122.6,230.8 118.2,191.2 Z" fill="#F6D7C3" stroke="none"/>
+  <path d="M111.6,233 Q100.6,129.6 160,125.2 Q219.4,129.6 208.4,233 L199.6,189 L190.8,160.4 L179.8,180.2 L166.6,158.2 L153.4,182.4 L140.2,158.2 L129.2,184.6 L120.4,189 Z" fill="#5A4A78" stroke="none"/>
+  <ellipse cx="142.4" cy="202.2" rx="5.5" ry="7.7" fill="#3A6EA5" stroke="none"/>
+  <ellipse cx="177.6" cy="202.2" rx="5.5" ry="7.7" fill="#3A6EA5" stroke="none"/>
+  <text x="160" y="350" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">元の絵</text>
+  <path d="M306.5,321 Q323,270.4 384.6,263.8 L415.4,263.8 Q477,270.4 493.5,321 Z" fill="#6F86A8" stroke="none"/>
+  <path d="M386.8,239.6 L384.6,268.2 L415.4,268.2 L413.2,239.6 Z" fill="#FAD9BE" stroke="none"/>
+  <path d="M358.2,191.2 Q356,142.8 400,140.6 Q444,142.8 441.8,191.2 Q437.4,230.8 400,248.4 Q362.6,230.8 358.2,191.2 Z" fill="#FAD9BE" stroke="none"/>
+  <path d="M351.6,233 Q340.6,129.6 400,125.2 Q459.4,129.6 448.4,233 L439.6,189 L430.8,160.4 L419.8,180.2 L406.6,158.2 L393.4,182.4 L380.2,158.2 L369.2,184.6 L360.4,189 Z" fill="#6E4E6E" stroke="none"/>
+  <ellipse cx="382.4" cy="202.2" rx="5.5" ry="7.7" fill="#6E86A0" stroke="none"/>
+  <ellipse cx="417.6" cy="202.2" rx="5.5" ry="7.7" fill="#6E86A0" stroke="none"/>
+  <rect x="310" y="110" width="180" height="200" fill="#FFB060" opacity="0.14" stroke="none"/>
+  <text x="400" y="350" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">暖色寄り（夕方）</text>
+  <path d="M546.5,321 Q563,270.4 624.6,263.8 L655.4,263.8 Q717,270.4 733.5,321 Z" fill="#3E6FB8" stroke="none"/>
+  <path d="M626.8,239.6 L624.6,268.2 L655.4,268.2 L653.2,239.6 Z" fill="#E8D6D6" stroke="none"/>
+  <path d="M598.2,191.2 Q596,142.8 640,140.6 Q684,142.8 681.8,191.2 Q677.4,230.8 640,248.4 Q602.6,230.8 598.2,191.2 Z" fill="#E8D6D6" stroke="none"/>
+  <path d="M591.6,233 Q580.6,129.6 640,125.2 Q699.4,129.6 688.4,233 L679.6,189 L670.8,160.4 L659.8,180.2 L646.6,158.2 L633.4,182.4 L620.2,158.2 L609.2,184.6 L600.4,189 Z" fill="#3E3E6E" stroke="none"/>
+  <ellipse cx="622.4" cy="202.2" rx="5.5" ry="7.7" fill="#3A6EA5" stroke="none"/>
+  <ellipse cx="657.6" cy="202.2" rx="5.5" ry="7.7" fill="#3A6EA5" stroke="none"/>
+  <rect x="550" y="110" width="180" height="200" fill="#6080FF" opacity="0.14" stroke="none"/>
+  <text x="640" y="350" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">寒色寄り（夜）</text>
+  <text x="400" y="410" font-size="15" fill="currentColor" stroke="none" text-anchor="middle">トーンカーブ・色相／彩度・カラーバランス、または色を置いたオーバーレイレイヤー</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">全体を1回だけ調整して、色に「空気」をまとめる</text>
+</svg>

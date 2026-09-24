@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M455,55 C485,70 480,110 455,118 L500,125 L545,95 L555,110 L500,160 L440,200 L420,245 L445,350 L465,455 L430,455 L395,345 L370,300 L345,350 L300,450 L270,445 L330,330 L355,250 L385,170 L420,120 C405,100 420,50 455,55 Z" fill="currentColor" fill-opacity="0.25" stroke="currentColor" stroke-width="3"/>
+  <text x="640" y="200" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">中を塗りつぶして</text>
+  <text x="640" y="228" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">外形だけで動きが</text>
+  <text x="640" y="256" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">伝わるか見る</text>
+  <path d="M130,350 C160,250 220,200 260,210" stroke="#7BB661" stroke-width="3"/>
+  <text x="160" y="390" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">腕と体のすき間も形</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">シルエットで読めるポーズは、線画でも伝わる</text>
+</svg>

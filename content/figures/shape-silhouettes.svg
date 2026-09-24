@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M70,250 L230,250 L230,380 L70,380 Z"/>
+  <path d="M55,250 L150,160 L245,250 Z" stroke="#7BB661" stroke-width="4"/>
+  <path d="M130,310 L170,310 L170,380 L130,380 Z" stroke-dasharray="8 8" opacity="0.6"/>
+  <text x="150" y="420" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">家＝四角＋三角</text>
+  <circle cx="400" cy="200" r="70" stroke="#7BB661" stroke-width="4"/>
+  <circle cx="350" cy="245" r="45" stroke="#7BB661" stroke-width="4"/>
+  <circle cx="450" cy="245" r="45" stroke="#7BB661" stroke-width="4"/>
+  <path d="M385,280 L415,280 L415,380 L385,380 Z"/>
+  <text x="400" y="420" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">木＝円の集まり＋長方形</text>
+  <path d="M560,280 L760,280 L760,345 L560,345 Z"/>
+  <path d="M600,280 L625,225 L710,225 L735,280 Z" stroke="#7BB661" stroke-width="4"/>
+  <circle cx="610" cy="350" r="28"/>
+  <circle cx="710" cy="350" r="28"/>
+  <text x="660" y="420" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">車＝台形＋長方形＋円</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">身の回りの物は、単純な図形の組み合わせで描ける</text>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <rect x="60" y="60" width="200" height="260" rx="4" stroke-width="2"/>
+  <path d="M122,162 Q120,118 160,116 Q200,118 198,162 Q194,198 160,214 Q126,198 122,162 Z"/>
+  <path d="M118,166 Q110,108 160,104 Q210,108 202,166 M130,130 L142,152 L152,134 L164,154 L174,132 L184,152 L192,134"/>
+  <path d="M148,210 L146,232 M172,210 L174,232 M146,232 Q100,236 80,270 M174,232 Q220,236 240,270"/>
+  <path d="M140,170 l10,0 M170,170 l10,0 M155,194 l10,0"/>
+  <text x="160" y="350" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">A 中央</text>
+  <rect x="300" y="60" width="200" height="260" rx="4" stroke-width="3.5" stroke="#7BB661"/>
+  <path d="M335.8,142.8 Q334,103.2 370,101.4 Q406,103.2 404.2,142.8 Q400.6,175.2 370,189.6 Q339.4,175.2 335.8,142.8 Z"/>
+  <path d="M332.2,146.4 Q325,94.2 370,90.6 Q415,94.2 407.8,146.4 M343,114 L353.8,133.8 L362.8,117.6 L373.6,135.6 L382.6,115.8 L391.6,133.8 L398.8,117.6"/>
+  <path d="M359.2,186 L357.4,205.8 M380.8,186 L382.6,205.8 M357.4,205.8 Q316,209.4 298,240 M382.6,205.8 Q424,209.4 442,240"/>
+  <path d="M352,150 l9,0 M379,150 l9,0 M365.5,171.6 l9,0"/>
+  <text x="400" y="350" font-size="19" fill="#7BB661" stroke="none" text-anchor="middle">B 三分割</text>
+  <rect x="540" y="60" width="200" height="260" rx="4" stroke-width="2"/>
+  <g transform="rotate(-20 640 180)"><path d="M605.8,172.8 Q604,133.2 640,131.4 Q676,133.2 674.2,172.8 Q670.6,205.2 640,219.6 Q609.4,205.2 605.8,172.8 Z"/><path d="M602.2,176.4 Q595,124.2 640,120.6 Q685,124.2 677.8,176.4 M613,144 L623.8,163.8 L632.8,147.6 L643.6,165.6 L652.6,145.8 L661.6,163.8 L668.8,147.6"/><path d="M629.2,216 L627.4,235.8 M650.8,216 L652.6,235.8 M627.4,235.8 Q586,239.4 568,270 M652.6,235.8 Q694,239.4 712,270"/><path d="M622,180 l9,0 M649,180 l9,0 M635.5,201.6 l9,0"/></g>
+  <text x="640" y="350" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">C 対角</text>
+  <line x1="400" y1="375" x2="400" y2="415" stroke="#7BB661"/>
+  <path d="M393.9,402.4 L400,415 L406.1,402.4" stroke="#7BB661"/>
+  <text x="400" y="450" font-size="19" fill="#7BB661" stroke="none" text-anchor="middle">いちばん「見たい」案を1つ選んで線画へ</text>
+</svg>

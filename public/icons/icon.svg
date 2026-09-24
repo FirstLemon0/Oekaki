@@ -1,7 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- 成長通 暫定アイコン: 和紙色の地に若葉色の円、うねる一本道の一筆線 -->
-  <rect width="512" height="512" rx="112" fill="#F4EFE4"/>
-  <circle cx="256" cy="256" r="184" fill="#45702A"/>
-  <path d="M170 380c0-70 186-58 186-128s-140-46-140-104c0-29 29-47 70-47" fill="none" stroke="#FBF8F1" stroke-width="30" stroke-linecap="round"/>
-  <circle cx="302" cy="101" r="26" fill="#FBF8F1"/>
+  <!-- 成長通 アプリアイコン（DESIGN_SYSTEM.md §6）: 和紙の地に若葉の一本道、終点に墨の点 -->
+  <rect width="512" height="512" rx="56" fill="#F2EFE8"/>
+  <g transform="translate(64 64) scale(6)">
+    <path d="M10 50 C 20 50, 22 30, 32 30 S 44 46, 54 12" fill="none" stroke="#7BB661" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="54" cy="12" r="5.5" fill="#2B2A28"/>
+  </g>
 </svg>

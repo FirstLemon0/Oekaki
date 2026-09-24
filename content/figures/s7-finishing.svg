@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M180.6,209.6 Q178,152.4 230,149.8 Q282,152.4 279.4,209.6 Q274.2,256.4 230,277.2 Q185.8,256.4 180.6,209.6 Z"/>
+  <path d="M175.4,214.8 Q165,139.4 230,134.2 Q295,139.4 284.6,214.8 M191,168 L206.6,196.6 L219.6,173.2 L235.2,199.2 L248.2,170.6 L261.2,196.6 L271.6,173.2"/>
+  <path d="M214.4,272 L211.8,300.6 M245.6,272 L248.2,300.6 M211.8,300.6 Q152,305.8 126,350 M248.2,300.6 Q308,305.8 334,350"/>
+  <path d="M204,220 l13,0 M243,220 l13,0 M223.5,251.2 l13,0"/>
+  <path d="M300,160 l14,-6 M150,300 l-8,12 M320,280 l10,4" stroke-width="1.5" opacity="0.8"/>
+  <circle cx="306" cy="157" r="16" stroke="#7BB661" stroke-dasharray="4 4"/>
+  <circle cx="146" cy="306" r="16" stroke="#7BB661" stroke-dasharray="4 4"/>
+  <circle cx="325" cy="282" r="16" stroke="#7BB661" stroke-dasharray="4 4"/>
+  <text x="230" y="420" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">消し残し・ヒゲ線を探す</text>
+  <rect x="470" y="110" width="90" height="110" rx="4"/>
+  <path d="M497.9,156.4 Q497,136.6 515,135.7 Q533,136.6 532.1,156.4 Q530.3,172.6 515,179.8 Q499.7,172.6 497.9,156.4 Z"/>
+  <path d="M496.1,158.2 Q492.5,132.1 515,130.3 Q537.5,132.1 533.9,158.2 M501.5,142 L506.9,151.9 L511.4,143.8 L516.8,152.8 L521.3,142.9 L525.8,151.9 L529.4,143.8"/>
+  <path d="M509.6,178 L508.7,187.9 M520.4,178 L521.3,187.9 M508.7,187.9 Q488,189.7 479,205 M521.3,187.9 Q542,189.7 551,205"/>
+  <path d="M506,160 l4.5,0 M519.5,160 l4.5,0 M512.8,170.8 l4.5,0"/>
+  <text x="515" y="255" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">縮小して全体</text>
+  <rect x="600" y="110" width="110" height="110" rx="4"/>
+  <line x1="655" y1="110" x2="655" y2="220" stroke="#7BB661" stroke-dasharray="4 4"/>
+  <line x1="630" y1="165" x2="680" y2="165"/>
+  <path d="M667.4,171.1 L680,165 L667.4,158.9"/>
+  <line x1="680" y1="180" x2="630" y2="180"/>
+  <path d="M642.6,173.9 L630,180 L642.6,186.1"/>
+  <text x="655" y="255" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">左右反転で歪み</text>
+  <text x="590" y="330" font-size="17" fill="#7BB661" stroke="none" text-anchor="middle">最後にラフ・下描きレイヤーを非表示</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">仕上げ＝描き足すより「消す・直す・隠す」</text>
+</svg>

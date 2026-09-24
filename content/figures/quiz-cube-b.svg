@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <circle cx="110" cy="80" r="18" stroke="#7BB661" stroke-width="3"/>
+  <line x1="136" y1="80" x2="146" y2="80" stroke="#7BB661" stroke-width="3"/>
+  <line x1="128.4" y1="98.4" x2="135.5" y2="105.5" stroke="#7BB661" stroke-width="3"/>
+  <line x1="110" y1="106" x2="110" y2="116" stroke="#7BB661" stroke-width="3"/>
+  <line x1="91.6" y1="98.4" x2="84.5" y2="105.5" stroke="#7BB661" stroke-width="3"/>
+  <line x1="84" y1="80" x2="74" y2="80" stroke="#7BB661" stroke-width="3"/>
+  <line x1="91.6" y1="61.6" x2="84.5" y2="54.5" stroke="#7BB661" stroke-width="3"/>
+  <line x1="110" y1="54" x2="110" y2="44" stroke="#7BB661" stroke-width="3"/>
+  <line x1="128.4" y1="61.6" x2="135.5" y2="54.5" stroke="#7BB661" stroke-width="3"/>
+  <path d="M400,200 L240,184 L420.9,171.9 L580,182 Z" fill="currentColor" fill-opacity="0.02" stroke="none"/>
+  <path d="M400,200 L400,390 L240,336 L240,184 Z" fill="currentColor" fill-opacity="0.18" stroke="none"/>
+  <path d="M400,200 L400,390 L580,329.3 L580,182 Z" fill="currentColor" fill-opacity="0.45" stroke="none"/>
+  <line x1="400" y1="200" x2="400" y2="390" stroke-width="3.5"/>
+  <line x1="240" y1="184" x2="240" y2="336" stroke-width="3.5"/>
+  <line x1="580" y1="182" x2="580" y2="329.3" stroke-width="3.5"/>
+  <line x1="400" y1="200" x2="240" y2="184" stroke-width="3.5"/>
+  <line x1="400" y1="200" x2="580" y2="182" stroke-width="3.5"/>
+  <line x1="400" y1="390" x2="240" y2="336" stroke-width="3.5"/>
+  <line x1="400" y1="390" x2="580" y2="329.3" stroke-width="3.5"/>
+  <line x1="240" y1="184" x2="420.9" y2="171.9" stroke-width="3.5"/>
+  <line x1="580" y1="182" x2="420.9" y2="171.9" stroke-width="3.5"/>
+</svg>

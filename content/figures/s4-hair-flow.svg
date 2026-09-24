@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <circle cx="200" cy="220" r="120" stroke-dasharray="6 6" opacity="0.55" stroke-width="1.5"/>
+  <path d="M60,410 Q45,160 150,90 Q240,65 320,170 Q355,280 340,410" stroke-width="3"/>
+  <circle cx="230" cy="125" r="6" fill="#45702A" stroke="none"/>
+  <path d="M225,133 Q160,160 140,230" stroke="#45702A" stroke-width="2.5"/>
+  <path d="M138.6,220.1 L140,230 L146.9,222.7" stroke="#45702A" stroke-width="2.5"/>
+  <path d="M240,129 Q320,180 325,340" stroke="#45702A" stroke-width="2.5"/>
+  <path d="M320.2,331.2 L325,340 L328.9,330.8" stroke="#45702A" stroke-width="2.5"/>
+  <path d="M218,127 Q70,170 68,340" stroke="#45702A" stroke-width="2.5"/>
+  <path d="M64.1,330.8 L68,340 L72.8,331.2" stroke="#45702A" stroke-width="2.5"/>
+  <path d="M230,135 Q220,190 210,240" stroke="#45702A" stroke-width="2.5"/>
+  <path d="M207.5,230.3 L210,240 L216,232" stroke="#45702A" stroke-width="2.5"/>
+  <text x="245" y="85" font-size="20" fill="#45702A" stroke="none" text-anchor="start">つむじ</text>
+  <text x="200" y="475" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">つむじから毛先へ流す</text>
+  <path d="M415,120 Q415,264 469,360 Q505,252 505,120" stroke-width="3.5"/>
+  <line x1="525" y1="240" x2="560" y2="240" stroke-width="2"/>
+  <path d="M549.2,245.2 L560,240 L549.2,234.8" stroke-width="2"/>
+  <path d="M578,120 Q578,256.8 604.4,348 Q622,245.4 622,120" stroke-width="3"/>
+  <path d="M624,120 Q624,235.2 650.4,312 Q668,225.6 668,120" stroke-width="3"/>
+  <line x1="690" y1="240" x2="715" y2="240" stroke-width="2"/>
+  <path d="M704.2,245.2 L715,240 L704.2,234.8" stroke-width="2"/>
+  <path d="M720,120 Q720,249.6 732,336 Q740,238.8 740,120" stroke-width="2"/>
+  <path d="M738,120 Q738,228 750,300 Q758,219 758,120" stroke-width="2"/>
+  <path d="M756,120 Q756,256.8 768,348 Q776,245.4 776,120" stroke-width="2"/>
+  <path d="M774,120 Q774,220.8 786,288 Q794,212.4 794,120" stroke-width="2"/>
+  <text x="460" y="405" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">大きな束</text>
+  <text x="623" y="405" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">2つに分ける</text>
+  <text x="757" y="405" font-size="19" fill="#45702A" stroke="none" text-anchor="middle">細かく</text>
+  <text x="600" y="90" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">大きい束 → 小さい束の順に</text>
+</svg>

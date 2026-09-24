@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <ellipse cx="300" cy="220" rx="90" ry="140" transform="rotate(-20 300 220)" stroke-width="4"/>
+  <ellipse cx="470" cy="260" rx="150" ry="80" transform="rotate(15 470 260)" stroke-width="4"/>
+  <path d="M366,188 Q350,255 372,322" stroke="#7BB661" stroke-width="4"/>
+  <text x="420" y="410" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">重なるところに「食い込む線」を描くと前後が伝わる</text>
+  <line x1="600" y1="150" x2="400" y2="200" stroke-width="2"/>
+  <path d="M410.8,191 L400,200 L413.7,202.9" stroke-width="2"/>
+  <text x="640" y="140" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">手前の形の輪郭は切らない</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">卵形どうしを重ねて、有機形の交わりをつくる</text>
+</svg>

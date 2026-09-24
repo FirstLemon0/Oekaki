@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M80,167.6 L85,174.4 L90,158.8 L95,165 L100,153.6 L105,164.1 L110,152.1 L115,159.1 L120,143.7 L125,150.1 L130,139 L135,149.8 L140,138.2 L145,145.5 L150,130.5 L155,137.4 L160,126.8 L165,138.1 L170,127.1 L175,135.1 L180,120.7 L185,128.2 L190,118.3 L195,130.3 L200,120 L205,128.7 L210,115.1 L215,123.4 L220,114.3 L225,127.1 L230,117.6 L235,127.1 L240,114.3 L245,123.4 L250,115.1 L255,128.7 L260,120 L265,130.3 L270,118.3 L275,128.2 L280,120.7 L285,135.1 L290,127.1 L295,138.1 L300,126.8 L305,137.4 L310,130.5 L315,145.5 L320,138.2 L325,149.8 L330,139 L335,150.1 L340,143.7 L345,159.1 L350,152.1 L355,164.1 L360,153.6 L365,165 L370,158.8 L375,174.4 L380,167.6"/>
+  <text x="230" y="250" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">補正なし：手の震えがそのまま</text>
+  <line x1="385" y1="150" x2="425" y2="150" stroke="#7BB661" stroke-width="3"/>
+  <path d="M412.4,156.1 L425,150 L412.4,143.9" stroke="#7BB661" stroke-width="3"/>
+  <path d="M440,170 L445,167.4 L450,164.8 L455,162.2 L460,159.6 L465,157.1 L470,154.5 L475,152.1 L480,149.7 L485,147.3 L490,145 L495,142.8 L500,140.6 L505,138.5 L510,136.5 L515,134.6 L520,132.8 L525,131.1 L530,129.5 L535,128.1 L540,126.7 L545,125.4 L550,124.3 L555,123.3 L560,122.4 L565,121.7 L570,121.1 L575,120.6 L580,120.3 L585,120.1 L590,120 L595,120.1 L600,120.3 L605,120.6 L610,121.1 L615,121.7 L620,122.4 L625,123.3 L630,124.3 L635,125.4 L640,126.7 L645,128.1 L650,129.5 L655,131.1 L660,132.8 L665,134.6 L670,136.5 L675,138.5 L680,140.6 L685,142.8 L690,145 L695,147.3 L700,149.7 L705,152.1 L710,154.5 L715,157.1 L720,159.6 L725,162.2 L730,164.8 L735,167.4 L740,170" stroke="#7BB661" stroke-width="3"/>
+  <text x="590" y="250" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">補正あり：なめらかに</text>
+  <line x1="80" y1="320" x2="720" y2="320" opacity="0.4"/>
+  <circle cx="160" cy="320" r="9" fill="none"/>
+  <circle cx="400" cy="320" r="9" fill="#7BB661" stroke="#7BB661"/>
+  <circle cx="640" cy="320" r="9" fill="none"/>
+  <text x="160" y="360" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">弱：線が素直</text>
+  <text x="400" y="360" font-size="17" fill="#7BB661" stroke="none" text-anchor="middle">中：まずはここから</text>
+  <text x="640" y="360" font-size="17" fill="currentColor" stroke="none" text-anchor="middle">強：線が遅れてついてくる</text>
+  <text x="400" y="420" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">例：ibisPaint・CLIP STUDIO「手ブレ補正」／Krita「ブラシのスムージング」</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">手ブレ補正は「補助輪」。遠慮なく使ってOK</text>
+</svg>

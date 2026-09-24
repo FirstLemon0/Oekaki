@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <circle cx="230" cy="230" r="110" stroke-width="3.5"/>
+  <line x1="205.9" y1="282.4" x2="282.4" y2="205.9" stroke-width="1.8" opacity="0.6"/>
+  <line x1="210.6" y1="286.2" x2="286.2" y2="210.6" stroke-width="1.8" opacity="0.6"/>
+  <line x1="215.4" y1="289.8" x2="289.8" y2="215.4" stroke-width="1.8" opacity="0.6"/>
+  <line x1="220.4" y1="293.4" x2="293.4" y2="220.4" stroke-width="1.8" opacity="0.6"/>
+  <line x1="189.8" y1="332.4" x2="332.4" y2="189.8" stroke-width="1.8" opacity="1"/>
+  <line x1="196.1" y1="334.6" x2="334.6" y2="196.1" stroke-width="1.8" opacity="1"/>
+  <line x1="202.7" y1="336.5" x2="336.5" y2="202.7" stroke-width="1.8" opacity="1"/>
+  <line x1="209.6" y1="338.1" x2="338.1" y2="209.6" stroke-width="1.8" opacity="1"/>
+  <line x1="216.9" y1="339.2" x2="339.2" y2="216.9" stroke-width="1.8" opacity="1"/>
+  <line x1="224.8" y1="339.9" x2="339.9" y2="224.8" stroke-width="1.8" opacity="1"/>
+  <line x1="233.2" y1="339.9" x2="339.9" y2="233.2" stroke-width="1.8" opacity="1"/>
+  <line x1="242.3" y1="339.3" x2="339.3" y2="242.3" stroke-width="1.8" opacity="1"/>
+  <line x1="252.4" y1="337.7" x2="337.7" y2="252.4" stroke-width="1.8" opacity="1"/>
+  <line x1="264" y1="334.6" x2="334.6" y2="264" stroke-width="1.8" opacity="1"/>
+  <line x1="278.2" y1="328.9" x2="328.9" y2="278.2" stroke-width="1.8" opacity="1"/>
+  <text x="230" y="385" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">暗い側だけ線を重ねる</text>
+  <path d="M470,170 L550,170 L550,290 L470,290 Z" stroke-width="1.5" opacity="0.45"/>
+  <line x1="474" y1="176" x2="546" y2="176" stroke-width="1.6"/>
+  <line x1="474" y1="192" x2="546" y2="192" stroke-width="1.6"/>
+  <line x1="474" y1="208" x2="546" y2="208" stroke-width="1.6"/>
+  <line x1="474" y1="224" x2="546" y2="224" stroke-width="1.6"/>
+  <line x1="474" y1="240" x2="546" y2="240" stroke-width="1.6"/>
+  <line x1="474" y1="256" x2="546" y2="256" stroke-width="1.6"/>
+  <line x1="474" y1="272" x2="546" y2="272" stroke-width="1.6"/>
+  <line x1="474" y1="288" x2="546" y2="288" stroke-width="1.6"/>
+  <text x="510" y="330" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">明るめ</text>
+  <path d="M575,170 L655,170 L655,290 L575,290 Z" stroke-width="1.5" opacity="0.45"/>
+  <line x1="579" y1="176" x2="651" y2="176" stroke-width="1.6"/>
+  <line x1="579" y1="186" x2="651" y2="186" stroke-width="1.6"/>
+  <line x1="579" y1="196" x2="651" y2="196" stroke-width="1.6"/>
+  <line x1="579" y1="206" x2="651" y2="206" stroke-width="1.6"/>
+  <line x1="579" y1="216" x2="651" y2="216" stroke-width="1.6"/>
+  <line x1="579" y1="226" x2="651" y2="226" stroke-width="1.6"/>
+  <line x1="579" y1="236" x2="651" y2="236" stroke-width="1.6"/>
+  <line x1="579" y1="246" x2="651" y2="246" stroke-width="1.6"/>
+  <line x1="579" y1="256" x2="651" y2="256" stroke-width="1.6"/>
+  <line x1="579" y1="266" x2="651" y2="266" stroke-width="1.6"/>
+  <line x1="579" y1="276" x2="651" y2="276" stroke-width="1.6"/>
+  <line x1="579" y1="286" x2="651" y2="286" stroke-width="1.6"/>
+  <text x="615" y="330" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">中間</text>
+  <path d="M680,170 L760,170 L760,290 L680,290 Z" stroke-width="1.5" opacity="0.45"/>
+  <line x1="684" y1="176" x2="756" y2="176" stroke-width="1.6"/>
+  <line x1="684" y1="182" x2="756" y2="182" stroke-width="1.6"/>
+  <line x1="684" y1="188" x2="756" y2="188" stroke-width="1.6"/>
+  <line x1="684" y1="194" x2="756" y2="194" stroke-width="1.6"/>
+  <line x1="684" y1="200" x2="756" y2="200" stroke-width="1.6"/>
+  <line x1="684" y1="206" x2="756" y2="206" stroke-width="1.6"/>
+  <line x1="684" y1="212" x2="756" y2="212" stroke-width="1.6"/>
+  <line x1="684" y1="218" x2="756" y2="218" stroke-width="1.6"/>
+  <line x1="684" y1="224" x2="756" y2="224" stroke-width="1.6"/>
+  <line x1="684" y1="230" x2="756" y2="230" stroke-width="1.6"/>
+  <line x1="684" y1="236" x2="756" y2="236" stroke-width="1.6"/>
+  <line x1="684" y1="242" x2="756" y2="242" stroke-width="1.6"/>
+  <line x1="684" y1="248" x2="756" y2="248" stroke-width="1.6"/>
+  <line x1="684" y1="254" x2="756" y2="254" stroke-width="1.6"/>
+  <line x1="684" y1="260" x2="756" y2="260" stroke-width="1.6"/>
+  <line x1="684" y1="266" x2="756" y2="266" stroke-width="1.6"/>
+  <line x1="684" y1="272" x2="756" y2="272" stroke-width="1.6"/>
+  <line x1="684" y1="278" x2="756" y2="278" stroke-width="1.6"/>
+  <line x1="684" y1="284" x2="756" y2="284" stroke-width="1.6"/>
+  <line x1="686" y1="174" x2="686" y2="286" stroke-width="1.6"/>
+  <line x1="694" y1="174" x2="694" y2="286" stroke-width="1.6"/>
+  <line x1="702" y1="174" x2="702" y2="286" stroke-width="1.6"/>
+  <line x1="710" y1="174" x2="710" y2="286" stroke-width="1.6"/>
+  <line x1="718" y1="174" x2="718" y2="286" stroke-width="1.6"/>
+  <line x1="726" y1="174" x2="726" y2="286" stroke-width="1.6"/>
+  <line x1="734" y1="174" x2="734" y2="286" stroke-width="1.6"/>
+  <line x1="742" y1="174" x2="742" y2="286" stroke-width="1.6"/>
+  <line x1="750" y1="174" x2="750" y2="286" stroke-width="1.6"/>
+  <line x1="758" y1="174" x2="758" y2="286" stroke-width="1.6"/>
+  <text x="720" y="330" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">暗い</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">線の間隔を詰める・重ねる（クロス）で暗さを3段階に</text>
+</svg>

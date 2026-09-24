@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <ellipse cx="400" cy="170" rx="80" ry="100" stroke-width="4"/>
+  <ellipse cx="400" cy="330" rx="75" ry="60" stroke-width="4"/>
+  <path d="M340,225 C345,265 350,285 330,310 M460,225 C455,265 450,285 470,310" stroke="#7BB661" stroke-width="4"/>
+  <line x1="400" y1="60" x2="400" y2="400" stroke-dasharray="8 8" opacity="0.6"/>
+  <text x="560" y="150" font-size="18" fill="currentColor" stroke="none" text-anchor="start">胸郭：大きめの卵</text>
+  <text x="560" y="340" font-size="18" fill="currentColor" stroke="none" text-anchor="start">骨盤：小さめの卵</text>
+  <text x="560" y="260" font-size="18" fill="#7BB661" stroke="none" text-anchor="start">くびれでつなぐ</text>
+  <circle cx="310" cy="110" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="310" y="117" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">1</text>
+  <circle cx="310" cy="360" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="310" y="367" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">2</text>
+  <circle cx="520" cy="255" r="15" stroke="#7BB661" stroke-width="2"/>
+  <text x="520" y="262" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">3</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">胴体は「2つの豆」。胸と腰を別々の塊として考える</text>
+</svg>

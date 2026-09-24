@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <circle cx="80" cy="70" r="18" stroke="#7BB661" stroke-width="3"/>
+  <line x1="106" y1="70" x2="116" y2="70" stroke="#7BB661" stroke-width="3"/>
+  <line x1="98.4" y1="88.4" x2="105.5" y2="95.5" stroke="#7BB661" stroke-width="3"/>
+  <line x1="80" y1="96" x2="80" y2="106" stroke="#7BB661" stroke-width="3"/>
+  <line x1="61.6" y1="88.4" x2="54.5" y2="95.5" stroke="#7BB661" stroke-width="3"/>
+  <line x1="54" y1="70" x2="44" y2="70" stroke="#7BB661" stroke-width="3"/>
+  <line x1="61.6" y1="51.6" x2="54.5" y2="44.5" stroke="#7BB661" stroke-width="3"/>
+  <line x1="80" y1="44" x2="80" y2="34" stroke="#7BB661" stroke-width="3"/>
+  <line x1="98.4" y1="51.6" x2="105.5" y2="44.5" stroke="#7BB661" stroke-width="3"/>
+  <line x1="20" y1="150" x2="780" y2="150" stroke-width="1.5" opacity="0.45"/>
+  <path d="M190,321.5 L324.4,296.2 L554.4,321.2 L670,348.3 L530,385 L300,360 Z" fill="currentColor" fill-opacity="0.4" stroke="none"/>
+  <path d="M300,210 L300,360 L440,323.3 L440,199.5 Z" fill="currentColor" fill-opacity="0.3" stroke="none"/>
+  <line x1="300" y1="210" x2="300" y2="360" stroke-width="3.5"/>
+  <line x1="190" y1="199" x2="190" y2="321.5" stroke-width="3.5"/>
+  <line x1="440" y1="199.5" x2="440" y2="323.3" stroke-width="3.5"/>
+  <line x1="300" y1="210" x2="190" y2="199" stroke-width="3.5"/>
+  <line x1="300" y1="210" x2="440" y2="199.5" stroke-width="3.5"/>
+  <line x1="300" y1="360" x2="190" y2="321.5" stroke-width="3.5"/>
+  <line x1="300" y1="360" x2="440" y2="323.3" stroke-width="3.5"/>
+  <line x1="190" y1="199" x2="324.4" y2="191.8" stroke-width="3.5"/>
+  <line x1="440" y1="199.5" x2="324.4" y2="191.8" stroke-width="3.5"/>
+  <line x1="80" y1="70" x2="670" y2="374.5" stroke="#7BB661" stroke-width="1.5" stroke-dasharray="4 6"/>
+  <text x="640" y="420" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">落ち影</text>
+  <text x="370" y="300" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">陰</text>
+  <text x="640" y="80" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">光源の反対側へ伸びる</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">落ち影は光源の反対方向へ伸び、物の底にくっついている</text>
+</svg>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <path d="M80,250 q20,-20 48,-8"/>
+  <path d="M118,253 q20,-24 48,2"/>
+  <path d="M156,244 q20,-28 48,-8"/>
+  <path d="M194,247 q20,-20 48,2"/>
+  <path d="M232,238 q20,-24 48,-8"/>
+  <path d="M270,241 q20,-28 48,2"/>
+  <path d="M308,232 q20,-20 48,-8"/>
+  <text x="230" y="330" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">短い線の継ぎ足し</text>
+  <text x="230" y="360" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">ギザギザ・毛羽立ちに見える</text>
+  <line x1="385" y1="230" x2="425" y2="230" stroke="#7BB661"/>
+  <path d="M412.4,236.1 L425,230 L412.4,223.9" stroke="#7BB661"/>
+  <path d="M450.3,260.4 L459.9,251.5 L469.4,243.3 L478.9,235.7 L488.4,228.7 L497.8,222.2 L507.2,216.3 L516.6,211 L525.9,206.3 L535.2,202.1 L544.4,198.5 L553.7,195.4 L562.8,192.8 L572,190.9 L581.1,189.4 L590.2,188.5 L599.4,188.1 L608.5,188.3 L617.6,188.9 L626.8,190.1 L635.9,191.9 L645.2,194.2 L654.4,197.1 L663.7,200.5 L673,204.4 L682.4,209 L691.8,214.1 L701.2,219.8 L710.7,226.1 L720.2,232.9 L729.7,240.4 L730.3,239.6 L721.2,231.7 L712,224.2 L702.8,217.4 L693.6,211.2 L684.3,205.5 L675,200.4 L665.6,195.8 L656.3,191.9 L646.8,188.6 L637.4,185.9 L627.9,183.8 L618.4,182.3 L608.8,181.4 L599.3,181.1 L589.8,181.5 L580.2,182.5 L570.7,184.1 L561.2,186.4 L551.7,189.2 L542.2,192.7 L532.8,196.7 L523.4,201.4 L514.1,206.6 L504.8,212.5 L495.5,218.9 L486.3,225.9 L477.1,233.5 L467.9,241.6 L458.8,250.4 L449.7,259.6 Z" fill="#7BB661" stroke="none"/>
+  <text x="590" y="330" font-size="20" fill="#7BB661" stroke="none" text-anchor="middle">1本で引く</text>
+  <text x="590" y="360" font-size="16" fill="currentColor" stroke="none" text-anchor="middle">失敗したら「取り消し」してもう1本</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">ゴースティング → 一気に引く → 気に入らなければ取り消し</text>
+</svg>

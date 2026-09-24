@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <defs><filter id="s10-wc-blur2"><feGaussianBlur stdDeviation="3"/></filter></defs>
+  <clipPath id="s10-watercolor-steps-ball10"><circle cx="140" cy="200" r="80"/></clipPath>
+  <g clip-path="url(#s10-watercolor-steps-ball10)" opacity="0.85"><circle cx="140" cy="200" r="80" fill="#F6D7C3" stroke="none"/></g>
+  <circle cx="140" cy="200" r="80" opacity="0.5" stroke-width="1.5"/>
+  <text x="140" y="330" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">① 薄いベタ</text>
+  <clipPath id="s10-watercolor-steps-ball11"><circle cx="400" cy="200" r="80"/></clipPath>
+  <g clip-path="url(#s10-watercolor-steps-ball11)" opacity="0.85"><circle cx="400" cy="200" r="80" fill="#EBB1A2" stroke="none"/><circle cx="372.8" cy="172.8" r="84" fill="#F6D7C3" stroke="none"/></g>
+  <circle cx="400" cy="200" r="80" opacity="0.5" stroke-width="1.5"/>
+  <text x="400" y="330" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">② 乗算で影を重ねる</text>
+  <clipPath id="s10-watercolor-steps-ball12"><circle cx="660" cy="200" r="80"/></clipPath>
+  <g clip-path="url(#s10-watercolor-steps-ball12)" opacity="0.85"><circle cx="660" cy="200" r="80" fill="#EBB1A2" stroke="none"/><circle cx="632.8" cy="172.8" r="84" fill="#F6D7C3" stroke="none"/></g>
+  <circle cx="690" cy="240" r="30" fill="#9CC3E6" opacity="0.4" stroke="none" filter="url(#s10-wc-blur2)"/>
+  <circle cx="590" cy="130" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="627" cy="183" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="664" cy="236" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="701" cy="149" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="598" cy="202" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="635" cy="255" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="672" cy="168" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="709" cy="221" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="606" cy="134" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="643" cy="187" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="680" cy="240" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="717" cy="153" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="614" cy="206" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="651" cy="259" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="688" cy="172" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="725" cy="225" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="622" cy="138" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="659" cy="191" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="696" cy="244" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="593" cy="157" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="630" cy="210" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="667" cy="263" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="704" cy="176" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="601" cy="229" r="1.5" fill="#A08A70" stroke="none" opacity="0.5"/>
+  <circle cx="660" cy="200" r="80" opacity="0.5" stroke-width="1.5"/>
+  <text x="660" y="330" font-size="19" fill="#7BB661" stroke="none" text-anchor="middle">③ 差し色＋紙の質感</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">水彩風の3ステップ。どの段も「薄く」が合言葉</text>
+</svg>

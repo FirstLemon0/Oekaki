@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <circle cx="200" cy="220" r="120" stroke-width="4"/>
+  <ellipse cx="200" cy="220" rx="120" ry="38" stroke="#7BB661" stroke-width="2.5"/>
+  <ellipse cx="200" cy="220" rx="44" ry="120" stroke-dasharray="8 8" opacity="0.6"/>
+  <text x="200" y="385" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">球＝円＋赤道＋子午線</text>
+  <ellipse cx="580" cy="340" rx="120" ry="38" stroke-width="4"/>
+  <line x1="460" y1="340" x2="580" y2="90" stroke-width="4"/>
+  <line x1="700" y1="340" x2="580" y2="90" stroke-width="4"/>
+  <line x1="580" y1="90" x2="580" y2="340" stroke="#7BB661" stroke-width="2"/>
+  <circle cx="580" cy="340" r="6" fill="#7BB661" stroke="none"/>
+  <text x="580" y="405" font-size="22" fill="currentColor" stroke="none" text-anchor="middle">円錐＝楕円＋頂点へ2本</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">丸い立体も、中心を通るガイド線で向きが伝わる</text>
+</svg>

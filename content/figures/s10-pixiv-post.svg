@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <rect x="80" y="50" width="280" height="380" rx="8"/>
+  <rect x="100" y="70" width="240" height="240" rx="4"/>
+  <path d="M178.2,181.2 Q176,132.8 220,130.6 Q264,132.8 261.8,181.2 Q257.4,220.8 220,238.4 Q182.6,220.8 178.2,181.2 Z"/>
+  <path d="M173.8,185.6 Q165,121.8 220,117.4 Q275,121.8 266.2,185.6 M187,146 L200.2,170.2 L211.2,150.4 L224.4,172.4 L235.4,148.2 L246.4,170.2 L255.2,150.4"/>
+  <path d="M206.8,234 L204.6,258.2 M233.2,234 L235.4,258.2 M204.6,258.2 Q154,262.6 132,300 M235.4,258.2 Q286,262.6 308,300"/>
+  <path d="M198,190 l11,0 M231,190 l11,0 M214.5,216.4 l11,0"/>
+  <rect x="100" y="325" width="240" height="20" rx="3" opacity="0.5"/>
+  <text x="110" y="340" font-size="14" fill="currentColor" stroke="none" text-anchor="start">タイトル</text>
+  <rect x="100" y="355" width="240" height="30" rx="3" opacity="0.5"/>
+  <text x="110" y="375" font-size="14" fill="currentColor" stroke="none" text-anchor="start">キャプション</text>
+  <rect x="100" y="395" width="70" height="22" rx="11" stroke="#7BB661"/>
+  <rect x="180" y="395" width="70" height="22" rx="11" stroke="#7BB661"/>
+  <rect x="260" y="395" width="70" height="22" rx="11" stroke="#7BB661"/>
+  <text x="420" y="110" font-size="21" fill="#7BB661" stroke="none" text-anchor="start" font-weight="700">タグ</text>
+  <text x="440" y="142" font-size="16" fill="currentColor" stroke="none" text-anchor="start">作品名・キャラ名（二次創作）／オリジナル</text>
+  <text x="440" y="168" font-size="16" fill="currentColor" stroke="none" text-anchor="start">内容を表すタグを少しだけ</text>
+  <text x="420" y="225" font-size="21" fill="currentColor" stroke="none" text-anchor="start" font-weight="700">キャプション</text>
+  <text x="440" y="257" font-size="16" fill="currentColor" stroke="none" text-anchor="start">一言の説明・描いた気持ち</text>
+  <text x="420" y="315" font-size="21" fill="currentColor" stroke="none" text-anchor="start" font-weight="700">サイズと公開範囲</text>
+  <text x="440" y="347" font-size="16" fill="currentColor" stroke="none" text-anchor="start">長い辺 2000〜3000px／最初は非公開でもOK</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">投稿はゴールではなく記録。気軽に1枚目を置いてみる</text>
+</svg>

@@ -15,7 +15,8 @@ function cx(...parts: (string | false | null | undefined)[]): string {
 export interface PillProps {
   icon?: IconName;
   iconClass?: string;
-  tone?: 'default' | 'accent' | 'quiet';
+  /** accent = 達成（accent-soft 地）、danger = ストリーク危機（danger-soft 地） */
+  tone?: 'default' | 'accent' | 'quiet' | 'danger';
   class?: string;
   title?: string;
   children?: ComponentChildren;
@@ -24,14 +25,14 @@ export interface PillProps {
 export function Pill({ icon, iconClass, tone = 'default', class: cls, title, children }: PillProps) {
   return (
     <span class={cx('pill', `pill--${tone}`, cls)} title={title}>
-      {icon && <Icon name={icon} size={20} class={iconClass} />}
+      {icon && <Icon name={icon} size={icon === 'freeze' || icon === 'snow' ? 18 : 20} class={iconClass} />}
       <span class="pill__text">{children}</span>
     </span>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Chip（選択可能な小ボタン。高さ 40）
+// Chip（フィルタピル。高さ 40、選択は墨地）
 // ---------------------------------------------------------------------------
 
 export interface ChipProps {
@@ -62,7 +63,8 @@ export function Chip({ selected, onClick, icon, disabled, children }: ChipProps)
 // ---------------------------------------------------------------------------
 
 export interface CardProps {
-  tone?: 'default' | 'soft' | 'dashed';
+  /** soft = accent-soft 地、ink = 墨地、good = 良い点（青緑）、dashed = 破線枠 */
+  tone?: 'default' | 'soft' | 'dashed' | 'ink' | 'good';
   as?: 'section' | 'div' | 'article';
   class?: string;
   style?: JSX.CSSProperties;

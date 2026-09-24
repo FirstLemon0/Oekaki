@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <line x1="300" y1="60" x2="300" y2="420" stroke="#7BB661" stroke-width="2"/>
+  <ellipse cx="300" cy="110" rx="120" ry="34" stroke-width="4"/>
+  <ellipse cx="300" cy="110" rx="104" ry="26" stroke-width="2"/>
+  <path d="M180,110 L180,370 A120,40 0 0 0 420,370 L420,110" stroke-width="4"/>
+  <path d="M180,370 A120,40 0 0 1 420,370" stroke-dasharray="8 8" opacity="0.6"/>
+  <path d="M420,170 C500,170 510,300 420,320" stroke-width="4"/>
+  <path d="M420,195 C475,200 478,285 420,295" stroke-width="2.5"/>
+  <circle cx="120" cy="110" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="120" y="117" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">1</text>
+  <circle cx="330" cy="60" r="15" stroke="#7BB661" stroke-width="2"/>
+  <text x="330" y="67" font-size="18" fill="#7BB661" stroke="none" text-anchor="middle">2</text>
+  <circle cx="530" cy="250" r="15" stroke="currentColor" stroke-width="2"/>
+  <text x="530" y="257" font-size="18" fill="currentColor" stroke="none" text-anchor="middle">3</text>
+  <text x="640" y="110" font-size="18" fill="currentColor" stroke="none" text-anchor="start">① 口の楕円</text>
+  <text x="640" y="140" font-size="18" fill="currentColor" stroke="none" text-anchor="start">② 軸と底の楕円</text>
+  <text x="640" y="170" font-size="18" fill="currentColor" stroke="none" text-anchor="start">③ 取っ手のCカーブ</text>
+  <text x="640" y="230" font-size="18" fill="currentColor" stroke="none" text-anchor="start">底の楕円は口より</text>
+  <text x="640" y="258" font-size="18" fill="currentColor" stroke="none" text-anchor="start">少し太い（深い）</text>
+  <text x="400" y="475" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">マグカップ＝円柱＋Cカーブ。口と底で楕円の度合いを変える</text>
+</svg>

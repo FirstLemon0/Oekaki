@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <line x1="40" y1="150" x2="160" y2="150"/>
+  <line x1="170" y1="160" x2="170" y2="260"/>
+  <circle cx="166" cy="154" r="16" stroke="#7BB661" stroke-dasharray="4 4"/>
+  <text x="110" y="300" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">すき間</text>
+  <text x="110" y="328" font-size="15" fill="currentColor" stroke="none" text-anchor="middle">塗りがもれる原因</text>
+  <line x1="230" y1="150" x2="370" y2="150"/>
+  <line x1="350" y1="130" x2="350" y2="260"/>
+  <circle cx="350" cy="150" r="16" stroke="#7BB661" stroke-dasharray="4 4"/>
+  <text x="300" y="300" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">はみ出し</text>
+  <text x="300" y="328" font-size="15" fill="currentColor" stroke="none" text-anchor="middle">消しゴムで整える</text>
+  <path d="M430,150 L550,150 L550,260" stroke="#7BB661" stroke-width="3.5"/>
+  <text x="490" y="300" font-size="20" fill="#7BB661" stroke="none" text-anchor="middle">ぴったり</text>
+  <text x="490" y="328" font-size="15" fill="currentColor" stroke="none" text-anchor="middle">輪郭は閉じる</text>
+  <path d="M620,270 Q630,200 645,185"/>
+  <path d="M672,158 Q690,138 720,128"/>
+  <text x="675" y="300" font-size="20" fill="currentColor" stroke="none" text-anchor="middle">あえて切る</text>
+  <text x="675" y="328" font-size="15" fill="currentColor" stroke="none" text-anchor="middle">光が当たる所・髪の先</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">輪郭はつなげる。光の当たる所は切ってもよい</text>
+</svg>

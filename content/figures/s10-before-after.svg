@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" font-family="Zen Kaku Gothic New, sans-serif">
+  <rect x="80" y="60" width="260" height="320" rx="6"/>
+  <path d="M170,160 Q210,120 250,160 Q260,230 210,260 Q160,230 170,160 Z" stroke-width="2"/>
+  <line x1="190" y1="190" x2="200" y2="190"/>
+  <line x1="220" y1="190" x2="230" y2="190"/>
+  <text x="210" y="410" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">Before（ステージ0）</text>
+  <line x1="360" y1="220" x2="440" y2="220" stroke="#7BB661" stroke-width="3"/>
+  <path d="M427.4,226.1 L440,220 L427.4,213.9" stroke="#7BB661" stroke-width="3"/>
+  <rect x="460" y="60" width="260" height="320" rx="6" stroke="#7BB661" stroke-width="3"/>
+  <path d="M479.5,343 Q499,283.2 571.8,275.4 L608.2,275.4 Q681,283.2 700.5,343 Z" fill="#4F7FB8" stroke="none"/>
+  <path d="M574.4,246.8 L571.8,280.6 L608.2,280.6 L605.6,246.8 Z" fill="#F6D7C3" stroke="none"/>
+  <path d="M540.6,189.6 Q538,132.4 590,129.8 Q642,132.4 639.4,189.6 Q634.2,236.4 590,257.2 Q545.8,236.4 540.6,189.6 Z" fill="#F6D7C3" stroke="none"/>
+  <path d="M532.8,239 Q519.8,116.8 590,111.6 Q660.2,116.8 647.2,239 L636.8,187 L626.4,153.2 L613.4,176.6 L597.8,150.6 L582.2,179.2 L566.6,150.6 L553.6,181.8 L543.2,187 Z" fill="#5A4A78" stroke="none"/>
+  <ellipse cx="569.2" cy="202.6" rx="6.5" ry="9.1" fill="#3A6EA5" stroke="none"/>
+  <ellipse cx="610.8" cy="202.6" rx="6.5" ry="9.1" fill="#3A6EA5" stroke="none"/>
+  <path d="M540.6,189.6 Q538,132.4 590,129.8 Q642,132.4 639.4,189.6 Q634.2,236.4 590,257.2 Q545.8,236.4 540.6,189.6 Z"/>
+  <path d="M535.4,194.8 Q525,119.4 590,114.2 Q655,119.4 644.6,194.8 M551,148 L566.6,176.6 L579.6,153.2 L595.2,179.2 L608.2,150.6 L621.2,176.6 L631.6,153.2"/>
+  <path d="M574.4,252 L571.8,280.6 M605.6,252 L608.2,280.6 M571.8,280.6 Q512,285.8 486,330 M608.2,280.6 Q668,285.8 694,330"/>
+  <text x="590" y="410" font-size="19" fill="#7BB661" stroke="none" text-anchor="middle">After（ステージ10）</text>
+  <text x="400" y="482" font-size="19" fill="currentColor" stroke="none" text-anchor="middle">ギャラリーで並べる。ここまで続けたこと自体が成果</text>
+</svg>
