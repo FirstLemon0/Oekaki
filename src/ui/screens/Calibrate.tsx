@@ -72,6 +72,7 @@ export function Calibrate() {
       <CanvasScreen
         key={phase}
         engine={engine}
+        lockPen
         task={`校正 ${phase + 1}/3 · ${plan.label}: ${plan.instruction}`}
         counter={`${Math.min(before + n, before + plan.count)}/${total}`}
         onExit={() => navigate(href.settings('scoring'))}

@@ -143,12 +143,13 @@ export function LessonDoneModal({
           </span>
         </div>
       </div>
-      {summary.nextTitle && (
-        <div class="ls-tomorrow">
-          <span class="ls-label">明日はこれ</span>
+      {summary.nextTitle && summary.nextLessonId && (
+        // 前を終えたら次はすぐ開く（日付の縛りなし）。押すとそのまま次のレッスンへ
+        <a class="ls-tomorrow" href={href.lesson(summary.nextLessonId)}>
+          <span class="ls-label">次はこれ</span>
           <span class="ls-tomorrow__title">{summary.nextTitle}</span>
           <Icon name="chevron" size={20} />
-        </div>
+        </a>
       )}
       {choosing && onBoxes && (
         <div class="ls-morechoice" role="group" aria-label="追加ドリルを選ぶ">
@@ -217,7 +218,7 @@ export function StageDoneModal({ summary, node }: { summary: LessonSummary; node
               <span class="ls-next__kicker">NEXT · STAGE {nextOrder}</span>
               <span class="ls-next__title">{nextStageNode.stage.title}</span>
               <span class="ls-next__meta">
-                <span class="num">{nextStageLessons}</span> レッスン · 明日から
+                <span class="num">{nextStageLessons}</span> レッスン · すぐ始められます
               </span>
             </div>
             <Icon name="chevron" size={24} />

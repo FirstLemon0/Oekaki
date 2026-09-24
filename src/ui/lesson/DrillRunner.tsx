@@ -189,7 +189,13 @@ export function DrillRunner({ step, session, lessonId, onFinish, onExit }: Drill
     live.current.entries = rest;
     live.current.finished = false;
     setEntries(rest);
-    engine.loadStrokes(engine.getStrokes().filter((s) => !drop.has(strokeKey(s))));
+    const all = engine.getStrokes();
+    const styles = engine.getStyles();
+    const keep = all.map((s) => !drop.has(strokeKey(s)));
+    engine.loadStrokes(
+      all.filter((_, k) => keep[k]),
+      styles.filter((_, k) => keep[k]),
+    );
     setStrokeCount(engine.getStrokes().length);
     setSheet(null);
     setError(null);
@@ -291,6 +297,7 @@ export function DrillRunner({ step, session, lessonId, onFinish, onExit }: Drill
   return (
     <CanvasScreen
       engine={engine}
+      lockPen
       task={step.instruction}
       counter={counterLabel}
       counterExtra={

@@ -335,6 +335,17 @@
 .today__actions > .btn { flex: 1; min-height: 52px; padding: 0 var(--sp-3); }
 
 .today--done { background: var(--color-accent-soft); border-color: var(--color-accent); }
+.today__next {
+  margin-top: var(--sp-3);
+  padding: 14px var(--sp-4) var(--sp-4);
+  background: var(--color-surface, var(--color-paper));
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md, 12px);
+  display: grid;
+}
+.today__next-label { font-size: var(--text-label); font-weight: 500; color: var(--color-ink-2); }
+.today__next .today__title { margin-top: 2px; }
+.today__next > .btn { margin-top: 14px; }
 
 .today--risk { background: var(--color-sumi); border-color: var(--color-sumi); color: var(--color-on-sumi); }
 .today--risk .today__kicker { color: var(--color-danger-on-dark); }

@@ -120,17 +120,19 @@ describe('replay（偽 DOM）', () => {
   const drawing: Drawing = [line(5, 0), line(4, 1000, 0, 50)];
   const SEGMENTS = 7;
 
+  /** attach で作られる canvas: [0] 表示 / [1] cache（紙＋完了ストローク） / [2] live（進行中） / [3] scratch */
   function setup() {
     const e = createCanvasEngine();
     e.attach(makeHost());
-    const main = canvases[0]!;
-    return { e, main };
+    const [main, cache, live] = canvases as [FakeCanvas, FakeCanvas, FakeCanvas];
+    return { e, main, cache, live };
   }
+  const reset = (...cs: FakeCanvas[]) => cs.forEach((c) => (c.calls.length = 0));
 
   it('loadStrokes の後でも最後まで再生でき、完了で Promise が解決する', async () => {
-    const { e, main } = setup();
+    const { e, main, cache, live } = setup();
     e.loadStrokes(drawing);
-    main.calls.length = 0;
+    reset(main, cache, live);
     let done = false;
     const p = e.replay({ speed: 1 }).then(() => {
       done = true;
@@ -138,8 +140,10 @@ describe('replay（偽 DOM）', () => {
     runToEnd();
     await p;
     expect(done).toBe(true);
-    // 再生中に全区間を 1 回ずつ描き、最後にキャッシュ（完成状態）を貼る
-    expect(count(main, 'quadraticCurveTo')).toBe(SEGMENTS);
+    // 途中は live レイヤーに描き足し、描き終えた線は cache へ完成形を 1 回。終了時に cache を作り直して貼る
+    expect(count(live, 'quadraticCurveTo') + count(live, 'arc')).toBeGreaterThan(0);
+    expect(count(cache, 'quadraticCurveTo')).toBe(SEGMENTS * 2);
+    expect(count(main, 'quadraticCurveTo')).toBe(0);
     expect(main.calls.at(-1)!.name).toBe('drawImage');
     expect(e.getStrokes()).toEqual(drawing);
     expect(rafQueue.size).toBe(0);
@@ -149,25 +153,26 @@ describe('replay（偽 DOM）', () => {
     const e = createCanvasEngine();
     e.loadStrokes(drawing);
     e.attach(makeHost());
-    const main = canvases[0]!;
-    main.calls.length = 0;
+    const cache = canvases[1]!;
+    cache.calls.length = 0;
     const p = e.replay({ speed: 4 });
     runToEnd();
     await p;
-    expect(count(main, 'quadraticCurveTo')).toBe(SEGMENTS);
+    expect(count(cache, 'quadraticCurveTo')).toBe(SEGMENTS * 2);
   });
 
   it('再生途中の cancelReplay: 即解決・完成状態を表示・データと履歴は変わらない', async () => {
-    const { e, main } = setup();
+    const { e, main, cache, live } = setup();
     e.loadStrokes(drawing);
     e.loadStrokes(drawing); // 2 回読んでも履歴は積まれない
     const canUndo = e.canUndo();
-    main.calls.length = 0;
+    reset(main, cache, live);
     const p = e.replay({ speed: 1 });
     advance(20); // 1 本目の途中
-    const partial = count(main, 'quadraticCurveTo');
+    const partial = count(live, 'quadraticCurveTo');
     expect(partial).toBeGreaterThan(0);
     expect(partial).toBeLessThan(SEGMENTS);
+    expect(count(cache, 'quadraticCurveTo')).toBe(0); // まだ描き終えた線はない
 
     e.cancelReplay();
     await expect(p).resolves.toBeUndefined();
@@ -177,21 +182,21 @@ describe('replay（偽 DOM）', () => {
     expect(e.canUndo()).toBe(canUndo);
 
     // 止めた後に時間が進んでも描き足さない
-    const before = main.calls.length;
+    const before = [main, cache, live].map((c) => c.calls.length);
     advance(1000);
-    expect(main.calls.length).toBe(before);
+    expect([main, cache, live].map((c) => c.calls.length)).toEqual(before);
 
     // 2 回目の cancel は無害、再生し直せば最初から全部描く
     e.cancelReplay();
-    main.calls.length = 0;
+    reset(main, cache, live);
     const p2 = e.replay({ speed: 1 });
     runToEnd();
     await p2;
-    expect(count(main, 'quadraticCurveTo')).toBe(SEGMENTS);
+    expect(count(cache, 'quadraticCurveTo')).toBe(SEGMENTS * 2);
   });
 
   it('再生中の loadStrokes / undo / 再度の replay は前の再生を解決して止める', async () => {
-    const { e, main } = setup();
+    const { e, main, cache, live } = setup();
     e.loadStrokes(drawing);
     const p1 = e.replay({ speed: 1 });
     advance(20);
@@ -200,12 +205,12 @@ describe('replay（偽 DOM）', () => {
 
     const p2 = e.replay({ speed: 1 });
     advance(5);
-    main.calls.length = 0;
-    const p3 = e.replay({ speed: 1 }); // 重ねて呼ぶ
+    const p3 = e.replay({ speed: 1 }); // 重ねて呼ぶ（前の再生の終了処理で cache を描き直す）
     await expect(p2).resolves.toBeUndefined();
+    reset(main, cache, live);
     runToEnd();
     await p3;
-    expect(count(main, 'quadraticCurveTo')).toBe(2); // 新しい 3 点のストロークだけ
+    expect(count(cache, 'quadraticCurveTo')).toBe(2 * 2); // 新しい 3 点のストロークだけ（再生中 1 回＋終了時 1 回）
     expect(e.getStrokes()).toEqual([line(3)]);
 
     e.clear();

@@ -20,14 +20,21 @@ export const ERASER_MARGIN = 8;
  * ストロークが点 pt に当たるか。いずれかの線分との距離が「その線分の線幅 + margin」以下ならヒット。
  * 1 点ストロークは点との距離で判定する。
  */
-export function strokeHit(stroke: Stroke, pt: Vec2, baseWidth: number, margin = ERASER_MARGIN): boolean {
+export function strokeHit(
+  stroke: Stroke,
+  pt: Vec2,
+  baseWidth: number,
+  margin = ERASER_MARGIN,
+  /** 筆圧 → 線幅（省略時は lineWidth(baseWidth, p)）。ペンのプリセットごとの幅を使うときに渡す */
+  widthAt: (p: number) => number = (p) => lineWidth(baseWidth, p),
+): boolean {
   const first = stroke[0];
   if (!first) return false;
   if (stroke.length === 1) {
-    return Math.hypot(pt.x - first.x, pt.y - first.y) <= lineWidth(baseWidth, first.p) + margin;
+    return Math.hypot(pt.x - first.x, pt.y - first.y) <= widthAt(first.p) + margin;
   }
   // 境界ボックスで早期除外
-  const maxW = lineWidth(baseWidth, 1) + margin;
+  const maxW = Math.max(widthAt(0), widthAt(1)) + margin;
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -42,7 +49,7 @@ export function strokeHit(stroke: Stroke, pt: Vec2, baseWidth: number, margin = 
   for (let i = 1; i < stroke.length; i++) {
     const a = stroke[i - 1]!;
     const b = stroke[i]!;
-    const w = lineWidth(baseWidth, (a.p + b.p) / 2);
+    const w = widthAt((a.p + b.p) / 2);
     if (distPointToSegment(pt, a, b) <= w + margin) return true;
   }
   return false;

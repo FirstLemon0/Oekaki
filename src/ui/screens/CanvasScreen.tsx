@@ -6,21 +6,46 @@
  * 描いている間は何も動かさない（トースト・アニメなし）。採点シートは sheet に渡す。
  *
  * ツールバー（DESIGN_SYSTEM §2）: ペン・消しゴム・元に戻す・やり直す・全消し・お手本・グリッド・左右反転・
- * シルエット・再生・課題（?）。右横に取っ手 36×48、その下に「グリッド」ミニセグメント（なし／3分割／4分割）。
+ * シルエット・再生・課題（?）。右横に取っ手 36×48、その下に「グリッド」ミニセグメント
+ * （なし／2／3／4／6／8 分割 と 25／50／100 px の 2 段）。
+ *
+ * ペン・消しゴムは、選択中にもう一度タップ（またはロングプレス 400ms）で小パネル（ToolPanels）。
+ * 設定は端末内の好み（localStorage、canvasPrefs）。採点するドリル（lockPen）ではペン・墨に固定する。
+ * 紙に触れたらパネルは閉じる（描いている間は出さない）。左右反転は絵だけ（グリッドは固定）。
  *
  * 紙の大きさが変わったとき（画面の回転など）は、描いた線を「中心合わせ・短辺の比で拡縮」して動かす。
  * お手本（fitTemplate）やドリルの手がかりも同じ規則で作り直されるので、線と目標がずれない。
  */
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { CanvasView, type CanvasEngine, type OverlaySpec } from '@/canvas';
+import { CanvasView, PEN_PRESETS, type CanvasEngine, type EraserStyle, type OverlaySpec, type PenStyle } from '@/canvas';
 import type { StrokePoint } from '@/scoring';
 import { Icon, Slider } from '../components';
 import { uiPrefs } from '../state';
 import { LsIcon } from '../lesson/LsIcon';
 import { rescaleMap, type Size } from '../lesson/drillSetup';
+import {
+  GRID_DIVIDE,
+  GRID_PITCH,
+  gridLabel,
+  gridSpecOf,
+  loadEraserStyle,
+  loadPenStyle,
+  loadRecentColors,
+  pushRecentColor,
+  saveEraserStyle,
+  savePenStyle,
+  saveRecentColors,
+  type GridKey,
+} from './canvasPrefs';
+import { EraserPanel, PenPanel, penDotColor } from './ToolPanels';
 
-export type Grid = 'none' | 'thirds' | 'quarters';
+/** 採点するドリルで使う固定のペン（「ペン」の既定・墨） */
+function lockedPen(): PenStyle {
+  return { preset: 'pen', size: PEN_PRESETS.pen.size, opacity: PEN_PRESETS.pen.opacity, color: undefined };
+}
+
+const LONG_PRESS_MS = 400;
 
 export interface CanvasScreenProps {
   engine: CanvasEngine;
@@ -57,18 +82,19 @@ export interface CanvasScreenProps {
   topCenter?: ComponentChildren;
   /** ツールを減らす（ジェスチャーのミニツールバー） */
   mini?: boolean;
+  /**
+   * 採点する画面（ドリル・なぞり・較正）: ペンを「ペン」・墨に固定する。
+   * 採点は線の精度を見るため。パネルにはその旨だけ出す。
+   */
+  lockPen?: boolean;
 }
-
-const GRID_OPTIONS: { value: Grid; label: string }[] = [
-  { value: 'none', label: 'なし' },
-  { value: 'thirds', label: '3分割' },
-  { value: 'quarters', label: '4分割' },
-];
 
 function ToolButton({
   icon,
   label,
   onClick,
+  onLongPress,
+  expanded,
   selected,
   disabled,
   children,
@@ -76,19 +102,54 @@ function ToolButton({
   icon?: Parameters<typeof Icon>[0]['name'];
   label: string;
   onClick: () => void;
+  /** 400ms 押し続けたとき（このときは onClick を呼ばない） */
+  onLongPress?: () => void;
+  /** 小パネルが開いているか（aria-expanded） */
+  expanded?: boolean;
   selected?: boolean;
   disabled?: boolean;
   children?: ComponentChildren;
 }) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fired = useRef(false);
+  const clear = () => {
+    if (timer.current !== null) clearTimeout(timer.current);
+    timer.current = null;
+  };
+  useEffect(() => clear, []);
   return (
     <button
       type="button"
       class={selected ? 'ls-tool is-selected' : 'ls-tool'}
       aria-label={label}
       aria-pressed={selected === undefined ? undefined : selected}
+      aria-expanded={expanded}
       title={label}
       disabled={disabled}
-      onClick={onClick}
+      onPointerDown={
+        onLongPress
+          ? () => {
+              fired.current = false;
+              clear();
+              timer.current = setTimeout(() => {
+                timer.current = null;
+                fired.current = true;
+                onLongPress();
+              }, LONG_PRESS_MS);
+            }
+          : undefined
+      }
+      onPointerUp={onLongPress ? clear : undefined}
+      onPointerLeave={onLongPress ? clear : undefined}
+      onPointerCancel={onLongPress ? clear : undefined}
+      onContextMenu={onLongPress ? (e) => e.preventDefault() : undefined}
+      onClick={() => {
+        if (fired.current) {
+          fired.current = false;
+          return;
+        }
+        onClick();
+      }}
     >
       {icon ? <Icon name={icon} size={24} /> : children}
     </button>
@@ -98,8 +159,14 @@ function ToolButton({
 export function CanvasScreen(props: CanvasScreenProps) {
   const { engine, overlay } = props;
   const prefs = uiPrefs.value;
+  const lockPen = props.lockPen === true;
   const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
-  const [grid, setGrid] = useState<Grid>('none');
+  const [penStyle, setPenStyle] = useState<PenStyle>(() => loadPenStyle() ?? engine.getPen());
+  const [eraserStyle, setEraserStyle] = useState<EraserStyle>(() => loadEraserStyle());
+  const [recentColors, setRecentColors] = useState<string[]>(() => loadRecentColors());
+  /** 開いている小パネル */
+  const [panel, setPanel] = useState<'pen' | 'eraser' | null>(null);
+  const [grid, setGrid] = useState<GridKey>('none');
   const [flipped, setFlipped] = useState(false);
   const [silhouette, setSilhouette] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -107,7 +174,7 @@ export function CanvasScreen(props: CanvasScreenProps) {
   const [opacityOpen, setOpacityOpen] = useState(false);
   const [opacity, setOpacity] = useState(overlay?.opacity ?? 0.4);
   /** グリッドのツールボタンで戻す先（最後に選んだ分割） */
-  const [lastGrid, setLastGrid] = useState<Exclude<Grid, 'none'>>('thirds');
+  const [lastGrid, setLastGrid] = useState<Exclude<GridKey, 'none'>>('d3');
   const [, setTick] = useState(0);
   const [replaying, setReplaying] = useState(false);
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
@@ -119,12 +186,65 @@ export function CanvasScreen(props: CanvasScreenProps) {
   }, [engine, prefs.penOnly, prefs.leftHanded]);
 
   useEffect(() => {
-    engine.setOptions({ grid, flipped, silhouette });
+    engine.setOptions({ grid: gridSpecOf(grid), flipped, silhouette });
   }, [engine, grid, flipped, silhouette]);
 
   useEffect(() => {
     engine.setTool(tool);
   }, [engine, tool]);
+
+  // ペン・消しゴムの設定（採点するドリルではペン・墨に固定）。色なし＝墨に戻すため color は常に渡す
+  useEffect(() => {
+    engine.setPen(lockPen ? lockedPen() : { ...penStyle, color: penStyle.color });
+  }, [engine, lockPen, penStyle]);
+
+  useEffect(() => {
+    engine.setEraser(eraserStyle);
+  }, [engine, eraserStyle]);
+
+  const changePen = (next: PenStyle) => {
+    if (lockPen) return;
+    setPenStyle(next);
+    savePenStyle(next);
+  };
+  const changeEraser = (next: EraserStyle) => {
+    setEraserStyle(next);
+    saveEraserStyle(next);
+  };
+  const rememberColor = (color: string) => {
+    const list = pushRecentColor(recentColors, color);
+    setRecentColors(list);
+    saveRecentColors(list);
+  };
+
+  /** ツールボタン: 未選択なら選ぶ。選択中にもう一度押したら小パネルを開け閉め */
+  const pickTool = (t: 'pen' | 'eraser') => {
+    if (tool === t) {
+      setPanel(panel === t ? null : t);
+      return;
+    }
+    setTool(t);
+    setPanel(null);
+  };
+  const longPressTool = (t: 'pen' | 'eraser') => {
+    setTool(t);
+    setPanel(t);
+  };
+
+  // 紙に触れたら（描き始めたら）小パネルを閉じる。描いている間は出さない
+  useEffect(() => {
+    const el = paperRef.current;
+    if (!el) return;
+    const close = () => setPanel(null);
+    el.addEventListener('pointerdown', close, true);
+    return () => el.removeEventListener('pointerdown', close, true);
+  }, []);
+
+  // 畳んだとき・採点シートが出たときも閉じる
+  const hasSheet = Boolean(props.sheet);
+  useEffect(() => {
+    if (collapsed || hasSheet) setPanel(null);
+  }, [collapsed, hasSheet]);
 
   // Undo/Redo の可否を追う
   useEffect(() => engine.on('change', () => setTick((t) => t + 1)), [engine]);
@@ -172,7 +292,11 @@ export function CanvasScreen(props: CanvasScreenProps) {
       if (strokes.length > 0) {
         const map = rescaleMap(prev, size);
         onRescaleRef.current?.(map);
-        engine.loadStrokes(strokes.map((s) => s.map(map)));
+        // 線ごとの見た目（ペンの種類・太さ・色）も一緒に戻す
+        engine.loadStrokes(
+          strokes.map((s) => s.map(map)),
+          engine.getStyles(),
+        );
       }
     }
     onSizeRef.current?.(size);
@@ -190,6 +314,24 @@ export function CanvasScreen(props: CanvasScreenProps) {
       setReplaying(false);
     }
   };
+
+  const renderGridItem = (k: GridKey, label: string) => (
+    <button
+      key={k}
+      type="button"
+      role="radio"
+      aria-checked={grid === k}
+      aria-label={gridLabel(k)}
+      title={gridLabel(k)}
+      class={grid === k ? 'ls-gridseg__item is-selected' : 'ls-gridseg__item'}
+      onClick={() => {
+        setGrid(k);
+        if (k !== 'none') setLastGrid(k);
+      }}
+    >
+      {label}
+    </button>
+  );
 
   const rootClass = [
     'ls-canvas',
@@ -256,8 +398,36 @@ export function CanvasScreen(props: CanvasScreenProps) {
         <div class="ls-toolbar-wrap">
           {!collapsed && (
             <div class="ls-toolbar" role="toolbar" aria-label="描画ツール">
-              <ToolButton icon="pen" label="ペン" selected={tool === 'pen'} onClick={() => setTool('pen')} />
-              {!props.mini && <ToolButton icon="eraser" label="消しゴム" selected={tool === 'eraser'} onClick={() => setTool('eraser')} />}
+              <div class="ls-toolbar__pop-host is-static">
+                <ToolButton
+                  label="ペン"
+                  selected={tool === 'pen'}
+                  expanded={panel === 'pen'}
+                  onClick={() => pickTool('pen')}
+                  onLongPress={() => longPressTool('pen')}
+                >
+                  <span class="ls-tool__pen">
+                    <Icon name="pen" size={24} />
+                    <span class="ls-tool__dot" style={{ background: penDotColor(penStyle, lockPen) }} aria-hidden="true" />
+                  </span>
+                </ToolButton>
+                {panel === 'pen' && (
+                  <PenPanel style={penStyle} locked={lockPen} recent={recentColors} onChange={changePen} onCustomColor={rememberColor} />
+                )}
+              </div>
+              {!props.mini && (
+                <div class="ls-toolbar__pop-host is-static">
+                  <ToolButton
+                    icon="eraser"
+                    label="消しゴム"
+                    selected={tool === 'eraser'}
+                    expanded={panel === 'eraser'}
+                    onClick={() => pickTool('eraser')}
+                    onLongPress={() => longPressTool('eraser')}
+                  />
+                  {panel === 'eraser' && <EraserPanel style={eraserStyle} onChange={changeEraser} />}
+                </div>
+              )}
               <ToolButton icon="undo" label="元に戻す" disabled={!engine.canUndo()} onClick={() => engine.undo()} />
               {!props.mini && <ToolButton icon="redo" label="やり直す" disabled={!engine.canRedo()} onClick={() => engine.redo()} />}
               <ToolButton icon="trash" label="全部消す" disabled={!engine.canUndo() && engine.getStrokes().length === 0} onClick={() => engine.clear()} />
@@ -284,7 +454,7 @@ export function CanvasScreen(props: CanvasScreenProps) {
                     selected={grid !== 'none'}
                     onClick={() => setGrid(grid === 'none' ? lastGrid : 'none')}
                   />
-                  <ToolButton icon="flip" label="左右反転" selected={flipped} onClick={() => setFlipped(!flipped)} />
+                  <ToolButton icon="flip" label="絵を左右反転（グリッドは固定）" selected={flipped} onClick={() => setFlipped(!flipped)} />
                   <ToolButton icon="silhouette" label="シルエット" selected={silhouette} onClick={() => setSilhouette(!silhouette)} />
                   <ToolButton icon="play" label={replaying ? '再生を止める' : '描いた順に再生'} selected={replaying} onClick={() => void replay()} />
                   <ToolButton icon="help" label={taskOpen ? '課題を隠す' : '課題を見る'} selected={taskOpen} onClick={() => setTaskOpen(!taskOpen)} />
@@ -305,23 +475,13 @@ export function CanvasScreen(props: CanvasScreenProps) {
             {!collapsed && !props.mini && (
               <div class="ls-gridseg" role="radiogroup" aria-label="グリッド">
                 <span class="ls-gridseg__label" aria-hidden="true">
-                  グリッド
+                  グリッド（分割）
                 </span>
-                {GRID_OPTIONS.map((o) => (
-                  <button
-                    key={o.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={grid === o.value}
-                    class={grid === o.value ? 'ls-gridseg__item is-selected' : 'ls-gridseg__item'}
-                    onClick={() => {
-                      setGrid(o.value);
-                      if (o.value !== 'none') setLastGrid(o.value);
-                    }}
-                  >
-                    {o.label}
-                  </button>
-                ))}
+                {GRID_DIVIDE.map((o) => renderGridItem(o.key, o.label))}
+                <span class="ls-gridseg__label" aria-hidden="true">
+                  方眼 px
+                </span>
+                {GRID_PITCH.map((o) => renderGridItem(o.key, o.label))}
               </div>
             )}
           </div>

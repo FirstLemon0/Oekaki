@@ -1,6 +1,7 @@
 /** 書き出し範囲の計算（純関数）。toWebp の切り詰め用。 */
 import type { Drawing } from '@/scoring/types';
-import { lineWidth } from './smooth';
+import type { StrokeStyle } from './types';
+import { penWidth, resolvePen } from './pen';
 
 export interface Rect {
   x: number;
@@ -16,23 +17,24 @@ export const CROP_MARGIN_MIN = 24;
 
 /**
  * ストロークが実際に塗る範囲（線幅の半分ぶん外側まで含む）。ストロークが無ければ null。
- * 座標が非数の点は無視する。
+ * 座標が非数の点は無視する。styles（getStyles() と同じ並び）を渡すとペンごとの幅で計算する（省略時は baseWidth のペン）。
  */
-export function inkBounds(drawing: Drawing, baseWidth: number): Rect | null {
+export function inkBounds(drawing: Drawing, baseWidth: number, styles?: readonly (StrokeStyle | undefined)[]): Rect | null {
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
   let maxY = -Infinity;
-  for (const s of drawing) {
+  drawing.forEach((s, i) => {
+    const rp = resolvePen(styles?.[i], baseWidth);
     for (const p of s) {
       if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;
-      const r = lineWidth(baseWidth, Number.isFinite(p.p) ? p.p : 0.5) / 2;
+      const r = penWidth(rp, Number.isFinite(p.p) ? p.p : 0.5) / 2 + rp.grain;
       if (p.x - r < minX) minX = p.x - r;
       if (p.y - r < minY) minY = p.y - r;
       if (p.x + r > maxX) maxX = p.x + r;
       if (p.y + r > maxY) maxY = p.y + r;
     }
-  }
+  });
   if (minX === Infinity) return null;
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
@@ -42,8 +44,8 @@ export function inkBounds(drawing: Drawing, baseWidth: number): Rect | null {
  * 塗り範囲 + 余白（長辺 × 8%、最低 24px）を四方に足し、整数 px に広げる。
  * 縦横比は内容のまま（正方形にしない）。ストロークが無ければ null（呼び出し側で紙全体にする）。
  */
-export function cropRect(drawing: Drawing, baseWidth: number): Rect | null {
-  const b = inkBounds(drawing, baseWidth);
+export function cropRect(drawing: Drawing, baseWidth: number, styles?: readonly (StrokeStyle | undefined)[]): Rect | null {
+  const b = inkBounds(drawing, baseWidth, styles);
   if (!b) return null;
   const m = Math.max(CROP_MARGIN_MIN, Math.max(b.width, b.height) * CROP_MARGIN_RATIO);
   const x = Math.floor(b.x - m);

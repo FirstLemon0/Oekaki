@@ -166,6 +166,7 @@ export function TraceRunner({ step, lessonId, session, onFinish, onExit }: Trace
   return (
     <CanvasScreen
       engine={engine}
+      lockPen
       task={step.instruction}
       counter={count > 1 ? `${i + 1}/${count}` : null}
       overlay={overlay}
@@ -224,7 +225,7 @@ export function CopyView({ step, ctx }: { step: CopyStep; ctx: StepCtx }) {
 
   const finish = async () => {
     const ok = await run(async () => {
-      await saveStrokes(engine.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session);
+      await saveStrokes(engine.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session, engine.getStyles());
     });
     if (ok) ctx.onDone();
   };
@@ -271,7 +272,7 @@ export function ConstructView({ step, ctx }: { step: ConstructStep; ctx: StepCtx
   const finish = async () => {
     const ok = await run(async () => {
       const r = rec.current;
-      if (r.saved === null) r.saved = (await saveStrokes(engine.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session)) !== null;
+      if (r.saved === null) r.saved = (await saveStrokes(engine.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session, engine.getStyles())) !== null;
       // 累計（counter があれば count ぶん）。何も描かずに進んだときは足さない
       if (r.saved && !r.bumped) {
         await bumpForStep(step, ctx.session);
@@ -475,7 +476,7 @@ export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
             return;
           }
           void run(async () => {
-            const d = await saveStrokes(engine.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session);
+            const d = await saveStrokes(engine.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session, engine.getStyles());
             setFirst(d);
             if (d) setPhase('mark');
           });
@@ -509,7 +510,7 @@ export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
       error={error}
       onDone={() => {
         void run(async () => {
-          if (!second.current) second.current = await saveStrokes(engine2.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session);
+          if (!second.current) second.current = await saveStrokes(engine2.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session, engine2.getStyles());
           const d = second.current;
           if (d && first) await saveDrawingMeta(d.id, { moshaVariantOf: first.id });
         }).then((ok) => {
@@ -567,11 +568,12 @@ export function FreeStepView({ step, ctx }: { step: FreeStep; ctx: StepCtx }) {
       error={error}
       onDone={() => {
         const strokes = engine.getStrokes();
+        const styles = engine.getStyles();
         if (n === 0 && !saved.current) {
           ctx.onDone();
           return;
         }
-        keep(() => saveStrokes(strokes, kind, ctx.node.lesson.id, ctx.session));
+        keep(() => saveStrokes(strokes, kind, ctx.node.lesson.id, ctx.session, styles));
       }}
     />
   );
@@ -633,7 +635,7 @@ export function CritiqueStepView({ step, ctx }: { step: CritiqueStep; ctx: StepC
       error={error}
       onDone={() => {
         void run(async () => {
-          const d = await saveStrokes(engine.getStrokes(), 'submit', ctx.node.lesson.id, ctx.session);
+          const d = await saveStrokes(engine.getStrokes(), 'submit', ctx.node.lesson.id, ctx.session, engine.getStyles());
           if (d) setDrawing(d);
         });
       }}

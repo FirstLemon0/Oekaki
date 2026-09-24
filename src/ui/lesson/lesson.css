@@ -365,6 +365,8 @@
 }
 .ls-toolbar__grip { width: 4px; height: 20px; border-radius: 2px; background: var(--color-ink-3); }
 .ls-toolbar__pop-host { position: relative; }
+/* ペン・消しゴムの小パネルはツールバー全体（取っ手・グリッドを含む）の外側に出す */
+.ls-toolbar__pop-host.is-static { position: static; }
 .ls-pop {
   position: absolute;
   top: 0;
@@ -383,9 +385,8 @@
 .ls-pop .slider { height: 36px; }
 .ls-pop__val { font-size: 14px; min-width: 40px; text-align: right; }
 .ls-gridseg {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: repeat(3, 44px);
   gap: 2px;
   padding: 4px;
   background: var(--glass);
@@ -394,7 +395,7 @@
   color: var(--color-ink-3);
 }
 .ls-gridseg__item {
-  min-width: 64px;
+  min-width: 0;
   height: 36px;
   border: 0;
   border-radius: 7px;
@@ -405,7 +406,96 @@
   cursor: pointer;
 }
 .ls-gridseg__item.is-selected { background: var(--color-ink); color: var(--color-ink-inverse); font-weight: 500; }
-.ls-gridseg__label { font-size: 10px; color: var(--color-ink-3); text-align: center; padding: 4px 0 2px; }
+.ls-gridseg__label { grid-column: 1 / -1; font-size: 10px; color: var(--color-ink-3); text-align: center; padding: 4px 0 2px; }
+
+/* ペンの現在色（アイコンの下に 10px の丸） */
+.ls-tool__pen { position: relative; display: grid; place-items: center; }
+.ls-tool__dot {
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--glass);
+}
+
+/* ペン・消しゴムの小パネル（glass。当たり判定 48px） */
+.ls-pop.ls-toolpanel {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--sp-2);
+  height: auto;
+  width: 292px;
+  padding: 12px;
+  white-space: normal;
+  z-index: 6;
+}
+.ls-toolpanel__title { font-size: 12px; font-weight: 500; letter-spacing: 0.06em; color: var(--color-ink-2); }
+.ls-toolpanel__note { font-size: 13px; line-height: 1.6; color: var(--color-ink-2); }
+.ls-toolpanel__presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.ls-toolpanel__preset {
+  min-height: 64px;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  padding: 6px 2px 4px;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.ls-toolpanel__preset.is-selected,
+.ls-toolpanel__mode.is-selected { background: var(--color-accent-soft); border-color: var(--color-accent); }
+.ls-toolpanel__row { display: flex; align-items: center; gap: var(--sp-2); min-height: 48px; }
+.ls-toolpanel__label { width: 56px; flex: none; font-size: 12px; color: var(--color-ink-2); }
+.ls-toolpanel__row .slider { flex: 1; min-width: 0; height: 36px; }
+.ls-toolpanel__modes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.ls-toolpanel__mode {
+  min-height: 48px;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.ls-toolpanel__swatches { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0; margin: 0 -4px; }
+.ls-swatch {
+  position: relative;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.ls-swatch__chip {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+.ls-swatch.is-selected .ls-swatch__chip { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.ls-swatch__chip--other {
+  background: conic-gradient(#e4574b, #e9b949, #7bb661, #4aa3c9, #7a6fd0, #d0679e, #e4574b);
+}
+.ls-swatch__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+}
+.ls-swatch--other:focus-within .ls-swatch__chip { outline: 2px solid var(--color-ink-3); outline-offset: 2px; }
 
 /* ペンのみ（左下） */
 .ls-penonly {
@@ -813,6 +903,8 @@
   border-radius: 12px;
 }
 .ls-tomorrow__title { flex: 1; font-size: 16px; font-weight: 700; }
+a.ls-tomorrow { min-height: 48px; color: inherit; text-decoration: none; }
+a.ls-tomorrow:hover { background: var(--color-accent-soft); }
 .ls-tomorrow svg { color: var(--color-ink-3); }
 
 .ls-stage {
@@ -894,7 +986,7 @@
   .ls-toolbar__sep { width: 1px; height: auto; margin: 6px 4px; }
   /* 取っ手は右横、グリッドはその下に縦（横に並べるとカウンターに重なる） */
   .ls-toolbar__aside, .is-left .ls-toolbar__aside { flex-direction: column; align-items: flex-start; }
-  .ls-gridseg__item { min-width: 56px; height: 32px; }
+  .ls-gridseg__item { height: 32px; }
   .ls-pop, .is-left .ls-pop { top: calc(100% + 12px); left: 0; right: auto; }
   .ls-task { top: 92px; max-width: calc(100% - 32px); }
   .ls-canvas__center { top: 84px; }

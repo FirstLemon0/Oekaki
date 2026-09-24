@@ -77,7 +77,7 @@ export function FreeDraw({ save }: { save?: 'before' | 'after' }) {
 
   const finish = async () => {
     const ok = await run(async () => {
-      if (n > 0 && !saved.current) saved.current = await saveStrokes(engine.getStrokes(), freeDrawingKind(save), null);
+      if (n > 0 && !saved.current) saved.current = await saveStrokes(engine.getStrokes(), freeDrawingKind(save), null, undefined, engine.getStyles());
       if (saved.current && save) await markBeforeAfter(saved.current.id, save);
       await recordFreeActivity(activeDrawingMs(spans.current));
     }, SAVE_FAILED);

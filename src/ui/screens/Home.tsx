@@ -111,7 +111,8 @@ function unitLabel(node: PathNode): string {
 // パスのレイアウト（幅 520、中心 x=260 の縦うねり）
 // ---------------------------------------------------------------------------
 
-type NodeState = 'done' | 'today' | 'tomorrow' | 'locked';
+/** 今日＝未完了の最初のレッスン（前を終えたら日付に関係なくすぐ開く）。それより先はロック */
+type NodeState = 'done' | 'today' | 'locked';
 
 type PathItem =
   | { kind: 'unit'; key: string; y: number; label: string; skippable: boolean }
@@ -189,7 +190,7 @@ function layoutStage(
 
     let state: NodeState;
     if (done.has(node.lesson.id)) state = 'done';
-    else if (isNext) state = finishedToday ? 'tomorrow' : 'today';
+    else if (isNext) state = 'today';
     else state = 'locked';
 
     const isGate = node.lesson.kind === 'graduation';
@@ -211,7 +212,7 @@ function layoutStage(
     if (state === 'done') {
       if (!gap) solidEnd = pi;
       if (node.lesson.id === justDone) justIdx = pi;
-    } else if (state === 'today' || state === 'tomorrow') {
+    } else if (state === 'today') {
       solidEnd = pi;
       gap = true;
     } else {
@@ -219,7 +220,7 @@ function layoutStage(
     }
     if (isGate) gateY = y;
     // 今日のノードは題と「今日」ピルぶん下を空ける
-    y += state === 'today' || state === 'tomorrow' ? STEP_Y + 24 : STEP_Y;
+    y += state === 'today' ? STEP_Y + 24 : STEP_Y;
   }
 
   return { items, points, solidEnd, justIdx, gateY, height: y };
@@ -242,13 +243,13 @@ function curve(points: { x: number; y: number }[]): string {
 // ノード
 // ---------------------------------------------------------------------------
 
-/** ロック: 左右に 3px 1 回だけ振れて「明日開きます」 */
+/** ロック: 左右に 3px 1 回だけ振れて「前のレッスンを終えると開きます」 */
 function shake(el: HTMLElement) {
   el.classList.remove('st-shake');
   void el.offsetWidth;
   el.classList.add('st-shake');
   el.addEventListener('animationend', () => el.classList.remove('st-shake'), { once: true });
-  showToast('明日開きます', 'info', 2000);
+  showToast('前のレッスンを終えると開きます', 'info', 2000);
 }
 
 function NodeView({
@@ -263,8 +264,8 @@ function NodeView({
   const { node, state, optional, skipped } = item;
   const lesson = node.lesson;
   const shape = lesson.kind === 'graduation' ? 'gate' : lesson.kind === 'checkpoint' ? 'cp' : 'lesson';
-  const blocked = state === 'locked' || state === 'tomorrow';
-  const stateLabel = { done: '完了', today: '今日', tomorrow: '明日', locked: 'ロック中' }[state];
+  const blocked = state === 'locked';
+  const stateLabel = { done: '完了', today: '今日', locked: 'ロック中' }[state];
   const aria = `${lessonTitle(node)}（${skipped ? '飛ばした · タップで挑戦' : stateLabel}${optional ? ' · 任意' : ''}）`;
 
   const onClick = (e: MouseEvent) => {
@@ -330,7 +331,7 @@ function NodeView({
     <div
       class={`pnode pnode--${state}${optional ? ' pnode--optional' : ''}${skipped ? ' pnode--skipped' : ''}`}
       style={{ left: `${item.x - 60}px`, top: `${item.y - (state === 'today' ? 36 : 32)}px` }}
-      data-today={state === 'today' || state === 'tomorrow' ? 'true' : undefined}
+      data-today={state === 'today' ? 'true' : undefined}
     >
       <button
         type="button"
@@ -346,7 +347,6 @@ function NodeView({
         {optional && <span class="pnode__optional">任意</span>}
       </span>
       {state === 'today' && <span class="pnode__tag">今日</span>}
-      {state === 'tomorrow' && <span class="pnode__tag pnode__tag--quiet">明日</span>}
     </div>
   );
 }
@@ -598,16 +598,25 @@ function TodayCard() {
       <section class="today today--done" aria-label="今日の1歩">
         <span class="today__kicker">
           <Icon name="check" size={16} strokeWidth={2.5} />
-          今日の分は終わり
+          今日の分は終わり。続けるなら次へ
         </span>
-        <h2 class="today__title today__title--sm">明日は{next.lesson.title}</h2>
-        <p class="today__meta">次のノードは明日開きます。続けるなら:</p>
+        <div class="today__next">
+          <span class="today__next-label">次のレッスン</span>
+          <h2 class="today__title today__title--sm">{lessonTitle(next)}</h2>
+          <p class="today__meta">
+            約<span class="num">{next.lesson.minutes}</span>分 · <span class="num">{next.lesson.steps.length}</span>ステップ ·{' '}
+            {stepFlow(next.lesson.steps)}
+          </p>
+          <Button variant="primary" block href={href.lesson(next.lesson.id)}>
+            続ける
+          </Button>
+        </div>
         <div class="today__actions">
           <Button variant="secondary" size="md" href={lastId ? href.lesson(lastId) : href.free()}>
             追加ドリル
           </Button>
           <Button variant="secondary" size="md" href={href.free()}>
-            自由枠 10分
+            自由お絵描き
           </Button>
         </div>
       </section>

@@ -21,7 +21,7 @@ import { Button, Segment } from '../components';
 import { CanvasScreen } from './CanvasScreen';
 import { ReferencePicker, useBlobUrl, useBusy, useCountdown, useEngine } from '../lesson/common';
 import { POSE_VIEWBOX, poseBounds, stickPoseFor, type MannequinPose } from '../lesson/mannequin-poses';
-import { bump, saveStrokes, type LessonSession } from '../lesson/stateBridge';
+import { bump, saveStrokes, type LessonSession, type StrokeStyles } from '../lesson/stateBridge';
 
 /** three の読み込みがこれ以上かかったら 2D で始める */
 const LOAD_TIMEOUT_MS = 6000;
@@ -137,6 +137,8 @@ export function GestureScreen({ step, session, lessonId, onFinish, onExit }: Ges
   const [phase, setPhase] = useState<'draw' | 'compare'>('draw');
   const [mode, setMode] = useState<'side' | 'overlay'>('side');
   const [strokes, setStrokes] = useState<Drawing>([]);
+  /** strokes と同じ並びの線ごとの見た目（保存用） */
+  const stylesRef = useRef<StrokeStyles>([]);
   const [refs, setRefs] = useState<ReferenceImage[] | null>(step.source === 'user' ? null : []);
   const [picked, setPicked] = useState(false);
   const { busy, error, run } = useBusy();
@@ -183,6 +185,7 @@ export function GestureScreen({ step, session, lessonId, onFinish, onExit }: Ges
     commitLivePointer(livePointer.current);
     livePointer.current = null;
     setStrokes(engine.getStrokes());
+    stylesRef.current = engine.getStyles();
     const api = apiRef.current;
     if (api && useMannequin) {
       savedView.current = { i, state: api.getState() };
@@ -237,7 +240,7 @@ export function GestureScreen({ step, session, lessonId, onFinish, onExit }: Ges
       const drawn = strokes;
       const r = rec.current;
       if (!r.saved && drawn.length > 0) {
-        await saveStrokes(drawn, 'lesson', lessonId, session);
+        await saveStrokes(drawn, 'lesson', lessonId, session, stylesRef.current);
       }
       r.saved = true;
       if (!r.bumped) {

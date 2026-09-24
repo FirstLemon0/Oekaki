@@ -18,7 +18,7 @@ import { downscaleToWebp } from '@/data/images';
 import { xpForDrillScore, xpForEvent } from '@/data/xp';
 import type { CounterKind, Drawing, DrawingKind, Progress, StrokeDrawing } from '@/data/types';
 import type { CritiqueResult } from '@/critic';
-import { createCanvasEngine } from '@/canvas';
+import { createCanvasEngine, type StrokeStyle } from '@/canvas';
 import type { Lesson } from '@/content/schema';
 import { completedIds, counters, critiques, drillStats, nextNode, path, profile, progress, reloadData, saveProfile, streak, uiPrefs } from '../state';
 import { baselineToRecord, scorersFor } from './limits';
@@ -127,18 +127,50 @@ export async function bump(kind: CounterKind, n = 1, session?: LessonSession): P
   if (session) session.counterDelta[kind] = (session.counterDelta[kind] ?? 0) + n;
 }
 
-/** ストロークから絵を保存する（長辺 1024 の WebP） */
+/** 線ごとの見た目（ペンの種類・太さ・不透明度・色）。meta.strokeStyles に strokes と同じ並びで入れる */
+export type StrokeStyles = readonly (StrokeStyle | undefined)[];
+
+function isStrokeStyle(v: unknown): v is StrokeStyle {
+  if (typeof v !== 'object' || v === null) return false;
+  const o = v as Record<string, unknown>;
+  return typeof o.preset === 'string' && typeof o.size === 'number' && typeof o.opacity === 'number';
+}
+
+/**
+ * 保存された絵の meta から線ごとの見た目を読む（再生・復元用）。
+ * 無い・壊れているときは undefined（エンジンは旧データのペンで描く）。null は「スタイルなしの線」。
+ */
+export function readStrokeStyles(meta: Record<string, unknown> | null | undefined): (StrokeStyle | undefined)[] | undefined {
+  const raw = meta?.strokeStyles;
+  if (!Array.isArray(raw)) return undefined;
+  const list = raw.map((s) => (isStrokeStyle(s) ? s : undefined));
+  return list.some((s) => s !== undefined) ? list : undefined;
+}
+
+/**
+ * ストロークから絵を保存する（長辺 1024 の WebP）。
+ * styles（engine.getStyles()）を渡すと、画像にも反映し、meta.strokeStyles に保存する
+ * （スタイルの無い線は null。バックアップの JSON でも並びが崩れないように）。
+ */
 export async function saveStrokes(
   strokes: StrokeDrawing,
   kind: DrawingKind,
   lessonId: string | null,
   session?: LessonSession,
+  styles?: StrokeStyles,
 ): Promise<Drawing | null> {
   if (strokes.length === 0) return null;
+  const st = styles && styles.some((s) => s !== undefined) ? strokes.map((_, i) => styles[i]) : undefined;
   const tmp = createCanvasEngine();
-  tmp.loadStrokes(strokes);
+  tmp.loadStrokes(strokes, st);
   const image = await tmp.toWebp(1024);
-  const d = await saveDrawing({ kind, lessonId, image, strokes });
+  const d = await saveDrawing({
+    kind,
+    lessonId,
+    image,
+    strokes,
+    ...(st ? { meta: { strokeStyles: st.map((s) => s ?? null) } } : {}),
+  });
   session?.drawingIds.push(d.id);
   return d;
 }

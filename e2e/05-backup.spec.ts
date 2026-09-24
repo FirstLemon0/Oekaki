@@ -2,9 +2,8 @@
  * バックアップ: 設定から zip を書き出し → IndexedDB を消して再読込 → 読み込み →
  * 進捗が戻ることを確認する。
  *
- * 注: 1日1レッスンの前提（DESIGN.md §6）により、今日1本終えると次のレッスンは
- * 「明日」表示になる（src/ui/screens/Home.tsx）。進捗が戻ったことは L1「完了」・
- * L2「明日」（＝ロックが外れている）で判定する。
+ * 注: 前を終えたら次はすぐ開く（DESIGN.md §6）。進捗が戻ったことは L1「完了」・
+ * L2「今日」（＝ロックが外れている）で判定する。
  */
 import { expect, test, type Page } from '@playwright/test';
 import { drawLine, gotoApp, wipeIndexedDb } from './helpers';
@@ -29,7 +28,7 @@ test.describe('バックアップ', () => {
     await expect(page.getByRole('heading', { name: '今日の分は終わり。' })).toBeVisible();
     await page.getByRole('button', { name: 'ホームへ' }).click();
     await expect(page.getByRole('button', { name: /^L1 .*（完了）$/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: /^L2 .*（明日）$/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^L2 .*（今日）$/ })).toBeVisible();
 
     // 書き出し
     await gotoSettings(page);
@@ -59,6 +58,6 @@ test.describe('バックアップ', () => {
     // 進捗が戻っている
     await gotoApp(page, '#/');
     await expect(page.getByRole('button', { name: /^L1 .*（完了）$/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: /^L2 .*（明日）$/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^L2 .*（今日）$/ })).toBeVisible();
   });
 });

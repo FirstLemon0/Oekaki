@@ -4,12 +4,13 @@
  * 大きく表示、日付・種別、描いた順に再生（src/canvas の replay。ストロークの無い取込画像では出さない）、
  * 批評（4 ブロック）、削除（確認つき）。
  *
- * 再生: 表示中の画像と同じ枠に createCanvasEngine を attach し、loadStrokes → replay({ speed: 2 })。
+ * 再生: 表示中の画像と同じ枠に createCanvasEngine を attach し、loadStrokes(strokes, meta.strokeStyles) → replay({ speed: 2 })。
+ * 線ごとの見た目（ペンの種類・太さ・色）は保存時の meta.strokeStyles。無い旧データは既定のペン。
  * キャンバスはストロークの座標（CSS px）のまま描くので、書き出し範囲（切り詰めなら cropRect、
  * 旧データの紙全体書き出しなら紙の大きさの推定）ぶんの箱を作って枠に合わせて拡大縮小する。
  */
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { createCanvasEngine, cropRect, DEFAULT_OPTIONS, type CanvasEngine, type Rect } from '@/canvas';
+import { createCanvasEngine, cropRect, DEFAULT_OPTIONS, type CanvasEngine, type Rect, type StrokeStyle } from '@/canvas';
 import { deleteDrawing, getCritique, getDrawing } from '@/data/repo';
 import type { Critique, Drawing, StrokeDrawing } from '@/data/types';
 import { Button, CritiqueFixes, CritiqueGood, CritiqueNext, EmptyState, Modal, showToast } from '../components';
@@ -17,6 +18,7 @@ import { formatDate, KIND_LABEL } from '../format';
 import { href, navigate } from '../router';
 import { path } from '../state';
 import { useObjectUrls } from '../useObjectUrl';
+import { readStrokeStyles } from '../lesson/stateBridge';
 
 function CritiqueBlocks({ critique }: { critique: Critique }) {
   const r = critique.response;
@@ -46,8 +48,9 @@ type ReplayMode = 'idle' | 'playing' | 'done';
  * 画像に対応するストローク座標の範囲。保存時の toWebp が切り詰めていれば cropRect と縦横比が一致する。
  * 一致しなければ（切り詰め導入前の絵）紙全体を書き出したものとみなし、原点から画像の縦横比で広げる。
  */
-function sourceRect(strokes: StrokeDrawing, imageAspect: number): Rect {
-  const crop = cropRect(strokes, DEFAULT_OPTIONS.baseWidth);
+function sourceRect(strokes: StrokeDrawing, imageAspect: number, styles?: readonly (StrokeStyle | undefined)[]): Rect {
+  // 保存時と同じく線ごとの太さで範囲を出す（太いペンでも画像と重なるように）
+  const crop = cropRect(strokes, DEFAULT_OPTIONS.baseWidth, styles);
   if (crop && imageAspect > 0 && Math.abs(crop.width / crop.height - imageAspect) / imageAspect < 0.03) return crop;
   let maxX = 1;
   let maxY = 1;
@@ -69,12 +72,15 @@ function shift(strokes: StrokeDrawing, dx: number, dy: number): StrokeDrawing {
 /** 画像の上に重ねる再生面。mode が idle 以外のあいだだけ描画される */
 function ReplayStage({
   strokes,
+  styles,
   imageAspect,
   runId,
   onEnd,
   engineRef,
 }: {
   strokes: StrokeDrawing;
+  /** strokes と同じ並びの線ごとの見た目（無ければ旧データのペン） */
+  styles: (StrokeStyle | undefined)[] | undefined;
   imageAspect: number;
   /** 増えるたびに頭から再生する */
   runId: number;
@@ -83,7 +89,7 @@ function ReplayStage({
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
-  const rect = useMemo(() => sourceRect(strokes, imageAspect), [strokes, imageAspect]);
+  const rect = useMemo(() => sourceRect(strokes, imageAspect, styles), [strokes, imageAspect, styles]);
   const [scale, setScale] = useState<{ x: number; y: number } | null>(null);
 
   // 枠の大きさに合わせる
@@ -108,14 +114,14 @@ function ReplayStage({
     if (!host) return;
     const engine = createCanvasEngine({ penOnly: true, allowMouse: false });
     engine.attach(host);
-    engine.loadStrokes(shift(strokes, rect.x, rect.y));
+    engine.loadStrokes(shift(strokes, rect.x, rect.y), styles);
     engineRef.current = engine;
     return () => {
       engine.cancelReplay();
       engine.detach();
       engineRef.current = null;
     };
-  }, [strokes, rect, engineRef]);
+  }, [strokes, styles, rect, engineRef]);
 
   // 再生（runId が変わるたび）
   useEffect(() => {
@@ -170,6 +176,8 @@ export function GalleryDetail({ id }: { id: string }) {
   }, [id]);
 
   const list = useMemo(() => (drawing ? [drawing] : []), [drawing]);
+  // 再生面の attach は styles の同一性で作り直すので、絵が変わったときだけ読み直す
+  const strokeStyles = useMemo(() => readStrokeStyles(drawing?.meta), [drawing]);
   const urls = useObjectUrls(list);
 
   if (drawing === undefined) return <div class="loading" aria-busy="true" />;
@@ -244,6 +252,7 @@ export function GalleryDetail({ id }: { id: string }) {
             {strokes && mode !== 'idle' && imageAspect > 0 && (
               <ReplayStage
                 strokes={strokes}
+                styles={strokeStyles}
                 imageAspect={imageAspect}
                 runId={runId}
                 engineRef={engineRef}
