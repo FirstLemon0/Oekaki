@@ -345,6 +345,16 @@ export async function unlockLesson(lessonId: string): Promise<void> {
   await saveProfile({ unlockedLessonIds: [...cur, lessonId] });
 }
 
+/** すべてのレッスンを開放する（ホーム一覧・設定 → 練習の「全部開放」）。ストリークや進捗は変えない */
+export async function unlockAllLessons(): Promise<void> {
+  await saveProfile({ unlockedLessonIds: path.value.map((n) => n.lesson.id) });
+}
+
+/** 隠し開放をすべて取り消す（「進捗に戻す」）。完了の記録は残り、ロックは完了状況どおりに戻る */
+export async function resetUnlockedLessons(): Promise<void> {
+  await saveProfile({ unlockedLessonIds: [] });
+}
+
 // ---------------------------------------------------------------------------
 // 外観の反映（テーマ・文字サイズ）
 // ---------------------------------------------------------------------------

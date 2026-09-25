@@ -304,6 +304,58 @@ button.stage-next { border: 0; font: inherit; text-align: left; cursor: default;
 .stage-next__kicker { font-size: 0.625rem; letter-spacing: 0.12em; opacity: 0.7; line-height: 1.4; }
 .stage-next__title { font-size: 0.9375rem; font-weight: 700; line-height: 1.4; }
 
+/* ---- 表示の切替（道／一覧）と一覧（カード） ---- */
+.home-viewbar { flex: none; width: min(var(--path-w), 100%); display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-3); }
+.home-viewbar--list { width: min(720px, 100%); }
+.home-viewbar__actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+
+.home-list { flex: 1; width: 100%; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: thin; padding-bottom: var(--sp-6); }
+.home-list__stage { max-width: 720px; margin: 0 auto var(--sp-6); display: flex; flex-direction: column; gap: 10px; }
+.home-list__stage-head { display: flex; align-items: baseline; gap: var(--sp-3); margin: 0 0 2px; padding: 14px 20px; border-radius: 12px; background: var(--color-sumi); color: var(--color-on-sumi); font-size: var(--text-body); font-weight: 700; line-height: 1.4; }
+.home-list__kicker { flex: none; font-size: 0.625rem; font-weight: 500; letter-spacing: 0.12em; opacity: 0.6; }
+.home-list__stage-title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home-list__count { flex: none; font-size: 0.9375rem; font-weight: 500; }
+.home-list__unit { margin: 10px 0 0; font-size: 0.75rem; font-weight: 500; color: var(--color-ink-2); }
+
+.lcard {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-4);
+  width: 100%;
+  min-height: 88px;
+  padding: 16px 20px;
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.lcard:active { background: var(--color-chip); }
+.lcard--today { background: var(--color-accent-soft); border-color: var(--color-accent); }
+.lcard--locked { color: var(--color-ink-3); cursor: default; }
+.lcard--locked:active { background: var(--color-surface); }
+.lcard.st-shake { animation: stShakeX 0.4s ease-in-out; }
+.lcard__icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; }
+.lcard--done .lcard__icon { background: var(--color-accent); color: var(--color-ink); }
+.lcard--today .lcard__icon { background: var(--color-surface); border: 3px solid var(--color-accent); color: var(--color-ink); }
+.lcard--open .lcard__icon, .lcard--skipped .lcard__icon { background: var(--color-accent-soft); color: var(--color-accent-text); }
+.lcard--locked .lcard__icon { background: var(--color-locked); color: var(--color-ink-3); }
+.lcard__opt { font-size: 0.75rem; font-weight: 700; }
+.lcard__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.lcard__title { font-size: 1rem; font-weight: 500; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lcard__summary { font-size: 0.8125rem; color: var(--color-ink-2); line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lcard--locked .lcard__summary { color: var(--color-ink-3); }
+.lcard__meta { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.lcard__min { font-size: 0.875rem; color: var(--color-ink-2); }
+.lcard--locked .lcard__min { color: var(--color-ink-3); }
+.lcard__chip { padding: 3px 10px; border-radius: 999px; background: var(--color-chip); font-size: 0.6875rem; font-weight: 500; color: var(--color-ink-2); white-space: nowrap; }
+.lcard--today .lcard__chip { background: var(--color-surface); }
+.lcard--locked .lcard__chip { color: var(--color-ink-3); }
+
 /* ---- 右パネル 400 ---- */
 .home__panel {
   grid-area: panel;

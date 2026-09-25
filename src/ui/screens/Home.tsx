@@ -10,16 +10,18 @@
  * 完了アニメ: `#/?justDone=<lessonId>` で来たら、そのノードを塗り（200ms）→ チェックを描き（300ms）
  * → 次区間の道を伸ばす（400ms）。読んだらハッシュは `#/` に戻す（再訪で繰り返さない）。
  */
+import { Fragment } from 'preact';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { PathNode, Step } from '@/content';
 import { stageProgress } from '@/content';
 import { monthlyPromptDue } from '@/data/beforeAfter';
 import { diffDays } from '@/data/date';
 import type { DueReview } from '@/data/review';
-import { Button, CounterChip, Icon, Modal, showToast } from '../components';
+import { Button, CounterChip, Icon, Modal, Segment, showToast } from '../components';
 import { drillName, formatStageOrder, lessonNumber, nf, unitNumber } from '../format';
 import { href, navigate } from '../router';
 import { registerLockTap, unlockHint } from '../unlockTaps';
+import { UnlockAllButtons } from '../UnlockAllButtons';
 import {
   completedIds,
   completedTodayIds,
@@ -116,6 +118,22 @@ function unitLabel(node: PathNode): string {
 /** 今日＝未完了の最初のレッスン（前を終えたら日付に関係なくすぐ開く）。それより先はロック */
 type NodeState = 'done' | 'today' | 'locked' | 'open';
 
+/** ノードの状態（パスと一覧で共通） */
+function nodeState(
+  node: PathNode,
+  done: Set<string>,
+  next: PathNode | undefined,
+  unlocked: ReadonlySet<string>,
+  prevDone: (node: PathNode) => boolean,
+): NodeState {
+  if (done.has(node.lesson.id)) return 'done';
+  if (next?.lesson.id === node.lesson.id) return 'today';
+  // 10 回タップで開放したレッスン（隠し機能・全部開放）と、その先で「前を終えた」レッスン:
+  // 今日と同じ見た目・ラベル「開放」（今日は未完了の最初の 1 本だけ）
+  if (unlocked.has(node.lesson.id) || prevDone(node)) return 'open';
+  return 'locked';
+}
+
 type PathItem =
   | { kind: 'unit'; key: string; y: number; label: string; skippable: boolean }
   | {
@@ -192,13 +210,7 @@ function layoutStage(
       y += STEP_Y;
     }
 
-    let state: NodeState;
-    if (done.has(node.lesson.id)) state = 'done';
-    else if (isNext) state = 'today';
-    // 10 回タップで開放したレッスン（隠し機能）と、その先で「前を終えた」レッスン:
-    // 今日と同じ見た目・ラベル「開放」（今日は未完了の最初の 1 本だけ）
-    else if (unlocked.has(node.lesson.id) || prevDone(node)) state = 'open';
-    else state = 'locked';
+    const state = nodeState(node, done, next, unlocked, prevDone);
 
     const isGate = node.lesson.kind === 'graduation';
     if (isGate) y += 16;
@@ -636,6 +648,156 @@ function PathView({ justDone }: { justDone: string | null }) {
 }
 
 // ---------------------------------------------------------------------------
+// 一覧（カード）表示
+// ---------------------------------------------------------------------------
+
+type HomeView = 'path' | 'list';
+const VIEW_KEY = 'seichotsu.homeView';
+
+function readView(): HomeView {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'path';
+  } catch {
+    return 'path';
+  }
+}
+
+function writeView(v: HomeView): void {
+  try {
+    localStorage.setItem(VIEW_KEY, v);
+  } catch {
+    // 保存できなくても切替自体はできる
+  }
+}
+
+function LessonCard({ node, state, skipped }: { node: PathNode; state: NodeState; skipped: boolean }) {
+  const lesson = node.lesson;
+  const optional = isOptional(node);
+  const blocked = state === 'locked';
+  const stateLabel = { done: '完了', today: '今日', locked: 'ロック中', open: '開放' }[state];
+  const aria = `${lessonTitle(node)}（${skipped ? '飛ばした · タップで挑戦' : stateLabel}${optional ? ' · 任意' : ''}）`;
+  const chip = lesson.kind === 'checkpoint' ? '模写チェックポイント' : lesson.kind === 'graduation' ? '卒業課題' : optional ? '任意' : null;
+
+  let icon;
+  if (skipped) icon = <span class="lcard__opt">任意</span>;
+  else if (state === 'done') icon = <Icon name="check" size={22} strokeWidth={2.5} />;
+  else if (state === 'today') icon = <Icon name="pen" size={20} />;
+  else if (state === 'locked') icon = <Icon name="lock" size={18} />;
+  else icon = <Icon name={lesson.kind === 'checkpoint' ? 'image' : 'pen'} size={20} />;
+
+  const onClick = (e: MouseEvent) => {
+    if (blocked) {
+      tapLocked(lesson.id, lesson.id, e.currentTarget as HTMLElement);
+      return;
+    }
+    navigate(href.lesson(lesson.id));
+  };
+
+  return (
+    <button
+      type="button"
+      class={`lcard lcard--${skipped ? 'skipped' : state}`}
+      aria-label={aria}
+      aria-disabled={blocked || undefined}
+      data-today={state === 'today' ? 'true' : undefined}
+      data-lesson={lesson.id}
+      onClick={onClick}
+    >
+      <span class="lcard__icon" aria-hidden="true">
+        {icon}
+      </span>
+      <span class="lcard__text">
+        <span class="lcard__title">{lessonTitle(node)}</span>
+        <span class="lcard__summary">{lesson.summary}</span>
+      </span>
+      <span class="lcard__meta">
+        <span class="lcard__min num">{lesson.minutes}分</span>
+        {chip && <span class="lcard__chip">{chip}</span>}
+      </span>
+    </button>
+  );
+}
+
+function ListView() {
+  const done = completedIds.value;
+  const unlocked = unlockedIds.value;
+  const skipped = skippedIds.value;
+  const all = path.value;
+  const next = nextNode.value;
+  const prevDone = (n: PathNode) => {
+    const p = all[n.index - 1];
+    return !!p && done.has(p.lesson.id);
+  };
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // 一覧を開いたら「今日」のカードへ（上から 3 割あたり）
+  useLayoutEffect(() => {
+    const host = scrollRef.current;
+    const el = host?.querySelector<HTMLElement>('[data-today="true"]');
+    if (host && el) host.scrollTop = Math.max(0, el.offsetTop - host.offsetTop - host.clientHeight * 0.3);
+  }, []);
+
+  return (
+    <div class="home-list" ref={scrollRef}>
+      {groupByStage(all).map((nodes) => {
+        const stage = nodes[0]!.stage;
+        const sp = stageProgress(all, done, stage.id);
+        let prevUnit = '';
+        return (
+          <section key={stage.id} class="home-list__stage" data-stage={stage.id} aria-label={`STAGE ${formatStageOrder(stage.order)} ${stage.title}`}>
+            <h2 class="home-list__stage-head">
+              <span class="home-list__kicker">STAGE {formatStageOrder(stage.order)}</span>
+              <span class="home-list__stage-title">{stage.title}</span>
+              <span class="home-list__count num">
+                {sp.done}/{sp.total}
+              </span>
+            </h2>
+            {nodes.map((n) => {
+              const head =
+                n.unit.id !== prevUnit ? (
+                  <h3 class="home-list__unit">
+                    ユニット {unitNumber(n.unit.id)} ・ {n.unit.title}
+                  </h3>
+                ) : null;
+              prevUnit = n.unit.id;
+              const state = nodeState(n, done, next, unlocked, prevDone);
+              return (
+                <Fragment key={n.lesson.id}>
+                  {head}
+                  <LessonCard node={n} state={state} skipped={state === 'done' && skipped.has(n.lesson.id)} />
+                </Fragment>
+              );
+            })}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function ViewBar({ view, onChange }: { view: HomeView; onChange: (v: HomeView) => void }) {
+  return (
+    <div class={`home-viewbar${view === 'list' ? ' home-viewbar--list' : ''}`}>
+      <Segment<HomeView>
+        size="sm"
+        label="表示"
+        value={view}
+        options={[
+          { value: 'path', label: '道' },
+          { value: 'list', label: '一覧' },
+        ]}
+        onChange={onChange}
+      />
+      {view === 'list' && (
+        <div class="home-viewbar__actions">
+          <UnlockAllButtons />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // 上部バー
 // ---------------------------------------------------------------------------
 
@@ -938,12 +1100,24 @@ function NoticeRow() {
 
 export function Home() {
   const justDone = useJustDone();
+  const [view, setView] = useState<HomeView>(readView);
+  const changeView = (v: HomeView) => {
+    setView(v);
+    writeView(v);
+  };
   return (
     <div class="home">
       <TopBar />
-      <section class="home__path" aria-label="パス">
-        <StageBanner />
-        <PathView justDone={justDone} />
+      <section class={`home__path${view === 'list' ? ' home__path--list' : ''}`} aria-label={view === 'list' ? '一覧' : 'パス'}>
+        <ViewBar view={view} onChange={changeView} />
+        {view === 'list' ? (
+          <ListView />
+        ) : (
+          <>
+            <StageBanner />
+            <PathView justDone={justDone} />
+          </>
+        )}
       </section>
       <aside class="home__panel" aria-label="今日">
         <TodayCard />

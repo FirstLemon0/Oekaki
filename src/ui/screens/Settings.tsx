@@ -17,6 +17,7 @@ import { Button, Icon, ListRow, Modal, Segment, Stepper, TextField, Toggle, show
 import { formatBytes, yyyymmdd } from '../format';
 import { href, navigate } from '../router';
 import { critiques, persisted, profile, reloadData, saveSettings, settings, uiPrefs } from '../state';
+import { UnlockAllButtons } from '../UnlockAllButtons';
 
 type SectionId = 'ai' | 'scoring' | 'practice' | 'data' | 'appearance' | 'about';
 
@@ -291,6 +292,9 @@ function PracticeGroup() {
       </ListRow>
       <ListRow title="復習を差し込む" desc="レッスンの始めに、点が落ちたドリルの復習を出します。出ても「スキップ」できます">
         <Toggle label="復習を差し込む" checked={s?.reviewWarmup !== false} onChange={(v) => void saveSettings({ reviewWarmup: v })} />
+      </ListRow>
+      <ListRow title="レッスンの開放" desc="全部開放しても、ストリークや進捗は変わりません。「進捗に戻す」で完了状況どおりのロックに戻ります">
+        <UnlockAllButtons size="md" />
       </ListRow>
       <ListRow title="利き手" desc="ツールバーと完了ボタンの位置が入れ替わります（キャンバスの「反対側へ」でも切り替わります）">
         <Segment<'right' | 'left'>
