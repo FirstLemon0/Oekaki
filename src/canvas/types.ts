@@ -3,8 +3,99 @@ import type { Drawing, Stroke } from '@/scoring/types';
 
 export type { Drawing, Stroke, StrokePoint } from '@/scoring/types';
 
-/** 'guide' は補助線（採点・本数・累計に数えない薄い線。StrokeStyle の preset 'guide'） */
-export type Tool = 'pen' | 'eraser' | 'guide';
+/**
+ * 'guide' は補助線（採点・本数・累計に数えない薄い線。StrokeStyle の preset 'guide'）。
+ * v2（契約 1b）: fill 塗りつぶし / eyedropper スポイト / select-rect・select-lasso 選択 /
+ * shape-line・shape-rect・shape-ellipse 図形 / hand 手のひら（ビューのパン）。
+ */
+export type Tool =
+  | 'pen'
+  | 'eraser'
+  | 'guide'
+  | 'fill'
+  | 'eyedropper'
+  | 'select-rect'
+  | 'select-lasso'
+  | 'shape-line'
+  | 'shape-rect'
+  | 'shape-ellipse'
+  | 'hand';
+
+/* ---------------- 契約 1b: レイヤー・選択・ビュー・操作履歴 ---------------- */
+
+export type BlendMode = 'normal' | 'multiply' | 'screen';
+
+/** レイヤー 1 枚の設定。並びは getLayers() の順（添字 0 がいちばん下）。 */
+export interface LayerInfo {
+  id: string;
+  name: string;
+  visible: boolean;
+  /** 0..1 */
+  opacity: number;
+  locked: boolean;
+  blend: BlendMode;
+}
+
+/** 選択範囲（キャンバス座標 CSS px）。 */
+export type SelectionMask =
+  | { kind: 'rect'; x: number; y: number; w: number; h: number }
+  | { kind: 'lasso'; points: { x: number; y: number }[] };
+
+/** 2D アフィン行列 a b c d e f（CSS matrix() と同じ: x' = a x + c y + e, y' = b x + d y + f）。 */
+export type Mat = [number, number, number, number, number, number];
+
+/** 表示のビュー。画面座標 = 反転(zoom × 回転(rotationDeg) × キャンバス座標 + (panX, panY))。 */
+export interface ViewState {
+  /** 0.25..8 */
+  zoom: number;
+  panX: number;
+  panY: number;
+  rotationDeg: number;
+}
+
+/**
+ * 操作履歴 1 手（再生・保存・Undo の単位）。座標はすべてキャンバス座標（CSS px、ビューに依存しない）。
+ * stroke は pen / eraser / guide / 図形（点列に展開済み）。
+ */
+export type CanvasOp =
+  | { kind: 'stroke'; layer: string; points: Stroke; style: StrokeStyle }
+  | { kind: 'fill'; layer: string; x: number; y: number; color: string; tolerance: number; reference: 'layer' | 'all' }
+  | { kind: 'transform'; layer: string; mask: SelectionMask; matrix: Mat }
+  | { kind: 'delete'; layer: string; mask: SelectionMask }
+  | { kind: 'layer-add'; layer: LayerInfo; index: number }
+  | { kind: 'layer-remove'; layer: string }
+  | { kind: 'layer-move'; layer: string; index: number }
+  | { kind: 'layer-set'; layer: string; patch: Partial<Omit<LayerInfo, 'id'>> }
+  | { kind: 'layer-merge-down'; layer: string }
+  | { kind: 'layer-duplicate'; layer: string; newId: string }
+  | { kind: 'layer-clear'; layer: string };
+
+/**
+ * 保存形式。layers は **ops を適用する前** のレイヤー（ふつうは空のレイヤー 1 枚）。
+ * loadDocument は layers から始めて ops を順に適用する。width/height は紙の大きさ（CSS px）。
+ */
+export interface CanvasDocument {
+  v: 2;
+  width: number;
+  height: number;
+  layers: LayerInfo[];
+  active: string;
+  ops: CanvasOp[];
+}
+
+export interface FillOptions {
+  /** 0..255（RGBA の最大差）。既定 32 */
+  tolerance: number;
+  /** 'layer': アクティブレイヤーだけを境界に使う / 'all': 見えているレイヤーの合成結果 */
+  reference: 'layer' | 'all';
+}
+
+export interface ToPngOptions {
+  /** 既定 false（紙色を敷く）。true で透明背景 */
+  transparent?: boolean;
+  /** 既定 false（紙全体）。true で内容の範囲＋余白（toWebp と同じ規則） */
+  crop?: boolean;
+}
 
 /** ペンの種類。見た目のパラメータは PEN_PRESETS（pen.ts）。 */
 export type PenPreset = 'pencil' | 'pen' | 'brush' | 'marker';
@@ -159,8 +250,54 @@ export interface CanvasEngine {
   size(): { width: number; height: number };
   on(event: 'strokeend', cb: (s: Stroke) => void): () => void;
   on(event: 'change', cb: () => void): () => void;
-  /** ペン／消しゴム設定が変わったとき */
+  /** ペン／消しゴム設定が変わったとき（スポイトで色を拾ったときも） */
   on(event: 'toolchange', cb: () => void): () => void;
+  /** layerschange: レイヤーの並び・設定・アクティブ / viewchange: ズーム・パン・回転 / selectionchange: 選択・変形プレビュー / opsend: 操作 1 手を積んだ・戻した */
+  on(event: 'layerschange' | 'viewchange' | 'selectionchange' | 'opsend', cb: () => void): () => void;
+
+  /* ---------------- 契約 1b ---------------- */
+  /** 下から順（コピー） */
+  getLayers(): LayerInfo[];
+  getActiveLayer(): string;
+  setActiveLayer(id: string): void;
+  /** 既定はアクティブレイヤーのすぐ上。作ったレイヤーがアクティブになる */
+  addLayer(opts?: { name?: string; index?: number }): LayerInfo;
+  /** 最後の 1 枚は消せない */
+  removeLayer(id: string): void;
+  duplicateLayer(id: string): LayerInfo;
+  /** すぐ下のレイヤーへ結合（下のレイヤーの設定が残る） */
+  mergeDown(id: string): void;
+  moveLayer(id: string, index: number): void;
+  setLayer(id: string, patch: Partial<Omit<LayerInfo, 'id'>>): void;
+  clearLayer(id: string): void;
+  /** 長辺 size px の透明背景 PNG */
+  getLayerThumbnail(id: string, size: number): Promise<Blob>;
+
+  setFill(opts: Partial<FillOptions>): void;
+  getFill(): FillOptions;
+  /** 見えているレイヤーの合成結果の色 `#RRGGBB`（紙色は含めない）。透明なら null */
+  pickColor(x: number, y: number): string | null;
+
+  getSelection(): SelectionMask | null;
+  setSelection(mask: SelectionMask | null): void;
+  selectAll(): void;
+  /** 選択範囲の変形プレビュー（元の位置からの行列。何度でも上書き） */
+  transformSelection(matrix: Mat): void;
+  commitTransform(): void;
+  cancelTransform(): void;
+  deleteSelection(): void;
+  isTransforming(): boolean;
+
+  getView(): ViewState;
+  setView(patch: Partial<ViewState>): void;
+  resetView(): void;
+  fitView(): void;
+  toCanvasPoint(clientX: number, clientY: number): { x: number; y: number };
+  toClientPoint(x: number, y: number): { x: number; y: number };
+
+  getDocument(): CanvasDocument;
+  loadDocument(doc: CanvasDocument): void;
+  toPng(maxEdge: number, opts?: ToPngOptions): Promise<Blob>;
 }
 
 export { PEN_PRESETS, PALETTE_COLORS, type PenPresetSpec, type PaletteColor } from './pen';

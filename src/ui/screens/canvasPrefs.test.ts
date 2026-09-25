@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_ERASER,
+  DEFAULT_FILL,
   gridLabel,
   gridSpecOf,
   parseEraserStyle,
+  parseFillPrefs,
   parsePenStyle,
+  parseShapeTool,
   parseRecentColors,
   pushRecentColor,
+  toleranceFromPercent,
+  toleranceToPercent,
 } from './canvasPrefs';
 
 describe('canvasPrefs', () => {
@@ -33,13 +38,25 @@ describe('canvasPrefs', () => {
     expect(parseEraserStyle({ size: 20.4 })).toEqual({ size: 20 });
     expect(parseEraserStyle({ mode: 'partial' })).toEqual({ size: 12 });
   });
-  it('直近の任意色: 3 つまで・重複は先頭へ', () => {
+  it('直近の任意色: 6 つまで・重複は先頭へ', () => {
     let list = parseRecentColors(['#111111', 'bad', '#222222']);
     expect(list).toEqual(['#111111', '#222222']);
-    list = pushRecentColor(list, '#333333');
-    list = pushRecentColor(list, '#444444');
-    expect(list).toEqual(['#444444', '#333333', '#111111']);
-    expect(pushRecentColor(list, '#111111')).toEqual(['#111111', '#444444', '#333333']);
+    for (const c of ['#333333', '#444444', '#555555', '#666666', '#777777']) list = pushRecentColor(list, c);
+    expect(list).toEqual(['#777777', '#666666', '#555555', '#444444', '#333333', '#111111']);
+    expect(pushRecentColor(list, '#111111')).toEqual(['#111111', '#777777', '#666666', '#555555', '#444444', '#333333']);
+  });
+  it('塗りつぶし: 許容値は 0..255 に丸め、参照は layer / all。表示は 0..100', () => {
+    expect(parseFillPrefs(null)).toEqual(DEFAULT_FILL);
+    expect(parseFillPrefs({ tolerance: 400, reference: 'all' })).toEqual({ tolerance: 255, reference: 'all' });
+    expect(parseFillPrefs({ tolerance: -3, reference: 'x' })).toEqual({ tolerance: 0, reference: 'layer' });
+    expect(toleranceFromPercent(100)).toBe(255);
+    expect(toleranceFromPercent(50)).toBe(128);
+    expect(toleranceToPercent(32)).toBe(13);
+    expect(toleranceToPercent(toleranceFromPercent(40))).toBe(40);
+  });
+  it('図形: 既定は直線、知らない値も直線', () => {
+    expect(parseShapeTool('shape-ellipse')).toBe('shape-ellipse');
+    expect(parseShapeTool('circle')).toBe('shape-line');
   });
   it('グリッド: キーから GridSpec と名前', () => {
     expect(gridSpecOf('none')).toBe('none');

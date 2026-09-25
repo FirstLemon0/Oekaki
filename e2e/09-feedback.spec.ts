@@ -102,6 +102,7 @@ test.describe('実機フィードバック 3', () => {
 
     // 保存（終わる）したら下書きは消える
     await page.getByRole('button', { name: '終わる' }).click();
+    await page.getByRole('button', { name: '保存して終わる' }).click();
     await expect(page.getByRole('link', { name: /自由お絵描き/ })).toBeVisible();
     expect(await page.evaluate(() => sessionStorage.getItem('seichotsu.draft.free'))).toBeNull();
   });

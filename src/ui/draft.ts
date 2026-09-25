@@ -2,6 +2,8 @@
  * 描きかけの下書き（sessionStorage）。実機フィードバック: 戻る操作で描いた線が消えた。
  *
  * 描いている間は、線が変わるたび（1 秒まとめて）に getHistory() と紙の大きさを保存する。
+ * フルツール（お絵描き v2）でレイヤー・塗りつぶしなどを使っているときは、文書（getDocument()）も一緒に残し、
+ * 開き直したときは loadDocument で戻す（history は互換のため同時に持つ）。
  * 同じステップを開き直したとき、下書きがあれば「続きから／捨てる」を出して loadHistory で戻す。
  * 保存が済んだら（または捨てたら）消す。容量が足りないなどで保存できないときは静かに諦める。
  *
@@ -9,11 +11,15 @@
  */
 import type { StrokeHistory } from '@/canvas';
 import { readStrokeHistory } from './lesson/stateBridge';
+import { readDrawingDoc } from './paint/canvasDoc';
+import type { CanvasDocument } from './paint/types';
 
 const PREFIX = 'seichotsu.draft.';
 
 export interface Draft {
   history: StrokeHistory;
+  /** レイヤー等を使った絵の文書（あれば loadDocument で戻す） */
+  doc?: CanvasDocument;
   /** 保存したときの紙の大きさ（CSS px）。開き直したときに大きさが違えば rescaleMap で合わせる */
   size: { width: number; height: number };
   savedAt: string;
@@ -33,16 +39,22 @@ function storage(): Storage | null {
   }
 }
 
-export function saveDraft(key: string, history: StrokeHistory, size: { width: number; height: number }): void {
+export function saveDraft(
+  key: string,
+  history: StrokeHistory,
+  size: { width: number; height: number },
+  doc?: CanvasDocument | null,
+): void {
   const s = storage();
   if (!s) return;
   try {
-    if (history.strokes.length === 0) {
+    if (history.strokes.length === 0 && !(doc && doc.ops.length > 0)) {
       s.removeItem(key);
       return;
     }
     const body: Draft = {
       history: { strokes: history.strokes, styles: history.styles.map((st) => st ?? null) as StrokeHistory['styles'] },
+      ...(doc ? { doc } : {}),
       size: { width: size.width, height: size.height },
       savedAt: new Date().toISOString(),
     };
@@ -59,11 +71,13 @@ export function loadDraft(key: string): Draft | null {
     const raw = s.getItem(key);
     if (!raw) return null;
     const o = JSON.parse(raw) as Record<string, unknown>;
-    const history = readStrokeHistory({ history: o.history });
+    const doc = readDrawingDoc({ doc: o.doc });
+    const history = readStrokeHistory({ history: o.history }) ?? (doc ? { strokes: [], styles: [] } : undefined);
     const size = o.size as { width?: unknown; height?: unknown } | undefined;
     if (!history || !size || !(Number(size.width) > 0) || !(Number(size.height) > 0)) return null;
     return {
       history,
+      ...(doc ? { doc } : {}),
       size: { width: Number(size.width), height: Number(size.height) },
       savedAt: typeof o.savedAt === 'string' ? o.savedAt : '',
     };

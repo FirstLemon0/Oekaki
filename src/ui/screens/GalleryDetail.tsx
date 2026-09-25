@@ -10,6 +10,11 @@
  * （消しゴムも描いた順に消える）。範囲（sourceRect）は従来どおり strokes（消えた所を除いた線）から出す。
  * キャンバスはストロークの座標（CSS px）のまま描くので、書き出し範囲（切り詰めなら cropRect、
  * 旧データの紙全体書き出しなら紙の大きさの推定）ぶんの箱を作って枠に合わせて拡大縮小する。
+ *
+ * お絵描き v2: meta.doc（レイヤー等を使った絵の CanvasDocument）があれば、紙の大きさ（doc.width × doc.height）の
+ * 箱に attach して loadDocument → replay（塗りつぶし・変形・レイヤー操作も順に再現）。
+ * 「PNG で書き出す」: 紙色つきの PNG（長辺 2048）をダウンロードする。文書・履歴・線があればエンジンで描き直し、
+ * 取込画像はそのまま PNG に変換する。
  */
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { createCanvasEngine, cropRect, DEFAULT_OPTIONS, type CanvasEngine, type Rect, type StrokeHistory, type StrokeStyle } from '@/canvas';
@@ -21,6 +26,65 @@ import { href, navigate } from '../router';
 import { path } from '../state';
 import { useObjectUrls } from '../useObjectUrl';
 import { readStrokeHistory, readStrokeStyles } from '../lesson/stateBridge';
+import { downloadBlob, exportFileName, readDrawingDoc } from '../paint/canvasDoc';
+import type { CanvasDocument } from '../paint/types';
+import { PaintIcon } from '../paint/PaintIcon';
+
+/** 線の無い絵（塗りだけの文書）の再生で渡す空の線（毎回同じ参照にして再生面を作り直さない） */
+const NO_STROKES: StrokeDrawing = [];
+
+const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
+
+/**
+ * 画面外の箱にエンジンを attach して、紙色つきの PNG（長辺 2048）を作る。
+ * 文書（doc）→ 履歴（history）→ 線（strokes）の順に使えるものを使う。どれも無ければ保存画像を PNG に変換する。
+ */
+async function drawingPng(
+  drawing: Drawing,
+  src: { doc?: CanvasDocument; history?: StrokeHistory; strokes: StrokeDrawing | null; styles?: (StrokeStyle | undefined)[] },
+): Promise<Blob> {
+  if (!src.doc && !src.history && !src.strokes) {
+    const bmp = await createImageBitmap(drawing.image);
+    const c = document.createElement('canvas');
+    c.width = bmp.width;
+    c.height = bmp.height;
+    c.getContext('2d')?.drawImage(bmp, 0, 0);
+    bmp.close();
+    return new Promise<Blob>((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('png'))), 'image/png'));
+  }
+  let w = 0;
+  let h = 0;
+  if (src.doc) {
+    w = src.doc.width;
+    h = src.doc.height;
+  } else {
+    for (const st of src.history?.strokes ?? src.strokes ?? []) {
+      for (const p of st) {
+        if (p.x > w) w = p.x;
+        if (p.y > h) h = p.y;
+      }
+    }
+    w += 48;
+    h += 48;
+  }
+  const host = document.createElement('div');
+  host.setAttribute('aria-hidden', 'true');
+  Object.assign(host.style, { position: 'fixed', left: '-100000px', top: '0', width: `${Math.ceil(w)}px`, height: `${Math.ceil(h)}px`, pointerEvents: 'none' });
+  document.body.appendChild(host);
+  const engine = createCanvasEngine({ penOnly: true, allowMouse: false });
+  try {
+    engine.attach(host);
+    await nextFrame();
+    await nextFrame();
+    if (src.doc) engine.loadDocument(src.doc);
+    else if (src.history) engine.loadHistory(src.history);
+    else engine.loadStrokes(src.strokes ?? [], src.styles);
+    return await engine.toPng(2048);
+  } finally {
+    engine.detach();
+    host.remove();
+  }
+}
 
 function CritiqueBlocks({ critique }: { critique: Critique }) {
   const r = critique.response;
@@ -76,11 +140,14 @@ function ReplayStage({
   strokes,
   styles,
   history,
+  doc,
   imageAspect,
   runId,
   onEnd,
   engineRef,
 }: {
+  /** レイヤー等を使った絵の文書（あれば紙の大きさの箱で loadDocument → replay） */
+  doc: CanvasDocument | undefined;
   strokes: StrokeDrawing;
   /** strokes と同じ並びの線ごとの見た目（無ければ旧データのペン） */
   styles: (StrokeStyle | undefined)[] | undefined;
@@ -94,7 +161,13 @@ function ReplayStage({
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
-  const rect = useMemo(() => sourceRect(strokes, imageAspect, styles), [strokes, imageAspect, styles]);
+  const rect = useMemo(() => {
+    if (!doc) return sourceRect(strokes, imageAspect, styles);
+    // 文書: 切り詰めた範囲が画像と同じ縦横比ならそこを、違えば（塗りが線より広いなど）紙全体を見せる
+    const crop = strokes.length > 0 ? cropRect(strokes, DEFAULT_OPTIONS.baseWidth, styles) : null;
+    if (crop && imageAspect > 0 && Math.abs(crop.width / crop.height - imageAspect) / imageAspect < 0.03) return crop;
+    return { x: 0, y: 0, width: doc.width, height: doc.height };
+  }, [doc, strokes, imageAspect, styles]);
   const [scale, setScale] = useState<{ x: number; y: number } | null>(null);
 
   // 枠の大きさに合わせる
@@ -119,7 +192,8 @@ function ReplayStage({
     if (!host) return;
     const engine = createCanvasEngine({ penOnly: true, allowMouse: false });
     engine.attach(host);
-    if (history) engine.loadHistory({ strokes: shift(history.strokes, rect.x, rect.y), styles: history.styles });
+    if (doc) engine.loadDocument(doc);
+    else if (history) engine.loadHistory({ strokes: shift(history.strokes, rect.x, rect.y), styles: history.styles });
     else engine.loadStrokes(shift(strokes, rect.x, rect.y), styles);
     engineRef.current = engine;
     return () => {
@@ -127,7 +201,7 @@ function ReplayStage({
       engine.detach();
       engineRef.current = null;
     };
-  }, [strokes, styles, history, rect, engineRef]);
+  }, [doc, strokes, styles, history, rect, engineRef]);
 
   // 再生（runId が変わるたび）
   useEffect(() => {
@@ -147,12 +221,22 @@ function ReplayStage({
       <div
         class="replay__host"
         ref={hostRef}
-        style={{
-          width: `${rect.width}px`,
-          height: `${rect.height}px`,
-          transform: scale ? `scale(${scale.x}, ${scale.y})` : undefined,
-          visibility: scale ? undefined : 'hidden',
-        }}
+        style={
+          doc
+            ? {
+                // 文書は紙の大きさのまま描き、表示したい範囲（rect）を枠に合わせる
+                width: `${doc.width}px`,
+                height: `${doc.height}px`,
+                transform: scale ? `scale(${scale.x}, ${scale.y}) translate(${-rect.x}px, ${-rect.y}px)` : undefined,
+                visibility: scale ? undefined : 'hidden',
+              }
+            : {
+                width: `${rect.width}px`,
+                height: `${rect.height}px`,
+                transform: scale ? `scale(${scale.x}, ${scale.y})` : undefined,
+                visibility: scale ? undefined : 'hidden',
+              }
+        }
       />
     </div>
   );
@@ -185,6 +269,8 @@ export function GalleryDetail({ id }: { id: string }) {
   // 再生面の attach は styles の同一性で作り直すので、絵が変わったときだけ読み直す
   const strokeStyles = useMemo(() => readStrokeStyles(drawing?.meta), [drawing]);
   const strokeHistory = useMemo(() => readStrokeHistory(drawing?.meta), [drawing]);
+  const strokeDoc = useMemo(() => readDrawingDoc(drawing?.meta), [drawing]);
+  const [exporting, setExporting] = useState(false);
   const urls = useObjectUrls(list);
 
   if (drawing === undefined) return <div class="loading" aria-busy="true" />;
@@ -201,6 +287,21 @@ export function GalleryDetail({ id }: { id: string }) {
 
   const lesson = drawing.lessonId ? path.value.find((n) => n.lesson.id === drawing.lessonId)?.lesson : undefined;
   const strokes = drawing.strokes && drawing.strokes.some((st) => st.length > 0) ? drawing.strokes : null;
+  /** 再生できるか（線か、レイヤー等の文書がある） */
+  const replayable = strokes !== null || strokeDoc !== undefined;
+
+  const exportPng = async () => {
+    setExporting(true);
+    try {
+      const blob = await drawingPng(drawing, { doc: strokeDoc, history: strokeHistory, strokes, styles: strokeStyles });
+      downloadBlob(blob, exportFileName(drawing.kind, new Date(drawing.createdAt)));
+      showToast('PNG で書き出しました');
+    } catch {
+      showToast('書き出せませんでした', 'danger');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const startReplay = () => {
     setMode('playing');
@@ -228,7 +329,13 @@ export function GalleryDetail({ id }: { id: string }) {
           <span class="detail__date num">{formatDate(drawing.createdAt)}</span>
         </div>
         <div class="detail__actions">
-          {strokes &&
+          <Button variant="secondary" disabled={exporting} onClick={() => void exportPng()}>
+            <span class="pt-btnicon">
+              <PaintIcon name="download" size={20} />
+              PNG で書き出す
+            </span>
+          </Button>
+          {replayable &&
             (mode === 'playing' ? (
               <Button variant="secondary" icon="close" onClick={stopReplay}>
                 止める
@@ -256,9 +363,10 @@ export function GalleryDetail({ id }: { id: string }) {
                 if (img.naturalWidth > 0 && img.naturalHeight > 0) setImageAspect(img.naturalWidth / img.naturalHeight);
               }}
             />
-            {strokes && mode !== 'idle' && imageAspect > 0 && (
+            {replayable && mode !== 'idle' && imageAspect > 0 && (
               <ReplayStage
-                strokes={strokes}
+                doc={strokeDoc}
+                strokes={strokes ?? NO_STROKES}
                 styles={strokeStyles}
                 history={strokeHistory}
                 imageAspect={imageAspect}

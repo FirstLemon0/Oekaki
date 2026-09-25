@@ -23,7 +23,9 @@ import { Button, Segment } from '../components';
 import { CanvasScreen } from './CanvasScreen';
 import { ReferencePicker, useBlobUrl, useBusy, useCountdown, useEngine } from '../lesson/common';
 import { POSE_VIEWBOX, poseBounds, stickPoseFor, type MannequinPose } from '../lesson/mannequin-poses';
-import { bump, saveStrokes, type LessonSession, type StrokeStyles } from '../lesson/stateBridge';
+import { bump, saveDocDrawing, saveStrokes, type LessonSession, type StrokeStyles } from '../lesson/stateBridge';
+import { docForSave, resetCanvas } from '../paint/canvasDoc';
+import type { CanvasDocument } from '../paint/types';
 
 /** three の読み込みがこれ以上かかったら 2D で始める */
 const LOAD_TIMEOUT_MS = 6000;
@@ -142,6 +144,8 @@ export function GestureScreen({ step, session, lessonId, onFinish, onExit }: Ges
   const [strokes, setStrokes] = useState<Drawing>([]);
   /** strokes と同じ並びの線ごとの見た目（保存用） */
   const stylesRef = useRef<StrokeStyles>([]);
+  /** レイヤー・塗りなどを使った体の文書と画像（見比べのあと「次のポーズ」で保存） */
+  const docRef = useRef<{ doc: CanvasDocument; image: Promise<Blob | undefined> } | null>(null);
   const [refs, setRefs] = useState<ReferenceImage[] | null>(step.source === 'user' ? null : []);
   const [picked, setPicked] = useState(false);
   const { busy, error, run } = useBusy();
@@ -190,6 +194,9 @@ export function GestureScreen({ step, session, lessonId, onFinish, onExit }: Ges
     livePointer.current = null;
     setStrokes(engine.getStrokes());
     stylesRef.current = engine.getStyles();
+    // レイヤー・塗りなどを使っていれば文書と画像（紙に付いているうちに書き出す）も取っておく
+    const doc = docForSave(engine);
+    docRef.current = doc ? { doc, image: engine.toWebp(1024).catch(() => undefined) } : null;
     const api = apiRef.current;
     if (api && useMannequin) {
       savedView.current = { i, state: api.getState() };
@@ -243,16 +250,20 @@ export function GestureScreen({ step, session, lessonId, onFinish, onExit }: Ges
     run(async () => {
       const drawn = strokes;
       const r = rec.current;
-      if (!r.saved && drawn.length > 0) {
+      const withDoc = docRef.current;
+      if (!r.saved && withDoc) {
+        await saveDocDrawing(withDoc.doc, drawn, stylesRef.current, 'lesson', lessonId, session, await withDoc.image);
+      } else if (!r.saved && drawn.length > 0) {
         await saveStrokes(drawn, 'lesson', lessonId, session, stylesRef.current);
       }
+      docRef.current = null;
       r.saved = true;
       if (!r.bumped) {
         await bump('gesture', 1, session);
         r.bumped = true;
       }
       rec.current = { bumped: false, saved: false };
-      engine.loadStrokes([]);
+      resetCanvas(engine);
       if (i + 1 >= step.count) {
         onFinish();
         return;
@@ -266,7 +277,8 @@ export function GestureScreen({ step, session, lessonId, onFinish, onExit }: Ges
 
   const sameAgain = () => {
     if (busy) return;
-    engine.loadStrokes([]);
+    resetCanvas(engine);
+    docRef.current = null;
     setSnap(null);
     setRound(round + 1);
     setPhase('draw');
@@ -429,7 +441,7 @@ export function GestureScreen({ step, session, lessonId, onFinish, onExit }: Ges
     <CanvasScreen
       engine={engine}
       task={step.instruction}
-      mini
+      full
       onExit={onExit}
       side={side}
       topCenter={

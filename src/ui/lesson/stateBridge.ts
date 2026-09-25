@@ -18,7 +18,9 @@ import { downscaleToWebp } from '@/data/images';
 import { xpForDrillScore, xpForEvent } from '@/data/xp';
 import type { CounterKind, Drawing, DrawingKind, Progress, StrokeDrawing } from '@/data/types';
 import type { CritiqueResult } from '@/critic';
-import { createCanvasEngine, flattenHistory, historyOf, isNonInkStyle, type StrokeHistory, type StrokeStyle } from '@/canvas';
+import { createCanvasEngine, flattenHistory, historyOf, isNonInkStyle, type CanvasEngine, type StrokeHistory, type StrokeStyle } from '@/canvas';
+import { docForSave, hasContent } from '../paint/canvasDoc';
+import type { CanvasDocument } from '../paint/types';
 import type { Lesson } from '@/content/schema';
 import { completedIds, counters, critiques, drillStats, nextNode, path, profile, progress, reloadData, saveProfile, streak, uiPrefs } from '../state';
 import { baselineToRecord, scorersFor } from './limits';
@@ -221,6 +223,52 @@ export async function saveStrokes(
   });
   session?.drawingIds.push(d.id);
   return d;
+}
+
+/**
+ * レイヤー等を使った絵（契約 1b の CanvasDocument）を保存する。meta.doc に文書をそのまま入れる。
+ * strokes / strokeStyles はペンの線（全レイヤー、下から順）で、採点・一覧の互換のために従来どおり持つ。
+ * image を渡さなければ一時エンジンで文書から描く（紙色つき・切り詰め）。
+ */
+export async function saveDocDrawing(
+  doc: CanvasDocument,
+  strokes: StrokeDrawing,
+  styles: StrokeStyles | undefined,
+  kind: DrawingKind,
+  lessonId: string | null,
+  session?: LessonSession,
+  image?: Blob,
+): Promise<Drawing | null> {
+  if (!hasContent(doc)) return null;
+  let img = image;
+  if (!img) {
+    const tmp = createCanvasEngine();
+    tmp.loadDocument(doc);
+    img = await tmp.toWebp(1024);
+  }
+  const meta: Record<string, unknown> = { doc };
+  if (styles && styles.some((s) => s !== undefined)) meta.strokeStyles = strokes.map((_, i) => styles[i] ?? null);
+  const d = await saveDrawing({ kind, lessonId, image: img, strokes, meta });
+  session?.drawingIds.push(d.id);
+  return d;
+}
+
+/**
+ * キャンバスの今の絵を保存する（フルツールの画面用）。
+ * レイヤーが 2 枚以上、または塗りつぶし・変形などを使っていれば meta.doc 付き（saveDocDrawing）、
+ * そうでなければ従来の saveStrokes と同じ。何も描いていなければ null。
+ */
+export async function saveCanvas(
+  engine: CanvasEngine,
+  kind: DrawingKind,
+  lessonId: string | null,
+  session?: LessonSession,
+): Promise<Drawing | null> {
+  const doc = docForSave(engine);
+  if (!doc) return saveStrokes(engine.getStrokes(), kind, lessonId, session, engine.getStyles());
+  if (!hasContent(doc)) return null;
+  const image = await engine.toWebp(1024);
+  return saveDocDrawing(doc, engine.getStrokes(), engine.getStyles(), kind, lessonId, session, image);
 }
 
 /** 取込画像を保存する（downscaleToWebp で長辺 1024） */

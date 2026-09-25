@@ -11,6 +11,15 @@ export type {
   GridSpec,
   StrokeStyle,
   StrokeHistory,
+  BlendMode,
+  LayerInfo,
+  SelectionMask,
+  Mat,
+  ViewState,
+  CanvasOp,
+  CanvasDocument,
+  FillOptions,
+  ToPngOptions,
 } from './types';
 export { cropRect, inkBounds, exportScale, CROP_MARGIN_RATIO, CROP_MARGIN_MIN, type Rect } from './crop';
 export {

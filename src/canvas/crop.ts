@@ -47,6 +47,11 @@ export function inkBounds(drawing: Drawing, baseWidth: number, styles?: readonly
 export function cropRect(drawing: Drawing, baseWidth: number, styles?: readonly (StrokeStyle | undefined)[]): Rect | null {
   const b = inkBounds(drawing, baseWidth, styles);
   if (!b) return null;
+  return padRect(b);
+}
+
+/** 内容の範囲 b に余白（長辺 × 8%、最低 24px）を足して整数 px に広げる（cropRect と同じ規則）。 */
+export function padRect(b: Rect): Rect {
   const m = Math.max(CROP_MARGIN_MIN, Math.max(b.width, b.height) * CROP_MARGIN_RATIO);
   const x = Math.floor(b.x - m);
   const y = Math.floor(b.y - m);

@@ -8,6 +8,8 @@
  */
 import { PALETTE_COLORS, PEN_PRESETS, type PenPreset, type PenStyle } from '@/canvas';
 import { Slider } from '../components';
+import { HsvPicker } from '../paint/HsvPicker';
+import { normalizeColor } from './canvasPrefs';
 import { PEN_OPACITY, PEN_PRESET_LABEL, PEN_PRESET_ORDER, PEN_SIZE } from './canvasPrefs';
 
 // ---------------------------------------------------------------------------
@@ -29,6 +31,16 @@ export function paletteSwatches(): Swatch[] {
 }
 
 const INK_LABEL = '墨（テーマの色）';
+
+/** テーマの墨色（CSS 変数 --color-ink）を `#rrggbb` で。読めなければ既定の墨 */
+export function themeInkHex(): string {
+  try {
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--color-ink').trim();
+    return normalizeColor(v) ?? '#2b2a28';
+  } catch {
+    return '#2b2a28';
+  }
+}
 
 /** ツールバーのペンアイコンの下に出す現在色 */
 export function penDotColor(style: PenStyle, locked: boolean): string {
@@ -66,7 +78,10 @@ export function PenPanel({
   recent,
   onChange,
   onCustomColor,
+  full,
 }: {
+  /** フルツール（自由お絵描きなど）: HSV ピッカーと直近 6 色を出す（「その他」の代わり） */
+  full?: boolean;
   style: PenStyle;
   /** 採点するドリル: ペン（墨）に固定 */
   locked: boolean;
@@ -95,7 +110,7 @@ export function PenPanel({
   const extra = recent.filter((c) => !known.has(c));
 
   return (
-    <div class="ls-pop ls-toolpanel" role="group" aria-label="ペンの設定">
+    <div class={full ? 'ls-pop ls-toolpanel pt-penpanel' : 'ls-pop ls-toolpanel'} role="group" aria-label="ペンの設定">
       <span class="ls-toolpanel__title">ペン</span>
       <div class="ls-toolpanel__presets" role="radiogroup" aria-label="ペンの種類">
         {PEN_PRESET_ORDER.map((p) => (
@@ -137,8 +152,32 @@ export function PenPanel({
         />
         <span class="num ls-pop__val">{Math.round(style.opacity * 100)}%</span>
       </label>
+      {full && (
+        <HsvPicker color={style.color ?? themeInkHex()} onInput={(hex) => setColor(hex)} onCommit={(hex) => onCustomColor(hex)} />
+      )}
+      {full && recent.length > 0 && (
+        <div class="pt-recent">
+          <span class="ls-toolpanel__label">最近の色</span>
+          <div class="ls-toolpanel__swatches pt-recent__list" role="radiogroup" aria-label="最近の色">
+            {recent.map((c) => (
+              <button
+                key={c}
+                type="button"
+                role="radio"
+                aria-checked={cur === c}
+                aria-label={`最近の色 ${c}`}
+                title={c}
+                class={cur === c ? 'ls-swatch is-selected' : 'ls-swatch'}
+                onClick={() => setColor(c)}
+              >
+                <span class="ls-swatch__chip" style={{ background: c }} />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div class="ls-toolpanel__swatches" role="radiogroup" aria-label="色">
-        {[...swatches, ...extra.map((c) => ({ value: c as string | undefined, label: `最近の色 ${c}` }))].map((s) => {
+        {[...swatches, ...(full ? [] : extra).map((c) => ({ value: c as string | undefined, label: `最近の色 ${c}` }))].map((s) => {
           const v = s.value?.toLowerCase();
           const on = cur === v;
           return (
@@ -156,6 +195,7 @@ export function PenPanel({
             </button>
           );
         })}
+        {!full && (
         <label class="ls-swatch ls-swatch--other" title="その他の色">
           <span class="ls-swatch__chip ls-swatch__chip--other" aria-hidden="true" />
           <input
@@ -167,6 +207,7 @@ export function PenPanel({
             onChange={(e) => onCustomColor((e.currentTarget as HTMLInputElement).value)}
           />
         </label>
+        )}
       </div>
     </div>
   );

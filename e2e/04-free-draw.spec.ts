@@ -15,6 +15,8 @@ test.describe('自由お絵描き', () => {
     await drawFewStrokes(page, canvas, 3);
 
     await page.getByRole('button', { name: '終わる' }).click();
+    // 「終わる」シート（お絵描き v2）: 保存して終わる
+    await page.getByRole('button', { name: '保存して終わる' }).click();
 
     // ホームへ戻ったらギャラリーへ
     await page.getByRole('link', { name: 'ギャラリー' }).click();

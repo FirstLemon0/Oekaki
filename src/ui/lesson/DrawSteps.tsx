@@ -24,6 +24,7 @@ import {
   markBeforeAfter,
   rememberCanvas,
   saveDrawingMeta,
+  saveCanvas,
   saveImported,
   saveStrokes,
   scorers,
@@ -248,7 +249,7 @@ export function CopyView({ step, ctx }: { step: CopyStep; ctx: StepCtx }) {
 
   const finish = async () => {
     const ok = await run(async () => {
-      await saveStrokes(engine.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session, engine.getStyles());
+      await saveCanvas(engine, 'lesson', ctx.node.lesson.id, ctx.session);
     });
     if (ok) {
       rememberCanvas(ctx.session, engine);
@@ -259,6 +260,7 @@ export function CopyView({ step, ctx }: { step: CopyStep; ctx: StepCtx }) {
   return (
     <CanvasScreen
       engine={engine}
+      full
       error={error}
       task={comparing ? 'お手本を重ねました。形・大きさ・位置の違いを見てみましょう。' : step.instruction}
       side={<RefSide source={source} />}
@@ -313,7 +315,7 @@ export function ConstructView({ step, ctx }: { step: ConstructStep; ctx: StepCtx
   const finish = async () => {
     const ok = await run(async () => {
       const r = rec.current;
-      if (r.saved === null) r.saved = (await saveStrokes(engine.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session, engine.getStyles())) !== null;
+      if (r.saved === null) r.saved = (await saveCanvas(engine, 'lesson', ctx.node.lesson.id, ctx.session)) !== null;
       // 累計（counter があれば count ぶん）。何も描かずに進んだとき（引き継いだ線だけのときも）は足さない
       const drewHere = engine.getHistory().strokes.length > carried.current.historyLen;
       if (r.saved && drewHere && !r.bumped) {
@@ -339,6 +341,7 @@ export function ConstructView({ step, ctx }: { step: ConstructStep; ctx: StepCtx
   return (
     <CanvasScreen
       engine={engine}
+      full
       error={error}
       task={step.instruction}
       counter={`${k + 1}/${step.stages.length}`}
@@ -561,6 +564,7 @@ export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
       <CanvasScreen
         key="draw"
         engine={engine}
+        full
         task="お手本を横に見ながら模写しましょう。描き終えたら「完了」。"
         side={side}
         sideMatch
@@ -574,7 +578,7 @@ export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
             return;
           }
           void run(async () => {
-            const d = await saveStrokes(engine.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session, engine.getStyles());
+            const d = await saveCanvas(engine, 'lesson', ctx.node.lesson.id, ctx.session);
             setFirst(d);
             if (d) setPhase('mark');
           });
@@ -602,6 +606,7 @@ export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
     <CanvasScreen
       key="modify"
       engine={engine2}
+      full
       task="1か所だけ自由に変えて、もう1枚描きましょう。形・向き・大きさ、どれでもOKです。"
       side={side}
       sideMatch
@@ -610,7 +615,7 @@ export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
       error={error}
       onDone={() => {
         void run(async () => {
-          if (!second.current) second.current = await saveStrokes(engine2.getStrokes(), 'lesson', ctx.node.lesson.id, ctx.session, engine2.getStyles());
+          if (!second.current) second.current = await saveCanvas(engine2, 'lesson', ctx.node.lesson.id, ctx.session);
           const d = second.current;
           if (d && first) await saveDrawingMeta(d.id, { moshaVariantOf: first.id });
         }).then((ok) => {
@@ -663,6 +668,7 @@ export function FreeStepView({ step, ctx }: { step: FreeStep; ctx: StepCtx }) {
   return (
     <CanvasScreen
       engine={engine}
+      full
       task={step.instruction ?? '好きなものを自由に描きましょう。採点はありません。'}
       onExit={ctx.onBack}
       draftKey={ctx.draftKey}
@@ -670,14 +676,12 @@ export function FreeStepView({ step, ctx }: { step: FreeStep; ctx: StepCtx }) {
       doneDisabled={busy}
       error={error}
       onDone={() => {
-        const strokes = engine.getStrokes();
-        const styles = engine.getStyles();
         if (n === 0 && !saved.current) {
           rememberCanvas(ctx.session, engine);
           ctx.onDone();
           return;
         }
-        keep(() => saveStrokes(strokes, kind, ctx.node.lesson.id, ctx.session, styles));
+        keep(() => saveCanvas(engine, kind, ctx.node.lesson.id, ctx.session));
       }}
     />
   );
@@ -732,6 +736,7 @@ export function CritiqueStepView({ step, ctx }: { step: CritiqueStep; ctx: StepC
   return (
     <CanvasScreen
       engine={engine}
+      full
       task={step.instruction}
       onExit={ctx.onBack}
       draftKey={ctx.draftKey}
@@ -740,7 +745,7 @@ export function CritiqueStepView({ step, ctx }: { step: CritiqueStep; ctx: StepC
       error={error}
       onDone={() => {
         void run(async () => {
-          const d = await saveStrokes(engine.getStrokes(), 'submit', ctx.node.lesson.id, ctx.session, engine.getStyles());
+          const d = await saveCanvas(engine, 'submit', ctx.node.lesson.id, ctx.session);
           if (d) setDrawing(d);
         });
       }}

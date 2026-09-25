@@ -484,3 +484,60 @@ describe('backup: 多数の画像を往復できる', () => {
     await expect(importBackup(strToU8('not a zip at all, definitely not'), 'replace')).rejects.toThrow(/zip/);
   });
 });
+
+describe('backup: お絵描き v2 の文書（meta.doc）', () => {
+  it('レイヤー・塗りつぶし・変形を含む文書が往復で保たれる', async () => {
+    const doc = {
+      v: 2,
+      width: 1200,
+      height: 800,
+      layers: [
+        { id: 'L1', name: 'レイヤー 1', visible: true, opacity: 1, locked: false, blend: 'normal' },
+        { id: 'L2', name: '清書', visible: false, opacity: 0.55, locked: true, blend: 'multiply' },
+      ],
+      active: 'L2',
+      ops: [
+        {
+          kind: 'stroke',
+          layer: 'L1',
+          points: [
+            { x: 10, y: 20, p: 0.5, t: 0 },
+            { x: 30.5, y: 40.25, p: 0.7, t: 16 },
+          ],
+          style: { preset: 'pen', size: 3, opacity: 1, color: '#c8553d' },
+        },
+        { kind: 'layer-add', layer: { id: 'L2', name: '清書', visible: true, opacity: 1, locked: false, blend: 'normal' }, index: 1 },
+        { kind: 'fill', layer: 'L2', x: 100, y: 120, color: '#7bb661', tolerance: 32, reference: 'all' },
+        {
+          kind: 'transform',
+          layer: 'L2',
+          mask: { kind: 'lasso', points: [{ x: 1, y: 2 }, { x: 50, y: 2 }, { x: 25, y: 60 }] },
+          matrix: [-1, 0, 0, 1, 80, 0],
+        },
+        { kind: 'layer-set', layer: 'L2', patch: { opacity: 0.55, blend: 'multiply', visible: false, locked: true } },
+      ],
+    };
+    const style = { preset: 'pen', size: 3, opacity: 1, color: '#c8553d' };
+    const saved = await saveDrawing({
+      kind: 'free',
+      lessonId: null,
+      image: webp('doc-image'),
+      strokes: [
+        [
+          { x: 10, y: 20, p: 0.5, t: 0 },
+          { x: 30.5, y: 40.25, p: 0.7, t: 16 },
+        ],
+      ],
+      meta: { doc, strokeStyles: [style] },
+    });
+
+    const bytes = await exportBackup();
+    await clearAllStores();
+    await importBackup(bytes, 'replace');
+
+    const db = await openDb();
+    const back = (await db.get('drawings', saved.id)) as Drawing | undefined;
+    expect(back?.meta?.doc).toEqual(doc);
+    expect(back?.meta?.strokeStyles).toEqual([style]);
+  });
+});

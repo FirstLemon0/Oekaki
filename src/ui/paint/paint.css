@@ -1,0 +1,367 @@
+/* ------------------------------------------------------------------ */
+/* お絵描き v2（フルツール）: ツールバー 2 列・レイヤーパネル・変形バー・  */
+/* HSV ピッカー・ズームピル。DESIGN_SYSTEM §2。キャンバス面は影なし・動かさない */
+/* ------------------------------------------------------------------ */
+
+/*
+ * ツールバーの外枠（ツールバー＋取っ手＋グリッド欄を並べる箱）の空いた所は紙へ通す。
+ * 2 列になって箱が広がると、グリッド欄の下の何もない所で描けなくなるため。
+ */
+.ls-toolbar-wrap { pointer-events: none; }
+.ls-toolbar-wrap > * { pointer-events: auto; }
+
+/* ツールバー: グループごとに 2 列（縦向きは 2 段） */
+.pt-toolbar { gap: 0; }
+.pt-group { display: grid; grid-template-columns: repeat(2, 48px); gap: 2px; }
+.pt-group + .pt-group { margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--color-line); }
+
+/* 小パネル（ペンは HSV ピッカーつきで縦に長い） */
+.ls-pop.ls-toolpanel.pt-penpanel { width: 300px; max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; }
+.pt-shapes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.pt-recent { display: flex; flex-direction: column; gap: 2px; }
+.pt-recent__list { margin: 0 -4px; }
+
+/* セグメント（パネル内の小さな切替） */
+.pt-seg {
+  flex: 1;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--color-chip);
+  border-radius: 8px;
+}
+.pt-seg__item {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-ink-2);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pt-seg__item::after { content: ''; position: absolute; inset: -4px 0; }
+.pt-seg__item.is-selected { background: var(--color-surface); color: var(--color-ink); font-weight: 500; box-shadow: var(--shadow-1); }
+
+/* ロック中の案内（下中央。描いている間も動かない静的な表示） */
+.pt-locknote {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 2;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  background: var(--glass);
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-pill);
+  color: var(--color-ink-2);
+  font-size: 13px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ---- ズーム率のピル（右上、mono。タップで全体を表示） ---- */
+.pt-zoom { display: flex; align-items: center; gap: 6px; }
+.pt-zoom__pct,
+.pt-zoom__rot {
+  position: relative;
+  height: 40px;
+  min-width: 68px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 12px;
+  background: var(--glass);
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-glass);
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.pt-zoom__pct::after,
+.pt-zoom__rot::after { content: ''; position: absolute; inset: -4px 0; }
+.pt-zoom__rot { color: var(--color-ink-2); }
+
+/* ---- 選択範囲の枠とハンドル ---- */
+.pt-sel { position: absolute; left: 0; top: 0; z-index: 3; overflow: visible; pointer-events: none; }
+.pt-sel__ants-bg { fill: none; stroke: var(--color-surface); stroke-width: 3; stroke-linejoin: round; }
+.pt-sel__ants { fill: none; stroke: var(--color-ink); stroke-width: 1.25; stroke-dasharray: 6 5; stroke-linejoin: round; }
+.pt-sel__body { fill: transparent; pointer-events: all; cursor: move; touch-action: none; }
+.pt-sel__stem { stroke: var(--color-accent); stroke-width: 1.5; }
+.pt-handle {
+  position: absolute;
+  z-index: 4;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: none;
+}
+.pt-handle__dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-accent);
+}
+.pt-handle.is-corner .pt-handle__dot { width: 16px; height: 16px; }
+.pt-handle.is-rotate .pt-handle__dot { width: 18px; height: 18px; border-radius: 50%; background: var(--color-accent); border-color: var(--color-surface); }
+.pt-handle:focus-visible .pt-handle__dot { outline: 2px solid var(--color-ink); outline-offset: 2px; }
+
+/* ---- 変形バー（上中央。選択中は課題ピルの代わり） ---- */
+.pt-xbar {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  background: var(--glass);
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-glass);
+  white-space: nowrap;
+}
+.pt-xbar__label { padding: 0 10px 0 8px; font-size: 13px; color: var(--color-ink-2); }
+.pt-xbar__sep { width: 1px; align-self: stretch; margin: 6px 4px; background: var(--color-line); }
+.pt-xbar__btn {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+.pt-xbar__btn:hover { background: var(--color-chip); }
+.pt-xbar__text,
+.pt-xbar__primary {
+  position: relative;
+  height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.pt-xbar__text::after,
+.pt-xbar__primary::after { content: ''; position: absolute; inset: -2px 0; }
+.pt-xbar__text { background: transparent; color: var(--color-ink-2); }
+.pt-xbar__text:hover:not(:disabled) { background: var(--color-chip); color: var(--color-ink); }
+.pt-xbar__text:disabled { color: var(--color-dash); cursor: default; }
+.pt-xbar__primary { background: var(--color-accent); color: var(--color-on-accent); }
+.pt-xbar__primary:active { background: var(--color-accent-press); transform: scale(0.97); }
+
+/* ---- レイヤーパネル（右端のドロワー 幅 300。ツールバーの反対側） ---- */
+.pt-layers {
+  position: absolute;
+  top: 72px;
+  right: 16px;
+  bottom: 88px;
+  z-index: 6;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass);
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-glass);
+  overflow: hidden;
+}
+.is-left .pt-layers { right: auto; left: 16px; }
+.pt-layers__head { flex: none; display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 16px; border-bottom: 1px solid var(--color-line); }
+.pt-layers__title { font-size: 15px; font-weight: 700; }
+.pt-layers__count { flex: 1; font-size: 13px; color: var(--color-ink-2); }
+.pt-layers__list { flex: 1; min-height: 0; margin: 0; padding: 4px 0; list-style: none; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+.pt-layers__list.is-sorting { overflow: hidden; touch-action: none; }
+.pt-layer {
+  position: relative;
+  height: 56px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 48px 48px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px 0 10px;
+  background: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  cursor: pointer;
+}
+.pt-layer.is-active { background: var(--color-accent-soft); }
+.pt-layer.is-dragging { z-index: 2; background: var(--color-surface); box-shadow: var(--shadow-2); }
+.pt-layer.is-hidden .pt-layer__thumb,
+.pt-layer.is-hidden .pt-layer__name { opacity: 0.45; }
+.is-sorting .pt-layer:not(.is-dragging) { transition: transform 160ms ease-out; }
+.pt-layer__thumb {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  /* 透明を見せる市松 */
+  background:
+    conic-gradient(var(--color-chip) 25%, var(--color-surface) 0 50%, var(--color-chip) 0 75%, var(--color-surface) 0) 0 0 / 10px 10px;
+}
+.pt-layer__thumb img { width: 100%; height: 100%; object-fit: contain; }
+.pt-layer__name {
+  min-width: 0;
+  height: 48px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.pt-layer.is-active .pt-layer__name { font-weight: 500; }
+.pt-layer__input {
+  min-width: 0;
+  height: 40px;
+  padding: 0 8px;
+  border: 1.5px solid var(--color-accent);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 15px;
+}
+.pt-layer__btn,
+.pt-iconbtn {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+.pt-layer__btn.is-off { color: var(--color-ink-3); }
+.pt-layer__btn.is-locked { color: var(--color-danger-text); }
+.pt-iconbtn:disabled { color: var(--color-dash); cursor: default; }
+.pt-layers__props { flex: none; display: flex; flex-direction: column; gap: 2px; padding: 6px 12px 4px; border-top: 1px solid var(--color-line); }
+.pt-layers__row { display: flex; align-items: center; gap: 8px; min-height: 48px; }
+.pt-layers__row .slider { flex: 1; min-width: 0; height: 36px; }
+.pt-layers__label { width: 56px; flex: none; font-size: 12px; color: var(--color-ink-2); }
+.pt-layers__val { width: 44px; text-align: right; font-size: 14px; }
+.pt-layers__order { display: flex; align-items: center; gap: 2px; margin-left: -8px; }
+.pt-layers__hint { margin-left: 6px; font-size: 12px; color: var(--color-ink-2); }
+.pt-layers__foot { flex: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; padding: 4px; border-top: 1px solid var(--color-line); }
+.pt-footbtn {
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.pt-footbtn:hover:not(:disabled) { background: var(--color-chip); }
+.pt-footbtn:disabled { color: var(--color-dash); cursor: default; }
+.pt-footbtn.is-danger:not(:disabled) { color: var(--color-danger-text); }
+
+/* ---- HSV ピッカー ---- */
+.pt-hsv { display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
+.pt-hsv__sv,
+.pt-hsv__hue { position: relative; touch-action: none; cursor: crosshair; outline-offset: 3px; }
+.pt-hsv__sv { width: 100%; aspect-ratio: 264 / 148; }
+.pt-hsv__hue { width: 100%; height: 28px; }
+/* 色相バーの当たり判定を 48px に */
+.pt-hsv__hue::before { content: ''; position: absolute; inset: -10px 0; }
+.pt-hsv__sv canvas,
+.pt-hsv__hue canvas { display: block; width: 100%; height: 100%; border-radius: 10px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
+.pt-hsv__hue canvas { border-radius: 14px; }
+.pt-hsv__knob {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.pt-hsv__ring {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+}
+.pt-hsv__foot { display: flex; align-items: center; gap: 8px; }
+.pt-hsv__chip { width: 20px; height: 20px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15); }
+.pt-hsv__hex { font-size: 13px; color: var(--color-ink-2); }
+
+/* ---- 「終わる」シート（自由お絵描き） ---- */
+.ls-sheet.pt-endsheet { height: auto; padding-bottom: 24px; }
+.pt-endsheet__body { display: flex; flex-direction: column; gap: 8px; max-width: 720px; }
+.pt-endsheet__title { margin: 0; font-size: 22px; font-weight: 700; }
+.pt-endsheet__text { margin: 0; font-size: 15px; line-height: 1.7; color: var(--color-ink-2); }
+.pt-endsheet__status { margin: 0; font-size: 14px; color: var(--color-accent-text); }
+.pt-endsheet__foot { flex-wrap: wrap; }
+.pt-btnicon { display: inline-flex; align-items: center; gap: 8px; }
+
+/* ---- 縦向き: ツールバーは 2 段、課題ピルはその下、レイヤーは下からのシート ---- */
+@media (orientation: portrait), (max-width: 900px) {
+  .pt-toolbar { flex-direction: row; }
+  .pt-group { grid-template-columns: none; grid-template-rows: repeat(2, 48px); grid-auto-flow: column; grid-auto-columns: 48px; }
+  .pt-group + .pt-group { margin: 0 0 0 5px; padding: 0 0 0 5px; border-top: 0; border-left: 1px solid var(--color-line); }
+  /* グリッド欄（取っ手の下の縦並び、~290px まで）と重ならない高さ */
+  .is-full .ls-task { top: 304px; }
+  .is-full .ls-canvas__center { top: 188px; }
+  .is-full .pt-xbar { top: 304px; }
+  .pt-layers,
+  .is-left .pt-layers {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    height: min(52dvh, 600px);
+    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+    border-bottom: 0;
+    background: var(--color-surface);
+  }
+  .ls-pop.ls-toolpanel.pt-penpanel { max-height: calc(100dvh - 220px); }
+}

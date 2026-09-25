@@ -1,34 +1,45 @@
 /**
- * キャンバス描画エンジン（契約 1）。
+ * キャンバス描画エンジン v2（契約 1 + 契約 1b）。
  * createCanvasEngine() は DOM に触らない。attach(host) で初めて <canvas> を作る。
  *
- * 表示の重ね順: 紙 → 完了ストローク（オフスクリーン cache、透明背景）→ 進行中ストローク（live レイヤー）→ 重ね（overlay）
- *   → 消しゴムの輪 → グリッド。左右反転は「紙〜重ね・消しゴムの輪」だけに掛け、グリッドは画面座標に固定。
- * 不透明度 < 1・multiply・筆圧で濃淡が変わるペンは、1 本ずつ別レイヤー（scratch）に描いてから合成する
- * （区間の継ぎ目が濃くならないように）。
- * 消しゴムは普通のラスター消しゴム: 消しゴムストロークを cache に destination-out の丸い線（半径 size）で描く。
- * 紙は cache に含めないので、消した所は紙が見える。
- * 補助線（tool 'guide'、StrokeStyle.preset 'guide'）は ink-2 色・幅 1.5px・不透明度 0.35 の細線。
- * 見た目・再生・書き出しには含めるが、getStrokes()/getStyles() には出さず（採点・本数から除く）、strokeend も出さない。
- * シルエット表示では出さない。
+ * 文書モデル: 「最初のレイヤー一覧（baseList）」＋「操作履歴 ops（CanvasOp）」。すべての編集は op として積み、
+ * Undo/Redo は op のまとまり（unit）単位。レイヤー一覧・点列（採点用）・画像はどれも ops の再生で決まる。
+ *
+ * 表示: レイヤーごとにオフスクリーン canvas（紙の大きさ × DPR、透明背景。キャンバス座標で保持）。
+ * 重ね順は 紙色 → レイヤー（下から、visible/opacity/blend）→ 描画中ストローク（アクティブレイヤーに合成）
+ *   → 重ね（overlay）→ 選択の点線 → 消しゴムの輪 → グリッド。
+ * 画面座標 = DPR × 反転 × ビュー（zoom/pan/rotation）× キャンバス座標。グリッドだけは画面座標に固定。
+ *
+ * Undo: stroke 以外で画素を書き換える op（fill/transform/delete/clear/merge/remove）の直前（と直後）に、
+ * そのレイヤーの画像のスナップショット（チェックポイント）を取る。レイヤーの任意時点の画像は
+ * 「その時点以前で最も新しいチェックポイント ＋ それ以降の op の再適用」で作る。
+ * チェックポイントは直近 20 op ぶん（かつ合計 256MB まで）。古い所へ戻るときは ops の再適用。
+ *
+ * 旧 API（getStrokes/getStyles/getHistory/loadHistory/setStrokeVisibility/toWebp/replay）は 1 レイヤーなら従来と同じ結果。
  */
 import type { Drawing, Stroke, StrokePoint, Vec2 } from '@/scoring/types';
 import type {
+  CanvasDocument,
   CanvasEngine,
   CanvasOptions,
   EraserStyle,
+  FillOptions,
+  LayerInfo,
+  Mat,
   OverlaySpec,
   PenStyle,
+  SelectionMask,
   StrokeHistory,
   StrokeStyle,
   Tool,
+  ToPngOptions,
   ToWebpOptions,
+  ViewState,
 } from './types';
-import { UndoStack } from './history';
-import { normalizePressure, quadSegmentAt, shouldAppend, tailSegment } from './smooth';
+import { normalizePressure, shouldAppend } from './smooth';
 import { buildReplaySchedule, visibleCounts, type ReplaySchedule } from './replay';
 import { resolveColor } from './color';
-import { cropRect, exportScale, type Rect } from './crop';
+import { cropRect, exportScale, inkBounds, padRect, type Rect } from './crop';
 import { flattenHistory } from './erase';
 import { GRID_COLOR, gridLines, normalizeGrid, sameGrid } from './grid';
 import {
@@ -38,26 +49,69 @@ import {
   clampEraserSize,
   clampOpacity,
   clampPenSize,
-  cumulativeLength,
   eraserStrokeStyle,
   guideStrokeStyle,
   isEraserStyle,
   isGuideStyle,
   isPenPreset,
-  jitterPoints,
   maxPenWidth,
   needsLayer,
   normalizeHexColor,
-  penAlpha,
-  penWidth,
   resolvePen,
   sanitizeStyle,
   silhouettePen,
   styleFromPen,
-  taperFactor,
-  taperLength,
-  type ResolvedPen,
 } from './pen';
+import { clearLayer, drawRange, drawTail, geom, makeLayer, paintEraser, prep, type Ctx, type Layer, type Paint, type Xf } from './paint';
+import {
+  compositeOp,
+  copyLayer,
+  cutMask,
+  drawCut,
+  drawDeleteOp,
+  drawFillOp,
+  drawLayerOnto,
+  drawStrokeOp,
+  drawTransformOp,
+  readPixels,
+  type RasterEnv,
+} from './raster';
+import {
+  DEFAULT_TOLERANCE,
+  applyLayerOp,
+  copyInfo,
+  exportOp,
+  isRasterOp,
+  layerName,
+  newLayerInfo,
+  sanitizeDocument,
+  sanitizePatch,
+  vectorModel,
+  visibleInk,
+  writesOf,
+  type EngineOp,
+  type RawHistory,
+} from './ops';
+import {
+  DEFAULT_VIEW,
+  IDENTITY,
+  apply,
+  clampZoom,
+  fitViewFor,
+  gestureView,
+  invert,
+  isFiniteMat,
+  isIdentity,
+  isIdentityView,
+  mul,
+  normalizeDeg,
+  translate,
+  twistDeg,
+  viewMatrix,
+} from './matrix';
+import { copyMask, maskPolygon, pointInMask, sanitizeMask, transformMask } from './selection';
+import { shapeStrokes, type ShapeKind } from './shapes';
+import { toHex } from './fill';
 
 export const DEFAULT_OPTIONS: CanvasOptions = {
   penOnly: false,
@@ -79,63 +133,105 @@ const FALLBACK_GUIDE = '#5f5b54';
 const GUIDE_COLOR_VAR = 'var(--color-ink-2)';
 const SILHOUETTE_PAPER = '#ffffff';
 const SILHOUETTE_INK = '#000000';
+/** ビューを動かしたときの紙の外側 */
+const DESK_SHADE = 'rgba(0,0,0,0.10)';
 /** 読み込んだ絵の続きを描くときにあける時間（ms） */
 const RESUME_GAP_MS = 300;
+/** Undo の手数の上限 */
+const UNDO_LIMIT = 200;
+/** チェックポイントを持つ op の数の上限と、画像の合計バイト数の上限 */
+const CKPT_OPS = 20;
+const CKPT_BYTES = 256 * 1024 * 1024;
+/** 2 本指のひねりをビューの回転とみなす角度（度） */
+const TWIST_THRESHOLD = 3;
+/** スポイトで透明とみなすアルファ（0..255） */
+const PICK_MIN_ALPHA = 8;
 
-type Ctx = CanvasRenderingContext2D;
 type Styles = (StrokeStyle | undefined)[];
 
-/** 履歴 1 手ぶんの状態（消しゴムストロークを含む生の履歴）。strokes と styles は同じ長さ・同じ並び。 */
+/** 生の履歴（消しゴム・補助線込み）。strokes と styles は同じ長さ・同じ並び。 */
 interface Doc {
   strokes: Drawing;
   styles: Styles;
 }
 
-/** 描画用に解決済みの見た目。 */
-interface Paint {
-  color: string;
-  pen: ResolvedPen;
-}
-
-/** CSS px → デバイス px の変換（dev = css × k + o）。 */
-interface Xf {
-  k: number;
-  ox: number;
-  oy: number;
-}
-
-interface Layer {
-  canvas: HTMLCanvasElement;
-  ctx: Ctx;
-}
-
 interface LiveInput {
   pointerId: number;
-  tool: Tool;
+  tool: 'pen' | 'eraser' | 'guide';
+  layer: string;
   points: StrokePoint[];
   /** 描画済みの最後の制御点インデックス（0 = まだ何も描いていない） */
   drawnCtrl: number;
   dotDrawn: boolean;
   /** 消しゴムの輪を出す位置（最後の入力位置） */
   lastEraserPt: Vec2 | null;
-  /** 消しゴム: cache に消し込んだ点の数 */
+  /** 消しゴム: レイヤーに消し込んだ点の数 */
   erasedPts: number;
   style: StrokeStyle;
 }
 
+interface ShapeInput {
+  pointerId: number;
+  kind: ShapeKind;
+  layer: string;
+  a: Vec2;
+  b: Vec2;
+  t0: number;
+  style: StrokeStyle;
+}
+
+interface SelectInput {
+  pointerId: number;
+  mode: 'rect' | 'lasso' | 'move';
+  start: Vec2;
+  points: Vec2[];
+  base: Mat;
+}
+
+interface TransformPreview {
+  layer: string;
+  mask: SelectionMask;
+  matrix: Mat;
+  /** 選択範囲を透明にしたレイヤー画像（attach 前は null） */
+  base: Layer | null;
+  /** 切り出した選択範囲 */
+  cut: Layer | null;
+}
+
+interface Gesture {
+  ids: [number, number];
+  c1: Vec2;
+  c2: Vec2;
+  s1: Vec2;
+  s2: Vec2;
+  base: ViewState;
+  rotating: boolean;
+}
+
 interface ReplayState {
-  doc: Doc;
   schedule: ReplaySchedule;
+  /** op の添字 → ストロークの通し番号（stroke 以外は -1） */
+  strokeOf: number[];
+  /** 次に適用する op */
+  opIdx: number;
   start: number;
-  /** cache に完成形を描き終えたストローク数（先頭から） */
-  committed: number;
-  /** live レイヤーに途中まで描いているストローク（-1 = なし）。消しゴムは cache に直接消し込む */
+  /** live レイヤーに途中まで描いている op（-1 = なし）。消しゴムはレイヤーに直接消し込む */
   partial: number;
-  /** ペン: 描いた制御点の番号。消しゴム: cache に消し込んだ点の数 */
+  /** ペン: 描いた制御点の番号。消しゴム: 消し込んだ点の数 */
   partialCtrl: number;
   partialDot: boolean;
   raf: number;
   resolve: () => void;
+}
+
+interface Ckpt {
+  id: string;
+  /** この画像は ops[0..count) を適用した後のレイヤー */
+  count: number;
+  /** どの op のために取ったか（古い順に捨てる） */
+  owner: number;
+  layer: Layer;
+  bytes: number;
 }
 
 function strokeBounds(d: Drawing): { width: number; height: number } {
@@ -162,7 +258,6 @@ function docToHistory(doc: Doc): StrokeHistory {
 /**
  * engine.getStyles() が返した配列から、同じ時点の「消しゴムを含む生の履歴」（getHistory() と同じ形のコピー）を得る。
  * getStyles() の戻り値でない（加工した配列など）ときは null。
- * getStrokes()/getStyles() だけを受け取る保存処理が、呼び出し側を変えずに消しゴム込みの履歴も残せるようにするためのもの。
  */
 export function historyOf(styles: readonly unknown[] | null | undefined): StrokeHistory | null {
   if (!styles) return null;
@@ -197,162 +292,14 @@ function copyStyle(s: StrokeStyle | undefined): StrokeStyle | undefined {
   return out;
 }
 
-/* ------------------------------------------------------------------ */
-/* ストロークの描画（ctx の変換は呼び出し側で設定済み）                    */
-/* ------------------------------------------------------------------ */
-
-/** 描画用に前処理した点列（ざらつき適用後）と入り抜き用の弧長。 */
-interface Geom {
-  pts: readonly StrokePoint[];
-  cum: number[] | null;
-  total: number | null;
-  len: number;
-}
-
-/** final: 終点が確定している（完了ストローク）。false なら始点側だけ入り抜きを掛ける。 */
-function geom(pts: readonly StrokePoint[], rp: ResolvedPen, final: boolean): Geom {
-  const jp = jitterPoints(pts, rp.grain);
-  if (!rp.taper) return { pts: jp, cum: null, total: null, len: 0 };
-  const cum = cumulativeLength(jp);
-  const L = cum[cum.length - 1] ?? 0;
-  return { pts: jp, cum, total: final ? L : null, len: final ? taperLength(rp, L) : rp.size * 6 };
-}
-
-function prep(c: Ctx, color: string): void {
-  c.strokeStyle = color;
-  c.fillStyle = color;
-  c.lineCap = 'round';
-  c.lineJoin = 'round';
-}
-
-function setAlpha(c: Ctx, rp: ResolvedPen, p: number, mul: number): void {
-  if (rp.pressureOpacity[0] !== rp.pressureOpacity[1]) c.globalAlpha = mul * penAlpha(rp, p);
-}
-
-/** 制御点 (from, to] の区間を描く。 */
-function drawRange(c: Ctx, g: Geom, rp: ResolvedPen, from: number, to: number, mul: number): void {
-  if (to <= from) return;
-  for (let k = Math.max(1, from + 1); k <= to; k++) {
-    const seg = quadSegmentAt(g.pts, k);
-    if (!seg) continue;
-    const f = g.cum ? taperFactor(rp, g.cum[k] ?? 0, g.total, g.len) : 1;
-    setAlpha(c, rp, seg.p, mul);
-    c.beginPath();
-    c.moveTo(seg.from.x, seg.from.y);
-    c.quadraticCurveTo(seg.ctrl.x, seg.ctrl.y, seg.to.x, seg.to.y);
-    c.lineWidth = penWidth(rp, seg.p) * f;
-    c.stroke();
-  }
-}
-
-/** 末尾区間（1 点なら点）を描く。 */
-function drawTail(c: Ctx, g: Geom, rp: ResolvedPen, mul: number): void {
-  const pts = g.pts;
-  const only = pts.length === 1 ? pts[0] : undefined;
-  if (only) {
-    setAlpha(c, rp, only.p, mul);
-    c.beginPath();
-    c.arc(only.x, only.y, penWidth(rp, only.p) / 2, 0, Math.PI * 2);
-    c.fill();
-    return;
-  }
-  const tail = tailSegment(pts);
-  if (!tail) return;
-  const n = pts.length;
-  const s = g.cum ? ((g.cum[n - 2] ?? 0) + (g.cum[n - 1] ?? 0)) / 2 : 0;
-  const f = g.cum ? taperFactor(rp, s, g.total, g.len) : 1;
-  setAlpha(c, rp, tail.p, mul);
-  c.beginPath();
-  c.moveTo(tail.from.x, tail.from.y);
-  c.quadraticCurveTo(tail.ctrl.x, tail.ctrl.y, tail.to.x, tail.to.y);
-  c.lineWidth = penWidth(rp, tail.p) * f;
-  c.stroke();
-}
-
-/**
- * 消しゴムストロークの点 [from, to) を c から消す（destination-out・半径 radius の丸い線）。
- * from > 0 なら点 from-1 からつなぐ。点が 1 個だけなら円。c は変換なし（デバイス px）を前提に xf で CSS px を写す。
- * 終わると c の変換・globalAlpha・合成方法は既定に戻っている。
- */
-function paintEraser(c: Ctx, pts: readonly StrokePoint[], radius: number, xf: Xf, from = 0, to = pts.length): void {
-  const end = Math.min(to, pts.length);
-  if (end <= from || end === 0) return;
-  c.setTransform(xf.k, 0, 0, xf.k, xf.ox, xf.oy);
-  c.globalAlpha = 1;
-  c.globalCompositeOperation = 'destination-out';
-  prep(c, '#000');
-  const start = Math.max(0, from - 1);
-  const first = pts[start]!;
-  if (end - start === 1) {
-    c.beginPath();
-    c.arc(first.x, first.y, radius, 0, Math.PI * 2);
-    c.fill();
-  } else {
-    c.lineWidth = radius * 2;
-    c.beginPath();
-    c.moveTo(first.x, first.y);
-    for (let i = start + 1; i < end; i++) c.lineTo(pts[i]!.x, pts[i]!.y);
-    c.stroke();
-  }
-  c.setTransform(1, 0, 0, 1, 0, 0);
-  c.globalCompositeOperation = 'source-over';
-}
-
-/**
- * 完了ストローク 1 本を c に描く。c は変換なし（デバイス px）を前提に xf で CSS px を写す。
- * 重なりを避けたいペンは scratch（c と同じ大きさ以上）に描いてから opacity と blend で合成する。
- * 終わると c の変換・globalAlpha・合成方法は既定（恒等・1・source-over）に戻っている。
- */
-function paintStroke(c: Ctx, pts: readonly StrokePoint[], paint: Paint, xf: Xf, scratch: Layer | null, size: { w: number; h: number }): void {
-  if (pts.length === 0) return;
-  const rp = paint.pen;
-  const g = geom(pts, rp, true);
-  if (!needsLayer(rp) || !scratch) {
-    c.setTransform(xf.k, 0, 0, xf.k, xf.ox, xf.oy);
-    c.globalAlpha = rp.opacity;
-    if (rp.blend !== 'source-over') c.globalCompositeOperation = rp.blend;
-    prep(c, paint.color);
-    drawRange(c, g, rp, 0, g.pts.length - 2, rp.opacity);
-    drawTail(c, g, rp, rp.opacity);
-    c.setTransform(1, 0, 0, 1, 0, 0);
-    c.globalAlpha = 1;
-    if (rp.blend !== 'source-over') c.globalCompositeOperation = 'source-over';
-    return;
-  }
-  // 範囲（デバイス px）
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  for (const q of g.pts) {
-    if (q.x < minX) minX = q.x;
-    if (q.y < minY) minY = q.y;
-    if (q.x > maxX) maxX = q.x;
-    if (q.y > maxY) maxY = q.y;
-  }
-  const pad = maxPenWidth(rp) / 2 + 2;
-  const bx = Math.max(0, Math.floor((minX - pad) * xf.k + xf.ox));
-  const by = Math.max(0, Math.floor((minY - pad) * xf.k + xf.oy));
-  const ex = Math.min(size.w, Math.ceil((maxX + pad) * xf.k + xf.ox));
-  const ey = Math.min(size.h, Math.ceil((maxY + pad) * xf.k + xf.oy));
-  if (!(ex > bx && ey > by)) return;
-  const sc = scratch.ctx;
-  sc.setTransform(1, 0, 0, 1, 0, 0);
-  sc.globalAlpha = 1;
-  sc.globalCompositeOperation = 'source-over';
-  sc.clearRect(bx, by, ex - bx, ey - by);
-  sc.setTransform(xf.k, 0, 0, xf.k, xf.ox, xf.oy);
-  prep(sc, paint.color);
-  drawRange(sc, g, rp, 0, g.pts.length - 2, 1);
-  drawTail(sc, g, rp, 1);
-  sc.globalAlpha = 1;
-  sc.setTransform(1, 0, 0, 1, 0, 0);
-  c.setTransform(1, 0, 0, 1, 0, 0);
-  c.globalAlpha = rp.opacity;
-  c.globalCompositeOperation = rp.blend;
-  c.drawImage(scratch.canvas, bx, by, ex - bx, ey - by, bx, by, ex - bx, ey - by);
-  c.globalAlpha = 1;
-  c.globalCompositeOperation = 'source-over';
+function toBlobAsync(c: HTMLCanvasElement, type: string, quality?: number): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    try {
+      c.toBlob((b) => resolve(b), type, quality);
+    } catch {
+      resolve(null);
+    }
+  });
 }
 
 export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine {
@@ -365,18 +312,123 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     penMemory[k] = { size: PEN_PRESETS[k].size, opacity: PEN_PRESETS[k].opacity };
   }
   let eraser: EraserStyle = { ...DEFAULT_ERASER };
+  let fillOpts: FillOptions = { tolerance: DEFAULT_TOLERANCE, reference: 'layer' };
+  let view: ViewState = { ...DEFAULT_VIEW };
 
-  const history = new UndoStack<Doc>({ strokes: [], styles: [] });
-  const current = (): Doc => history.present;
-  /** 履歴 → ペンだけの点列（消しゴムで消えた点を除く）。Doc ごとに 1 回だけ計算する */
-  const flatMemo = new WeakMap<Doc, Doc>();
-  function flat(doc: Doc): Doc {
-    let f = flatMemo.get(doc);
-    if (!f) {
-      f = flattenHistory(doc.strokes, doc.styles);
-      flatMemo.set(doc, f);
+  // ================= 文書（ops） =================
+  const FIRST_ID = 'layer-1';
+  let baseList: readonly LayerInfo[] = [newLayerInfo(FIRST_ID, layerName(1))];
+  let ops: EngineOp[] = [];
+  /** 各 Undo 単位の開始位置（昇順）。units[0] より前は Undo できない */
+  let units: number[] = [];
+  let redoUnits: EngineOp[][] = [];
+  let active = FIRST_ID;
+  /** 紙の大きさ（CSS px）。attach 後は画面より小さくならない */
+  let docW = 0;
+  let docH = 0;
+  /** 中身が変わるたびに増やす（メモの鍵） */
+  let version = 0;
+  let listCache: (readonly LayerInfo[])[] = [baseList];
+
+  function listAt(n: number): readonly LayerInfo[] {
+    const m = Math.max(0, Math.min(n, ops.length));
+    while (listCache.length <= m) {
+      const i = listCache.length;
+      listCache.push(applyLayerOp(listCache[i - 1]!, ops[i - 1]!));
     }
-    return f;
+    return listCache[m]!;
+  }
+  const curList = () => listAt(ops.length);
+  function touched(from: number): void {
+    version++;
+    if (listCache.length > from + 1) listCache.length = from + 1;
+  }
+
+  let modelMemo: { v: number; model: ReturnType<typeof vectorModel> } | null = null;
+  function model(): ReturnType<typeof vectorModel> {
+    if (!modelMemo || modelMemo.v !== version) modelMemo = { v: version, model: vectorModel(baseList, ops) };
+    return modelMemo.model;
+  }
+  let inkMemo: { v: number; ink: { strokes: Drawing; styles: Styles } } | null = null;
+  function ink(): { strokes: Drawing; styles: Styles } {
+    if (!inkMemo || inkMemo.v !== version) inkMemo = { v: version, ink: visibleInk(model()) };
+    return inkMemo.ink;
+  }
+  /** アクティブレイヤーの stroke op（getHistory の中身）と、その op の添字 */
+  let histMemo: { v: number; active: string; doc: Doc; index: Map<number, number> } | null = null;
+  function activeHistory(): { doc: Doc; index: Map<number, number> } {
+    if (!histMemo || histMemo.v !== version || histMemo.active !== active) {
+      const doc: Doc = { strokes: [], styles: [] };
+      const index = new Map<number, number>();
+      ops.forEach((op, j) => {
+        if (op.kind !== 'stroke' || op.layer !== active) return;
+        index.set(j, doc.strokes.length);
+        doc.strokes.push(op.points);
+        doc.styles.push(op.style);
+      });
+      histMemo = { v: version, active, doc, index };
+    }
+    return histMemo;
+  }
+
+  const findLayer = (id: string, list = curList()) => list.find((l) => l.id === id);
+
+  function uniqueId(): string {
+    const used = new Set<string>();
+    for (const l of baseList) used.add(l.id);
+    for (const op of ops) {
+      if (op.kind === 'layer-add') used.add(op.layer.id);
+      if (op.kind === 'layer-duplicate') used.add(op.newId);
+    }
+    for (const u of redoUnits) for (const op of u) {
+      if (op.kind === 'layer-add') used.add(op.layer.id);
+      if (op.kind === 'layer-duplicate') used.add(op.newId);
+    }
+    let n = used.size + 1;
+    while (used.has(`layer-${n}`)) n++;
+    return `layer-${n}`;
+  }
+  function nextLayerNumber(): number {
+    let n = 0;
+    const scan = (name: string) => {
+      const m = /^レイヤー (\d+)$/.exec(name);
+      if (m) n = Math.max(n, Number(m[1]));
+    };
+    for (const l of baseList) scan(l.name);
+    for (const op of ops) if (op.kind === 'layer-add') scan(op.layer.name);
+    return Math.max(n, curList().length) + 1;
+  }
+
+  /** id のレイヤーの画素を最後に作った（add / duplicate）op の添字。最初からあるレイヤーは -1 */
+  function creationIndex(id: string, n: number): number {
+    for (let j = Math.min(n, ops.length) - 1; j >= 0; j--) {
+      const op = ops[j]!;
+      if ((op.kind === 'layer-add' && op.layer.id === id) || (op.kind === 'layer-duplicate' && op.newId === id)) {
+        if (writesOf(op, listAt(j)).includes(id)) return j;
+      }
+    }
+    return -1;
+  }
+
+  /** 最後に画素が空になってから何か書かれたか（clear() の判定用） */
+  function hasContent(id: string): boolean {
+    for (let j = ops.length - 1; j >= 0; j--) {
+      const op = ops[j]!;
+      if (!writesOf(op, listAt(j)).includes(id)) continue;
+      return !(op.kind === 'layer-clear' || op.kind === 'layer-add');
+    }
+    return false;
+  }
+
+  /** 最後に空になってから stroke 以外の画素 op（塗りつぶし等）があるか（消しゴムの空振り判定用） */
+  function hasRasterContent(id: string): boolean {
+    for (let j = ops.length - 1; j >= 0; j--) {
+      const op = ops[j]!;
+      if (!writesOf(op, listAt(j)).includes(id)) continue;
+      if (op.kind === 'layer-clear' || op.kind === 'layer-add') return false;
+      if (op.kind !== 'stroke') return true;
+    }
+    return false;
   }
 
   let overlay: OverlaySpec | null = null;
@@ -386,18 +438,24 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
   const strokeEndCbs = new Set<(s: Stroke) => void>();
   const changeCbs = new Set<() => void>();
   const toolChangeCbs = new Set<() => void>();
+  const layersCbs = new Set<() => void>();
+  const viewCbs = new Set<() => void>();
+  const selectionCbs = new Set<() => void>();
+  const opsCbs = new Set<() => void>();
 
-  // --- DOM 状態（attach 後のみ） ---
+  // ================= DOM（attach 後のみ） =================
   let host: HTMLElement | null = null;
   let canvas: HTMLCanvasElement | null = null;
   let ctx: Ctx | null = null;
-  /** 紙＋完了ストローク */
-  let cache: Layer | null = null;
-  /** 進行中ストローク（入力・再生） */
+  /** レイヤーごとの表示用画像（今表示している時点の状態） */
+  const bms = new Map<string, Layer>();
+  /** 表示しているレイヤーの並び（ふつうは curList()、再生中は途中の並び） */
+  let dispList: readonly LayerInfo[] = baseList;
+  /** 進行中ストローク（入力・再生）・図形のプレビュー */
   let liveLayer: Layer | null = null;
   /** 1 本ずつ合成するための作業用 */
   let scratch: Layer | null = null;
-  /** 進行中の multiply ペンを「完了ストロークだけ」に掛けるための合成用（必要なときだけ作る） */
+  /** 進行中の線・変形プレビューをレイヤーと合成するための作業用（必要なときだけ作る） */
   let mix: Layer | null = null;
   let ro: ResizeObserver | null = null;
   let dprMql: MediaQueryList | null = null;
@@ -405,21 +463,34 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
   let cssH = 0;
   let dpr = 1;
   let paper = FALLBACK_PAPER;
-  let ink = FALLBACK_INK;
+  let inkColor = FALLBACK_INK;
   let guideInk = FALLBACK_GUIDE;
+  let ckpts: Ckpt[] = [];
 
   let live: LiveInput | null = null;
+  let shape: ShapeInput | null = null;
+  let selIn: SelectInput | null = null;
+  let panIn: { pointerId: number; last: Vec2 } | null = null;
+  let pickIn: number | null = null;
+  const touches = new Map<number, Vec2>();
+  let gesture: Gesture | null = null;
+  let selection: SelectionMask | null = null;
+  let tf: TransformPreview | null = null;
   /** 消しゴム選択中にペン／マウスが紙の上にある位置（輪を出す） */
   let hoverPt: Vec2 | null = null;
-  /** live レイヤーに何か描いてあり、合成に使う見た目 */
+  /** live レイヤーに何か描いてあり、合成に使う見た目と、合成先のレイヤー */
   let livePaint: Paint | null = null;
+  let liveOn: string | null = null;
   let rafId = 0;
   let fullDirty = false;
   let composeDirty = false;
   let timeOrigin: number | null = null;
   let replayState: ReplayState | null = null;
-  /** 表示だけの透明度（履歴の添字ごと）。null はすべて 1 */
+  /** 表示だけの透明度（getHistory() の添字ごと）。null はすべて 1 */
   let visibility: readonly (number | undefined)[] | null = null;
+
+  const bmW = () => Math.max(1, Math.round(docW * dpr));
+  const bmH = () => Math.max(1, Math.round(docH * dpr));
 
   // ---------- 色・スタイル ----------
   function lookupVar(name: string): string {
@@ -430,13 +501,13 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
   }
   function resolveColors(): void {
     paper = resolveColor(opts.paperColor, lookupVar, FALLBACK_PAPER);
-    ink = resolveColor(opts.inkColor, lookupVar, FALLBACK_INK);
+    inkColor = resolveColor(opts.inkColor, lookupVar, FALLBACK_INK);
     guideInk = resolveColor(GUIDE_COLOR_VAR, lookupVar, FALLBACK_GUIDE);
   }
   /** 書き出し・重ね用（シルエットを無視） */
   function normalPaint(style: StrokeStyle | undefined): Paint {
     if (isGuideStyle(style)) return { color: guideInk, pen: resolvePen(style, opts.baseWidth) };
-    return { color: style?.color ?? ink, pen: resolvePen(style, opts.baseWidth) };
+    return { color: style?.color ?? inkColor, pen: resolvePen(style, opts.baseWidth) };
   }
   /** 画面表示用（シルエット中は太い黒） */
   function viewPaint(style: StrokeStyle | undefined): Paint {
@@ -444,83 +515,254 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     if (!opts.silhouette || isGuideStyle(style)) return p;
     return { color: SILHOUETTE_INK, pen: silhouettePen(p.pen) };
   }
+  /** 塗りつぶしに使う色（ペンの色、未指定は墨） */
+  function fillColorNow(): string {
+    return pen.color ?? normalizeHexColor(inkColor) ?? FALLBACK_INK.toUpperCase();
+  }
 
   // ---------- イベント ----------
-  function emitChange(): void {
-    for (const cb of [...changeCbs]) cb();
-  }
-  function emitToolChange(): void {
-    for (const cb of [...toolChangeCbs]) cb();
-  }
+  const emit = (set: Set<() => void>) => {
+    for (const cb of [...set]) cb();
+  };
+  const emitChange = () => emit(changeCbs);
+  const emitToolChange = () => emit(toolChangeCbs);
+  const emitLayers = () => emit(layersCbs);
+  const emitView = () => emit(viewCbs);
+  const emitSelection = () => emit(selectionCbs);
+  const emitOps = () => emit(opsCbs);
 
-  // ---------- レイヤー ----------
-  function makeLayer(w: number, h: number): Layer | null {
-    const cv = document.createElement('canvas');
-    cv.width = w;
-    cv.height = h;
-    const c = cv.getContext('2d');
-    return c ? { canvas: cv, ctx: c } : null;
-  }
-  function devSize(): { w: number; h: number } {
-    return { w: canvas?.width ?? 0, h: canvas?.height ?? 0 };
-  }
-  function clearLayer(l: Layer | null): void {
-    if (!l) return;
-    l.ctx.setTransform(1, 0, 0, 1, 0, 0);
-    l.ctx.globalAlpha = 1;
-    l.ctx.clearRect(0, 0, l.canvas.width, l.canvas.height);
-  }
-
-  // ---------- 描画 ----------
-  function applyView(c: Ctx): void {
-    c.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (opts.flipped) c.transform(-1, 0, 0, 1, cssW, 0);
-  }
-
-  function paintCacheStroke(i: number, doc: Doc): void {
-    if (!cache) return;
-    const s = doc.strokes[i];
-    if (!s) return;
-    const st = doc.styles[i];
-    if (isEraserStyle(st)) {
-      paintEraser(cache.ctx, s, st.size, { k: dpr, ox: 0, oy: 0 });
-      return;
-    }
-    // 補助線はシルエット（形だけを見る表示）には出さない
-    if (isGuideStyle(st) && opts.silhouette) return;
-    const paint = viewPaint(st);
-    // 再生中は表示用の透明度を掛けない（描いた順をそのまま見せる）
-    const a = replayState ? 1 : visibilityAt(i);
-    if (a <= 0) return;
-    const shown = a < 1 ? { ...paint, pen: { ...paint.pen, opacity: paint.pen.opacity * a } } : paint;
-    paintStroke(cache.ctx, s, shown, { k: dpr, ox: 0, oy: 0 }, scratch, devSize());
-  }
-
-  function visibilityAt(i: number): number {
-    const v = visibility?.[i];
+  // ================= レイヤー画像の計算 =================
+  function visAlpha(j: number): number {
+    if (!visibility || replayState) return 1;
+    const i = activeHistory().index.get(j);
+    if (i === undefined) return 1;
+    const v = visibility[i];
     if (v === undefined || !Number.isFinite(v)) return 1;
     return Math.min(1, Math.max(0, v));
   }
 
-  /** cache を透明にして、doc の先頭 upto 本（消しゴムを含む）を描く。紙は compose で塗る。 */
-  function rebuildCache(doc: Doc = current(), upto = doc.strokes.length): void {
-    if (!cache) return;
-    const c = cache.ctx;
-    c.setTransform(1, 0, 0, 1, 0, 0);
-    c.globalAlpha = 1;
-    c.globalCompositeOperation = 'source-over';
-    c.clearRect(0, 0, cache.canvas.width, cache.canvas.height);
-    for (let i = 0; i < upto; i++) paintCacheStroke(i, doc);
+  function dispEnv(): RasterEnv {
+    const w = bmW();
+    const h = bmH();
+    return {
+      xf: { k: dpr, ox: 0, oy: 0 },
+      w,
+      h,
+      // 補助線はシルエット（形だけを見る表示）には出さない
+      paint: (st) => (isGuideStyle(st) && opts.silhouette ? null : viewPaint(st)),
+      fillColor: (c) => (opts.silhouette ? SILHOUETTE_INK : c),
+      scratch,
+      make: () => makeLayer(w, h),
+      dilate: Math.max(1, Math.round(dpr)),
+    };
   }
 
-  /** 進行中の消しゴムの、まだ消し込んでいない点を cache から消す。 */
-  function eraseLiveIncrement(): void {
-    if (!live || live.tool !== 'eraser' || !cache) return;
-    const n = live.points.length;
-    if (n <= live.erasedPts) return;
-    paintEraser(cache.ctx, live.points, live.style.size, { k: dpr, ox: 0, oy: 0 }, live.erasedPts, n);
-    live.erasedPts = n;
-    composeDirty = true;
+  /**
+   * op（添字 j）が layer id に及ぼす効果を target に描く。target は op の直前の id の画像。
+   * other(id2) は op の直前（時点 j）の別のレイヤーの画像。
+   */
+  function execInto(target: Layer, id: string, op: EngineOp, j: number, other: (id2: string) => Layer | null, env: RasterEnv): void {
+    switch (op.kind) {
+      case 'stroke':
+        if (op.layer === id) drawStrokeOp(target, op.points, op.style, env, visAlpha(j));
+        return;
+      case 'fill': {
+        if (op.layer !== id) return;
+        let ref: Uint8ClampedArray | null = null;
+        if (op.reference === 'all') {
+          const tmp = env.make();
+          if (!tmp) return;
+          for (const l of listAt(j)) {
+            const src = l.id === id ? target : other(l.id);
+            if (src) drawLayerOnto(tmp, src, l);
+          }
+          ref = readPixels(tmp)?.data ?? null;
+          if (!ref) return;
+        }
+        drawFillOp(target, ref, op, env);
+        return;
+      }
+      case 'transform':
+        if (op.layer === id) drawTransformOp(target, op.mask, op.matrix, env);
+        return;
+      case 'delete':
+        if (op.layer === id) drawDeleteOp(target, op.mask, env);
+        return;
+      case 'layer-clear':
+        if (op.layer === id) clearLayer(target);
+        return;
+      case 'layer-merge-down': {
+        const list = listAt(j);
+        const i = list.findIndex((l) => l.id === op.layer);
+        if (i <= 0 || list[i - 1]!.id !== id) return;
+        const up = other(op.layer);
+        if (up) drawLayerOnto(target, up, list[i]!);
+        return;
+      }
+      case 'layer-add':
+        if (op.layer.id === id) clearLayer(target);
+        return;
+      case 'layer-duplicate': {
+        if (op.newId !== id) return;
+        const src = other(op.layer);
+        if (src) copyLayer(target, src);
+        else clearLayer(target);
+        return;
+      }
+      default:
+        return;
+    }
+  }
+
+  /** target に「ops[0..n) を適用した後の id の画像」を描く（チェックポイント＋再適用）。 */
+  function renderLayerInto(target: Layer, id: string, n: number, env: RasterEnv, memo: Map<string, Layer | null>): void {
+    const created = creationIndex(id, n);
+    let best: Ckpt | null = null;
+    for (const c of ckpts) {
+      if (c.id !== id || c.count > n || c.count <= created) continue;
+      if (!best || c.count > best.count) best = c;
+    }
+    let start: number;
+    if (best) {
+      copyLayer(target, best.layer);
+      start = best.count;
+    } else {
+      clearLayer(target);
+      start = Math.max(0, created);
+    }
+    for (let j = start; j < n; j++) {
+      const op = ops[j]!;
+      if (!writesOf(op, listAt(j)).includes(id)) continue;
+      execInto(target, id, op, j, (id2) => layerAtTemp(id2, j, env, memo), env);
+    }
+  }
+
+  function layerAtTemp(id: string, n: number, env: RasterEnv, memo: Map<string, Layer | null>): Layer | null {
+    const key = `${n}\u0000${id}`;
+    if (memo.has(key)) return memo.get(key)!;
+    const t = env.make();
+    memo.set(key, t);
+    if (t) renderLayerInto(t, id, n, env, memo);
+    return t;
+  }
+
+  // ---------- チェックポイント ----------
+  function saveCkpt(id: string, count: number, owner: number, src: Layer): void {
+    const copy = makeLayer(src.canvas.width, src.canvas.height);
+    if (!copy) return;
+    copy.ctx.drawImage(src.canvas, 0, 0);
+    ckpts = ckpts.filter((c) => !(c.id === id && c.count === count));
+    ckpts.push({ id, count, owner, layer: copy, bytes: src.canvas.width * src.canvas.height * 4 });
+    evictCkpts();
+  }
+  function evictCkpts(): void {
+    for (;;) {
+      const owners = [...new Set(ckpts.map((c) => c.owner))].sort((a, b) => a - b);
+      const bytes = ckpts.reduce((s, c) => s + c.bytes, 0);
+      if (owners.length <= CKPT_OPS && bytes <= CKPT_BYTES) return;
+      const oldest = owners[0]!;
+      ckpts = ckpts.filter((c) => c.owner !== oldest);
+      if (owners.length <= 1) return;
+    }
+  }
+  function dropCkptsAbove(n: number): void {
+    ckpts = ckpts.filter((c) => c.count <= n);
+  }
+  function dropAllCkpts(): void {
+    ckpts = [];
+  }
+
+  // ---------- 表示用の画像 ----------
+  function ensureBm(id: string): Layer | null {
+    let l = bms.get(id);
+    if (!l) {
+      l = makeLayer(bmW(), bmH()) ?? undefined;
+      if (!l) return null;
+      bms.set(id, l);
+    }
+    return l;
+  }
+  function pruneBms(list: readonly LayerInfo[]): void {
+    for (const id of [...bms.keys()]) if (!list.some((l) => l.id === id)) bms.delete(id);
+  }
+
+  /** 表示中（時点 j）の画像に op を適用する。snapshots: Undo 用のチェックポイントを取る */
+  function applyOpDisplay(op: EngineOp, j: number, snapshots: boolean, skipExec = false): void {
+    const before = listAt(j);
+    if (!ctx) {
+      dispList = listAt(j + 1);
+      return;
+    }
+    const writes = writesOf(op, before);
+    const snap = snapshots && isRasterOp(op);
+    if (snap) {
+      const ids = new Set(writes);
+      if (op.kind === 'layer-remove' || op.kind === 'layer-merge-down') ids.add(op.layer);
+      for (const id of ids) {
+        const bm = bms.get(id);
+        if (bm) saveCkpt(id, j, j, bm);
+      }
+    }
+    if (!skipExec) {
+      const env = dispEnv();
+      for (const id of writes) {
+        const bm = ensureBm(id);
+        if (bm) execInto(bm, id, op, j, (id2) => bms.get(id2) ?? null, env);
+      }
+    }
+    if (snap) for (const id of writes) {
+      const bm = bms.get(id);
+      if (bm) saveCkpt(id, j + 1, j, bm);
+    }
+    dispList = listAt(j + 1);
+    if (!replayState) pruneBms(dispList);
+  }
+
+  /** 全レイヤーを ops.length の時点に描き直す */
+  function rebuildAll(): void {
+    if (!ctx) return;
+    dispList = curList();
+    const env = dispEnv();
+    const memo = new Map<string, Layer | null>();
+    for (const l of dispList) {
+      const bm = ensureBm(l.id);
+      if (bm) renderLayerInto(bm, l.id, ops.length, env, memo);
+    }
+    pruneBms(dispList);
+    // なぞっている途中の消しゴムは履歴にまだ無いので、描き直したら消し込み直す
+    if (live && live.tool === 'eraser') {
+      live.erasedPts = 0;
+      eraseLiveIncrement();
+    }
+  }
+
+  /** 指定したレイヤーだけ ops.length の時点に描き直す */
+  function rebuildLayers(ids: Iterable<string>): void {
+    if (!ctx) return;
+    dispList = curList();
+    const env = dispEnv();
+    const memo = new Map<string, Layer | null>();
+    for (const id of ids) {
+      if (!dispList.some((l) => l.id === id)) continue;
+      const bm = ensureBm(id);
+      if (bm) renderLayerInto(bm, id, ops.length, env, memo);
+    }
+    pruneBms(dispList);
+  }
+
+  function fullRedraw(): void {
+    rebuildAll();
+    compose();
+  }
+
+  // ================= 合成 =================
+  function applyView(c: Ctx): void {
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (opts.flipped) c.transform(-1, 0, 0, 1, cssW, 0);
+    if (!isIdentityView(view)) {
+      const v = viewMatrix(view);
+      c.transform(v[0], v[1], v[2], v[3], v[4], v[5]);
+    }
   }
 
   /** グリッド（画面座標に固定。反転しない）。 */
@@ -577,72 +819,134 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     c.globalAlpha = 1;
   }
 
+  /** 選択範囲の点線（白黒 2 重）と、投げ縄の描きかけ */
+  function drawSelection(c: Ctx): void {
+    if (replayState) return;
+    const shown = selection ? (tf ? transformMask(tf.mask, tf.matrix) : selection) : null;
+    const lasso = selIn && selIn.mode === 'lasso' && selIn.points.length > 1 ? selIn.points : null;
+    if (!shown && !lasso) return;
+    applyView(c);
+    const px = 1 / Math.max(0.01, view.zoom);
+    c.globalAlpha = 1;
+    c.lineWidth = px;
+    const path = () => {
+      c.beginPath();
+      if (shown) {
+        const poly = maskPolygon(shown);
+        poly.forEach((p, i) => (i === 0 ? c.moveTo(p.x, p.y) : c.lineTo(p.x, p.y)));
+        c.closePath();
+      }
+      if (lasso) lasso.forEach((p, i) => (i === 0 ? c.moveTo(p.x, p.y) : c.lineTo(p.x, p.y)));
+    };
+    c.setLineDash([]);
+    c.strokeStyle = '#ffffff';
+    path();
+    c.stroke();
+    c.setLineDash([4 * px, 4 * px]);
+    c.strokeStyle = '#000000';
+    path();
+    c.stroke();
+    c.setLineDash([]);
+  }
+
   /** 消しゴムの輪（半径 = size）。なぞっている間と、ペン／マウスが紙の上にある間に出す。 */
   function drawEraserRing(c: Ctx): void {
     const pt = live ? (live.tool === 'eraser' ? live.lastEraserPt : null) : tool === 'eraser' && !replayState ? hoverPt : null;
     if (!pt) return;
     applyView(c);
     c.globalAlpha = 0.45;
-    c.strokeStyle = opts.silhouette ? SILHOUETTE_INK : ink;
-    c.lineWidth = 1 / Math.max(1, dpr);
+    c.strokeStyle = opts.silhouette ? SILHOUETTE_INK : inkColor;
+    c.lineWidth = 1 / Math.max(1, dpr) / Math.max(0.01, view.zoom);
     c.beginPath();
     c.arc(pt.x, pt.y, eraser.size, 0, Math.PI * 2);
     c.stroke();
     c.globalAlpha = 1;
   }
 
-  /** 全層を合成し直す（cache は作り直さない）。 */
+  function ensureMix(w: number, h: number): Layer | null {
+    if (!mix || mix.canvas.width !== w || mix.canvas.height !== h) mix = makeLayer(w, h);
+    return mix;
+  }
+
+  /** 全層を合成し直す（レイヤー画像は作り直さない）。 */
   function compose(): void {
     if (!ctx || !canvas) return;
     composeDirty = false;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = opts.silhouette ? SILHOUETTE_PAPER : paper;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    applyView(ctx);
-    if (livePaint && liveLayer && cache && livePaint.pen.blend !== 'source-over') {
-      // multiply 等は紙ではなく完了ストロークにだけ掛ける（確定後の cache と同じ見た目にする）
-      if (!mix || mix.canvas.width !== cache.canvas.width || mix.canvas.height !== cache.canvas.height) {
-        mix = makeLayer(cache.canvas.width, cache.canvas.height);
-      }
-      if (mix) {
-        const m = mix.ctx;
-        clearLayer(mix);
-        m.drawImage(cache.canvas, 0, 0);
-        m.globalAlpha = livePaint.pen.opacity;
-        m.globalCompositeOperation = livePaint.pen.blend;
-        m.drawImage(liveLayer.canvas, 0, 0);
-        m.globalAlpha = 1;
-        m.globalCompositeOperation = 'source-over';
-        ctx.drawImage(mix.canvas, 0, 0, cssW, cssH);
-        drawOverlay(ctx);
-        drawEraserRing(ctx);
-        drawGrid(ctx);
-        return;
-      }
+    const paperNow = opts.silhouette ? SILHOUETTE_PAPER : paper;
+    if (isIdentityView(view)) {
+      ctx.fillStyle = paperNow;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    } else {
+      // 紙の外側は少し暗く
+      ctx.fillStyle = paperNow;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = DESK_SHADE;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      applyView(ctx);
+      ctx.fillStyle = paperNow;
+      ctx.fillRect(0, 0, docW, docH);
     }
-    if (cache) ctx.drawImage(cache.canvas, 0, 0, cssW, cssH);
-    if (livePaint && liveLayer) {
-      ctx.globalAlpha = livePaint.pen.opacity;
-      if (livePaint.pen.blend !== 'source-over') ctx.globalCompositeOperation = livePaint.pen.blend;
-      ctx.drawImage(liveLayer.canvas, 0, 0, cssW, cssH);
+    applyView(ctx);
+    for (const l of dispList) {
+      if (!l.visible) continue;
+      const bm = bms.get(l.id);
+      if (!bm) continue;
+      let src: Layer = bm;
+      const withTf = !!tf && tf.layer === l.id && !!tf.base && !!tf.cut;
+      const withLive = !!livePaint && !!liveLayer && liveOn === l.id;
+      if (withLive && !withTf && l.opacity >= 1 && l.blend === 'normal' && livePaint!.pen.blend === 'source-over') {
+        // 従来の経路: 完了ストロークの上に進行中の線を不透明度付きで重ねる
+        ctx.drawImage(bm.canvas, 0, 0, docW, docH);
+        ctx.globalAlpha = livePaint!.pen.opacity;
+        ctx.drawImage(liveLayer!.canvas, 0, 0, docW, docH);
+        ctx.globalAlpha = 1;
+        continue;
+      }
+      if (withTf || withLive) {
+        const m = ensureMix(bm.canvas.width, bm.canvas.height);
+        if (m) {
+          clearLayer(m);
+          if (withTf) {
+            m.ctx.drawImage(tf!.base!.canvas, 0, 0);
+            drawCut(m, tf!.cut!, tf!.matrix, { k: dpr, ox: 0, oy: 0 });
+          } else m.ctx.drawImage(bm.canvas, 0, 0);
+          if (withLive) {
+            // multiply 等は紙ではなくレイヤーの中身にだけ掛ける（確定後と同じ見た目にする）
+            m.ctx.globalAlpha = livePaint!.pen.opacity;
+            m.ctx.globalCompositeOperation = livePaint!.pen.blend;
+            m.ctx.drawImage(liveLayer!.canvas, 0, 0);
+            m.ctx.globalAlpha = 1;
+            m.ctx.globalCompositeOperation = 'source-over';
+          }
+          src = m;
+        }
+      }
+      const blend = compositeOp(l.blend);
+      if (l.opacity < 1) ctx.globalAlpha = l.opacity;
+      if (blend !== 'source-over') ctx.globalCompositeOperation = blend;
+      ctx.drawImage(src.canvas, 0, 0, docW, docH);
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over';
     }
     drawOverlay(ctx);
+    drawSelection(ctx);
     drawEraserRing(ctx);
     drawGrid(ctx);
   }
 
-  function fullRedraw(): void {
-    rebuildCache();
-    // なぞっている途中の消しゴムは履歴にまだ無いので、描き直したら消し込み直す
-    if (live && live.tool === 'eraser') {
-      live.erasedPts = 0;
-      eraseLiveIncrement();
-    }
-    compose();
+  /** 進行中の消しゴムの、まだ消し込んでいない点をアクティブレイヤーから消す。 */
+  function eraseLiveIncrement(): void {
+    if (!live || live.tool !== 'eraser') return;
+    const bm = bms.get(live.layer);
+    if (!bm) return;
+    const n = live.points.length;
+    if (n <= live.erasedPts) return;
+    paintEraser(bm.ctx, live.points, live.style.size, { k: dpr, ox: 0, oy: 0 }, live.erasedPts, n);
+    live.erasedPts = n;
+    composeDirty = true;
   }
 
   /** 進行中のペン入力の新しい区間を live レイヤーに描き足す。描いたら true。 */
@@ -679,6 +983,22 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     return false;
   }
 
+  /** 図形のプレビューを live レイヤーに描く */
+  function drawShapePreview(): void {
+    if (!shape || !liveLayer || !livePaint) return;
+    clearLayer(liveLayer);
+    const c = liveLayer.ctx;
+    for (const s of shapeStrokes(shape.kind, shape.a, shape.b, shape.t0)) {
+      const g = geom(s, livePaint.pen, true);
+      c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      prep(c, livePaint.color);
+      drawRange(c, g, livePaint.pen, 0, g.pts.length - 2, 1);
+      drawTail(c, g, livePaint.pen, 1);
+      c.globalAlpha = 1;
+    }
+    c.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
   function frame(): void {
     rafId = 0;
     if (!ctx) return;
@@ -697,41 +1017,55 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
   }
 
   // ---------- サイズ ----------
+  function reallocBitmaps(): void {
+    const w = bmW();
+    const h = bmH();
+    for (const l of [...bms.values(), liveLayer, scratch]) {
+      if (!l) continue;
+      l.canvas.width = w;
+      l.canvas.height = h;
+    }
+    mix = null;
+    dropAllCkpts();
+    if (tf) cancelTf();
+  }
+
   function resize(): void {
-    if (!host || !canvas || !cache) return;
+    if (!host || !canvas) return;
     const w = host.clientWidth;
     const h = host.clientHeight;
     const nd = typeof window !== 'undefined' && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
     if (w === cssW && h === cssH && nd === dpr && canvas.width > 0) return;
     cssW = w;
     cssH = h;
+    const dprChanged = nd !== dpr;
     dpr = nd;
-    const pw = Math.max(1, Math.round(w * dpr));
-    const ph = Math.max(1, Math.round(h * dpr));
-    canvas.width = pw;
-    canvas.height = ph;
-    mix = null;
-    for (const l of [cache, liveLayer, scratch]) {
-      if (!l) continue;
-      l.canvas.width = pw;
-      l.canvas.height = ph;
-    }
-    if (live && live.tool !== 'eraser') {
-      // 大きさが変わると live レイヤーは消えるので描き直す
-      live.drawnCtrl = 0;
-      live.dotDrawn = false;
-      drawLiveIncrement();
-    }
-    if (replayState) {
-      rebuildCache(replayState.doc, replayState.committed);
-      replayState.partialCtrl = 0;
-      replayState.partialDot = false;
-      clearLayer(liveLayer);
-      drawReplayPartial(replayState);
-      compose();
+    canvas.width = Math.max(1, Math.round(w * dpr));
+    canvas.height = Math.max(1, Math.round(h * dpr));
+    const nw = Math.max(docW, w);
+    const nh = Math.max(docH, h);
+    const grew = nw !== docW || nh !== docH;
+    docW = nw;
+    docH = nh;
+    const first = (liveLayer?.canvas.width ?? 0) === 0;
+    if (grew || dprChanged || first) {
+      reallocBitmaps();
+      if (live && live.tool !== 'eraser') {
+        // 大きさが変わると live レイヤーは消えるので描き直す
+        live.drawnCtrl = 0;
+        live.dotDrawn = false;
+        drawLiveIncrement();
+      }
+      if (shape) drawShapePreview();
+      if (replayState) {
+        replayRebuild(replayState);
+        compose();
+        return;
+      }
+      fullRedraw();
       return;
     }
-    fullRedraw();
+    compose();
   }
 
   function watchDpr(): void {
@@ -772,13 +1106,67 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     img.src = url;
   }
 
-  // ---------- 入力 ----------
-  function toPoint(e: PointerEvent): Vec2 {
+  // ================= 操作の積み下ろし =================
+  /** op のまとまりを 1 手として積む（表示にも適用）。skipFirstExec: 先頭 op の画像は描き済み（消しゴム） */
+  function pushUnit(unit: EngineOp[], skipFirstExec = false): void {
+    if (unit.length === 0) return;
+    redoUnits = [];
+    const start = ops.length;
+    units.push(start);
+    const listBefore = curList();
+    unit.forEach((op, i) => {
+      const j = ops.length;
+      ops.push(op);
+      touched(j);
+      applyOpDisplay(op, j, true, skipFirstExec && i === 0);
+    });
+    while (units.length > UNDO_LIMIT) units.shift();
+    afterOps(listBefore);
+  }
+
+  function afterOps(listBefore: readonly LayerInfo[]): void {
+    const list = curList();
+    let layersChanged = list !== listBefore;
+    if (!list.some((l) => l.id === active)) {
+      active = list[list.length - 1]!.id;
+      layersChanged = true;
+    }
+    if (tf && !list.some((l) => l.id === tf!.layer)) cancelTf();
+    compose();
+    emitChange();
+    emitOps();
+    if (layersChanged) emitLayers();
+  }
+
+  /** 変形プレビュー中なら先に確定する */
+  function settleTransform(): void {
+    if (tf) engine.commitTransform();
+  }
+
+  function activeEditable(): boolean {
+    const l = findLayer(active);
+    return !!l && !l.locked;
+  }
+
+  function cancelTf(): void {
+    tf = null;
+  }
+
+  // ================= 入力 =================
+  /** 画面上の位置（反転を戻した CSS px、ビュー適用前） */
+  function screenPt(e: { clientX: number; clientY: number }): Vec2 {
     const rect = canvas!.getBoundingClientRect();
     let x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     if (opts.flipped) x = rect.width - x;
     return { x, y };
+  }
+  function viewInverse(p: Vec2): Vec2 {
+    if (isIdentityView(view)) return p;
+    return apply(invert(viewMatrix(view)), p.x, p.y);
+  }
+  function toPoint(e: { clientX: number; clientY: number }): Vec2 {
+    return viewInverse(screenPt(e));
   }
 
   function allowed(e: PointerEvent): boolean {
@@ -789,10 +1177,10 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     return false;
   }
 
-  function timeOf(e: PointerEvent): number {
+  function timeOf(e: { timeStamp: number }): number {
     if (timeOrigin === null) {
       let lastT = -RESUME_GAP_MS;
-      for (const s of current().strokes) for (const p of s) if (Number.isFinite(p.t) && p.t > lastT) lastT = p.t;
+      for (const op of ops) if (op.kind === 'stroke') for (const p of op.points) if (Number.isFinite(p.t) && p.t > lastT) lastT = p.t;
       timeOrigin = e.timeStamp - (lastT + RESUME_GAP_MS);
     }
     return Math.max(0, e.timeStamp - timeOrigin);
@@ -801,9 +1189,11 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
   /**
    * 消しゴムの軌跡（半径 r）が、いま見えている線（ペン、シルエット中は太い線）に届きうるか。
    * 届かない消しゴムは履歴に積まない（何も無い所をなぞっても Undo の手数が増えないように）。
+   * 塗りつぶし等の画素があるレイヤーでは常に積む。
    */
-  function eraserTouchesInk(pts: readonly StrokePoint[], r: number): boolean {
+  function eraserTouchesInk(pts: readonly StrokePoint[], r: number, layerId: string): boolean {
     if (pts.length === 0) return false;
+    if (hasRasterContent(layerId)) return true;
     let ex0 = Infinity;
     let ey0 = Infinity;
     let ex1 = -Infinity;
@@ -814,7 +1204,7 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
       if (q.x > ex1) ex1 = q.x;
       if (q.y > ey1) ey1 = q.y;
     }
-    const doc = current();
+    const doc: RawHistory = model().raw.get(layerId) ?? { strokes: [], styles: [] };
     return doc.strokes.some((s, i) => {
       const st = doc.styles[i];
       if (isEraserStyle(st) || s.length === 0) return false;
@@ -831,7 +1221,6 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
         if (q.y > sy1) sy1 = q.y;
       }
       if (ex1 + pad < sx0 || ex0 - pad > sx1 || ey1 + pad < sy0 || ey0 - pad > sy1) return false;
-      // 線分どうしの距離（端点と線分の距離の最小）で詳しく見る
       for (let k = 0; k < pts.length; k++) {
         const a = pts[k]!;
         const b = pts[k + 1] ?? a;
@@ -862,24 +1251,192 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     live.points.push({ x: pos.x, y: pos.y, p: normalizePressure(e.pressure), t: timeOf(e) });
   }
 
-  function onDown(e: PointerEvent): void {
-    if (!canvas || replayState || live) return;
-    if (!allowed(e)) return;
-    e.preventDefault();
+  function capture(e: PointerEvent): void {
     try {
-      canvas.setPointerCapture(e.pointerId);
+      canvas?.setPointerCapture(e.pointerId);
     } catch {
       /* 一部環境では失敗するが描画は続けられる */
     }
-    const style = tool === 'eraser' ? eraserStrokeStyle(eraser.size) : tool === 'guide' ? guideStrokeStyle() : styleFromPen(pen);
-    live = { pointerId: e.pointerId, tool, points: [], drawnCtrl: 0, dotDrawn: false, lastEraserPt: null, erasedPts: 0, style };
+  }
+
+  /** 1 本指・ペン・マウスの操作を取り消す（2 本指のジェスチャーに切り替えるとき） */
+  function cancelSingleInput(): void {
+    if (live) interruptInput();
+    if (shape) {
+      shape = null;
+      livePaint = null;
+      liveOn = null;
+      clearLayer(liveLayer);
+    }
+    if (selIn) {
+      selIn = null;
+      composeDirty = true;
+    }
+    panIn = null;
+    pickIn = null;
+    stopFrame();
+    compose();
+  }
+
+  function startGesture(): void {
+    const ids = [...touches.keys()].slice(0, 2) as [number, number];
+    const s1 = touches.get(ids[0])!;
+    const s2 = touches.get(ids[1])!;
+    gesture = { ids, s1: { ...s1 }, s2: { ...s2 }, c1: viewInverse(s1), c2: viewInverse(s2), base: { ...view }, rotating: false };
+  }
+  function updateGesture(): void {
+    const g = gesture;
+    if (!g) return;
+    const s1 = touches.get(g.ids[0]);
+    const s2 = touches.get(g.ids[1]);
+    if (!s1 || !s2) return;
+    if (!g.rotating && Math.abs(twistDeg(g.s1, g.s2, s1, s2)) >= TWIST_THRESHOLD) g.rotating = true;
+    view = gestureView(g.base, g.c1, g.c2, s1, s2, g.rotating);
+    composeDirty = true;
+    schedule();
+    emitView();
+  }
+
+  function selectionShown(): SelectionMask | null {
+    if (!selection) return null;
+    return tf ? transformMask(tf.mask, tf.matrix) : selection;
+  }
+
+  function onDown(e: PointerEvent): void {
+    if (!canvas || replayState) return;
+    if (e.pointerType === 'touch') {
+      touches.set(e.pointerId, screenPt(e));
+      if (touches.size === 2) {
+        // ペン・マウスで描いている間の手のひら（2 本目のタッチ）ではビューを動かさない
+        const busy = live?.pointerId ?? shape?.pointerId ?? selIn?.pointerId ?? panIn?.pointerId ?? pickIn;
+        if (busy !== null && busy !== undefined && !touches.has(busy)) return;
+        e.preventDefault();
+        capture(e);
+        cancelSingleInput();
+        startGesture();
+        return;
+      }
+      if (touches.size > 2) return;
+      if (gesture) return;
+    } else if (gesture) {
+      // ペン・マウスが来たらジェスチャーをやめて描く（ペン優先）
+      gesture = null;
+    }
+    if (live || shape || selIn || panIn || pickIn !== null) return;
+    if (tool !== 'hand' && !allowed(e)) return;
+    e.preventDefault();
+    capture(e);
+    const p = toPoint(e);
+    switch (tool) {
+      case 'hand':
+        panIn = { pointerId: e.pointerId, last: screenPt(e) };
+        return;
+      case 'eyedropper':
+        pickIn = e.pointerId;
+        pickAt(p);
+        return;
+      case 'fill':
+        settleTransform();
+        if (!activeEditable()) return;
+        if (docW > 0 && docH > 0 && (p.x < 0 || p.y < 0 || p.x >= docW || p.y >= docH)) return;
+        pushUnit([{ kind: 'fill', layer: active, x: p.x, y: p.y, color: fillColorNow(), tolerance: fillOpts.tolerance, reference: fillOpts.reference }]);
+        return;
+      case 'select-rect':
+      case 'select-lasso': {
+        const shown = selectionShown();
+        if (shown && pointInMask(shown, p.x, p.y) && activeEditable()) {
+          selIn = { pointerId: e.pointerId, mode: 'move', start: p, points: [], base: tf ? tf.matrix : [...IDENTITY] };
+          return;
+        }
+        settleTransform();
+        selIn = { pointerId: e.pointerId, mode: tool === 'select-rect' ? 'rect' : 'lasso', start: p, points: [p], base: [...IDENTITY] };
+        if (tool === 'select-rect') selection = null;
+        composeDirty = true;
+        schedule();
+        return;
+      }
+      case 'shape-line':
+      case 'shape-rect':
+      case 'shape-ellipse': {
+        settleTransform();
+        if (!activeEditable()) return;
+        const style = styleFromPen(pen);
+        const kind: ShapeKind = tool === 'shape-line' ? 'line' : tool === 'shape-rect' ? 'rect' : 'ellipse';
+        shape = { pointerId: e.pointerId, kind, layer: active, a: p, b: p, t0: timeOf(e), style };
+        clearLayer(liveLayer);
+        livePaint = viewPaint(style);
+        liveOn = active;
+        return;
+      }
+      default:
+        break;
+    }
+    // pen / eraser / guide
+    settleTransform();
+    if (!activeEditable()) return;
+    const t = tool as 'pen' | 'eraser' | 'guide';
+    const style = t === 'eraser' ? eraserStrokeStyle(eraser.size) : t === 'guide' ? guideStrokeStyle() : styleFromPen(pen);
+    live = { pointerId: e.pointerId, tool: t, layer: active, points: [], drawnCtrl: 0, dotDrawn: false, lastEraserPt: null, erasedPts: 0, style };
     clearLayer(liveLayer);
-    livePaint = tool === 'eraser' ? null : viewPaint(style);
+    livePaint = t === 'eraser' ? null : viewPaint(style);
+    liveOn = t === 'eraser' ? null : active;
     addSample(e);
     schedule();
   }
 
   function onMove(e: PointerEvent): void {
+    if (e.pointerType === 'touch' && touches.has(e.pointerId)) {
+      touches.set(e.pointerId, screenPt(e));
+      if (gesture) {
+        if (gesture.ids.includes(e.pointerId)) {
+          e.preventDefault();
+          updateGesture();
+        }
+        return;
+      }
+    }
+    if (panIn && e.pointerId === panIn.pointerId) {
+      e.preventDefault();
+      const s = screenPt(e);
+      const dx = s.x - panIn.last.x;
+      const dy = s.y - panIn.last.y;
+      panIn.last = s;
+      if (dx !== 0 || dy !== 0) {
+        view = { ...view, panX: view.panX + dx, panY: view.panY + dy };
+        composeDirty = true;
+        schedule();
+        emitView();
+      }
+      return;
+    }
+    if (pickIn !== null && e.pointerId === pickIn) {
+      pickAt(toPoint(e));
+      return;
+    }
+    if (shape && e.pointerId === shape.pointerId) {
+      e.preventDefault();
+      shape.b = toPoint(e);
+      drawShapePreview();
+      composeDirty = true;
+      schedule();
+      return;
+    }
+    if (selIn && e.pointerId === selIn.pointerId) {
+      e.preventDefault();
+      const p = toPoint(e);
+      if (selIn.mode === 'rect') {
+        selection = sanitizeMask({ kind: 'rect', x: selIn.start.x, y: selIn.start.y, w: p.x - selIn.start.x, h: p.y - selIn.start.y });
+      } else if (selIn.mode === 'lasso') {
+        const last = selIn.points[selIn.points.length - 1];
+        if (!last || Math.hypot(p.x - last.x, p.y - last.y) >= 1) selIn.points.push(p);
+      } else {
+        engine.transformSelection(mul(translate(p.x - selIn.start.x, p.y - selIn.start.y), selIn.base));
+        return;
+      }
+      composeDirty = true;
+      schedule();
+      return;
+    }
     if (!live) {
       // 消しゴム選択中は、ペン／マウスの位置に輪を出す（タッチはホバーが無いので出さない）
       if (tool === 'eraser' && canvas && !replayState && e.pointerType !== 'touch') {
@@ -901,28 +1458,93 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     rafId = 0;
   }
 
+  function finishShape(e: PointerEvent, cancelled: boolean): void {
+    const s = shape!;
+    shape = null;
+    livePaint = null;
+    liveOn = null;
+    clearLayer(liveLayer);
+    if (!cancelled) s.b = toPoint(e);
+    const strokes = cancelled ? [] : shapeStrokes(s.kind, s.a, s.b, s.t0);
+    if (strokes.length === 0) {
+      compose();
+      return;
+    }
+    pushUnit(strokes.map((pts) => ({ kind: 'stroke', layer: s.layer, points: pts, style: s.style })));
+    for (const pts of strokes) for (const cb of [...strokeEndCbs]) cb(pts);
+  }
+
+  function finishSelect(e: PointerEvent, cancelled: boolean): void {
+    const s = selIn!;
+    selIn = null;
+    if (s.mode === 'move') {
+      if (!cancelled) {
+        const p = toPoint(e);
+        engine.transformSelection(mul(translate(p.x - s.start.x, p.y - s.start.y), s.base));
+      }
+      return;
+    }
+    if (cancelled) {
+      compose();
+      return;
+    }
+    if (s.mode === 'rect') {
+      const p = toPoint(e);
+      const m = sanitizeMask({ kind: 'rect', x: s.start.x, y: s.start.y, w: p.x - s.start.x, h: p.y - s.start.y });
+      // 小さすぎる矩形（タップ）は選択解除
+      selection = m && m.kind === 'rect' && m.w >= 2 && m.h >= 2 ? m : null;
+    } else {
+      selection = sanitizeMask({ kind: 'lasso', points: s.points });
+    }
+    compose();
+    emitSelection();
+  }
+
   function finish(e: PointerEvent, cancelled: boolean): void {
+    if (e.pointerType === 'touch') {
+      touches.delete(e.pointerId);
+      if (gesture && gesture.ids.includes(e.pointerId)) {
+        gesture = null;
+        return;
+      }
+    }
+    if (panIn && e.pointerId === panIn.pointerId) {
+      panIn = null;
+      return;
+    }
+    if (pickIn !== null && e.pointerId === pickIn) {
+      pickIn = null;
+      return;
+    }
+    if (shape && e.pointerId === shape.pointerId) {
+      finishShape(e, cancelled);
+      return;
+    }
+    if (selIn && e.pointerId === selIn.pointerId) {
+      finishSelect(e, cancelled);
+      return;
+    }
     if (!live || e.pointerId !== live.pointerId) return;
     if (!cancelled) addSample(e);
     const l = live;
     live = null;
     livePaint = null;
+    liveOn = null;
     clearLayer(liveLayer);
     if (l.tool === 'eraser') {
       stopFrame();
       hoverPt = e.pointerType === 'touch' || cancelled ? null : l.lastEraserPt;
-      if (eraserTouchesInk(l.points, l.style.size)) {
-        // cache には消し込み済み。1 回なぞる（down〜up）で 1 操作
-        const prev = history.present;
-        history.commit({ strokes: [...prev.strokes, l.points], styles: [...prev.styles, l.style] });
+      if (eraserTouchesInk(l.points, l.style.size, l.layer)) {
+        // 画像には消し込み済み。1 回なぞる（down〜up）で 1 操作
+        pushUnit([{ kind: 'stroke', layer: l.layer, points: l.points, style: l.style }], true);
         if (fullDirty) {
           fullDirty = false;
           fullRedraw();
-        } else compose();
-        emitChange();
+        }
       } else {
         fullDirty = false;
-        fullRedraw();
+        rebuildLayers([l.layer]);
+        compose();
       }
       return;
     }
@@ -933,20 +1555,14 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
       return;
     }
     const stroke: Stroke = l.points;
-    const prev = history.present;
-    const next: Doc = { strokes: [...prev.strokes, stroke], styles: [...prev.styles, l.style] };
-    history.commit(next);
     stopFrame();
+    pushUnit([{ kind: 'stroke', layer: l.layer, points: stroke, style: l.style }]);
     if (fullDirty) {
       fullDirty = false;
       fullRedraw();
-    } else {
-      paintCacheStroke(next.strokes.length - 1, next);
-      compose();
     }
     // 補助線は採点しないので strokeend を出さない（change だけ）
     if (l.tool !== 'guide') for (const cb of [...strokeEndCbs]) cb(stroke);
-    emitChange();
   }
 
   const onUp = (e: PointerEvent): void => finish(e, false);
@@ -958,29 +1574,38 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     schedule();
   };
 
-  // ---------- 再生 ----------
-  /** 再生中のストローク（partial）の、まだ描いていない部分を live レイヤーに描く。 */
+  function pickAt(p: Vec2): void {
+    const c = engine.pickColor(p.x, p.y);
+    engine.setPen({ color: c ?? undefined });
+  }
+
+  // ================= 再生 =================
   function drawReplayPartial(st: ReplayState): void {
     if (st.partial < 0 || !liveLayer) return;
-    const s = st.doc.strokes[st.partial];
-    if (!s) return;
-    const n = Math.min(s.length, visibleCounts(st.schedule, performance.now() - st.start)[st.partial] ?? 0);
-    const style = st.doc.styles[st.partial];
+    const op = ops[st.partial];
+    if (!op || op.kind !== 'stroke') return;
+    const s = op.points;
+    const n = Math.min(s.length, visibleCounts(st.schedule, performance.now() - st.start)[st.strokeOf[st.partial]!] ?? 0);
+    const style = op.style;
     if (isEraserStyle(style)) {
-      // 消しゴムは cache から直接消していく
+      // 消しゴムはレイヤーから直接消していく
       livePaint = null;
-      if (cache && n > st.partialCtrl) {
-        paintEraser(cache.ctx, s, style.size, { k: dpr, ox: 0, oy: 0 }, st.partialCtrl, n);
+      liveOn = null;
+      const bm = bms.get(op.layer);
+      if (bm && n > st.partialCtrl) {
+        paintEraser(bm.ctx, s, style.size, { k: dpr, ox: 0, oy: 0 }, st.partialCtrl, n);
         st.partialCtrl = n;
       }
       return;
     }
     if (isGuideStyle(style) && opts.silhouette) {
       livePaint = null;
+      liveOn = null;
       return;
     }
     const paint = viewPaint(style);
     livePaint = paint;
+    liveOn = op.layer;
     const c = liveLayer.ctx;
     const pts = s.slice(0, n);
     const ready = n - 2;
@@ -1006,12 +1631,32 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     }
   }
 
+  /** 再生用: 表示を時点 0 に戻す */
+  function resetDisplayTo0(): void {
+    dispList = listAt(0);
+    for (const l of dispList) {
+      const bm = ensureBm(l.id);
+      clearLayer(bm);
+    }
+  }
+
+  /** 再生中にレイヤー画像が消えたとき（リサイズ）: 時点 opIdx まで描き直す */
+  function replayRebuild(st: ReplayState): void {
+    resetDisplayTo0();
+    for (let j = 0; j < st.opIdx; j++) applyOpDisplay(ops[j]!, j, false);
+    st.partialCtrl = 0;
+    st.partialDot = false;
+    clearLayer(liveLayer);
+    drawReplayPartial(st);
+  }
+
   function endReplay(): void {
     const st = replayState;
     if (!st) return;
     replayState = null;
     if (st.raf && typeof cancelAnimationFrame !== 'undefined') cancelAnimationFrame(st.raf);
     livePaint = null;
+    liveOn = null;
     clearLayer(liveLayer);
     fullRedraw();
     st.resolve();
@@ -1023,19 +1668,21 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     st.raf = 0;
     const elapsed = performance.now() - st.start;
     const counts = visibleCounts(st.schedule, elapsed);
-    const strokes = st.doc.strokes;
-    // 描き終わったストロークは完成形を cache へ
-    while (st.committed < strokes.length && (counts[st.committed] ?? 0) >= strokes[st.committed]!.length) {
-      if (st.partial === st.committed) {
+    while (st.opIdx < ops.length) {
+      const op = ops[st.opIdx]!;
+      if (op.kind === 'stroke' && (counts[st.strokeOf[st.opIdx]!] ?? 0) < op.points.length) break;
+      if (st.partial === st.opIdx) {
         st.partial = -1;
         livePaint = null;
+        liveOn = null;
         clearLayer(liveLayer);
       }
-      paintCacheStroke(st.committed, st.doc);
-      st.committed++;
+      applyOpDisplay(op, st.opIdx, false);
+      st.opIdx++;
     }
-    const next = st.committed;
-    if (next < strokes.length && (counts[next] ?? 0) > 0) {
+    const next = st.opIdx;
+    const op = ops[next];
+    if (op && op.kind === 'stroke' && (counts[st.strokeOf[next]!] ?? 0) > 0) {
       if (st.partial !== next) {
         st.partial = next;
         st.partialCtrl = 0;
@@ -1044,7 +1691,7 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
       }
       drawReplayPartial(st);
     }
-    if (elapsed >= st.schedule.total) {
+    if (elapsed >= st.schedule.total && st.opIdx >= ops.length) {
       endReplay();
       return;
     }
@@ -1052,16 +1699,187 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     st.raf = requestAnimationFrame(replayStep);
   }
 
-  // ---------- 公開 API ----------
+  // ================= 書き出し =================
+  /** 全 op を xf の解像度で新しいレイヤー画像に適用する（表示とは無関係）。 */
+  function renderDoc(W: number, H: number, xf: Xf): { list: readonly LayerInfo[]; layers: Map<string, Layer> } | null {
+    const needScratch = ops.some((op) => op.kind === 'stroke' && !isEraserStyle(op.style) && needsLayer(normalPaint(op.style).pen));
+    const sc = needScratch ? makeLayer(W, H) : null;
+    const layers = new Map<string, Layer>();
+    for (const l of listAt(0)) {
+      const c = makeLayer(W, H);
+      if (!c) return null;
+      layers.set(l.id, c);
+    }
+    const env: RasterEnv = {
+      xf,
+      w: W,
+      h: H,
+      paint: normalPaint,
+      fillColor: (c) => c,
+      scratch: sc,
+      make: () => makeLayer(W, H),
+      dilate: Math.max(1, Math.round(xf.k)),
+    };
+    ops.forEach((op, j) => {
+      for (const id of writesOf(op, listAt(j))) {
+        let t = layers.get(id);
+        if (!t) {
+          t = makeLayer(W, H) ?? undefined;
+          if (!t) continue;
+          layers.set(id, t);
+        }
+        // 書き出しでは表示用の透明度を掛けない
+        const saved = visibility;
+        visibility = null;
+        execInto(t, id, op, j, (id2) => layers.get(id2) ?? null, env);
+        visibility = saved;
+      }
+    });
+    return { list: curList(), layers };
+  }
+
+  /** 見えているレイヤーを 1 枚に（1 枚だけでふつうの合成ならそのまま） */
+  function flatten(r: { list: readonly LayerInfo[]; layers: Map<string, Layer> }, W: number, H: number): Layer | null {
+    const vis = r.list.filter((l) => l.visible);
+    const only = vis.length === 1 && r.list.length === 1 ? vis[0]! : null;
+    if (only && only.opacity >= 1 && only.blend === 'normal') return r.layers.get(only.id) ?? null;
+    const comp = makeLayer(W, H);
+    if (!comp) return null;
+    for (const l of vis) {
+      const src = r.layers.get(l.id);
+      if (src) drawLayerOnto(comp, src, l);
+    }
+    return comp;
+  }
+
+  /** 塗りつぶしを含む文書の、画素で見た内容の範囲（CSS px）。分からなければ null */
+  function pixelBounds(): Rect | null {
+    const W0 = docW > 0 ? docW : strokeBounds(ink().strokes).width;
+    const H0 = docH > 0 ? docH : strokeBounds(ink().strokes).height;
+    const s = Math.min(1, 1024 / Math.max(1, W0, H0));
+    const W = Math.max(1, Math.round(W0 * s));
+    const H = Math.max(1, Math.round(H0 * s));
+    const r = renderDoc(W, H, { k: s, ox: 0, oy: 0 });
+    if (!r) return null;
+    const flat = flatten(r, W, H);
+    if (!flat) return null;
+    const img = readPixels(flat);
+    if (!img) return null;
+    let x0 = W;
+    let y0 = H;
+    let x1 = -1;
+    let y1 = -1;
+    const d = img.data;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (d[(y * W + x) * 4 + 3]! === 0) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+    if (x1 < 0) return null;
+    return { x: x0 / s, y: y0 / s, width: (x1 + 1 - x0) / s, height: (y1 + 1 - y0) / s };
+  }
+
+  function contentRect(): Rect | null {
+    const v = ink();
+    if (!ops.some((op) => op.kind === 'fill')) return cropRect(v.strokes, opts.baseWidth, v.styles);
+    const vb = inkBounds(v.strokes, opts.baseWidth, v.styles);
+    const pb = pixelBounds();
+    if (!vb && !pb) return null;
+    if (!vb || !pb) return padRect((vb ?? pb)!);
+    const x = Math.min(vb.x, pb.x);
+    const y = Math.min(vb.y, pb.y);
+    return padRect({ x, y, width: Math.max(vb.x + vb.width, pb.x + pb.width) - x, height: Math.max(vb.y + vb.height, pb.y + pb.height) - y });
+  }
+
+  async function exportImage(
+    maxEdge: number,
+    o: { crop: boolean; transparent: boolean; type: string; quality?: number; fullSize: () => { width: number; height: number } },
+  ): Promise<Blob> {
+    if (typeof document === 'undefined') throw new Error('書き出し: document がありません');
+    if (!host) resolveColors();
+    const cropped = o.crop ? contentRect() : null;
+    let rect: Rect;
+    if (cropped) rect = cropped;
+    else {
+      const sz = o.fullSize();
+      rect = { x: 0, y: 0, width: Math.max(1, sz.width), height: Math.max(1, sz.height) };
+    }
+    const k = exportScale(rect, maxEdge, dpr, cropped !== null);
+    const W = Math.max(1, Math.round(rect.width * k));
+    const H = Math.max(1, Math.round(rect.height * k));
+    const r = renderDoc(W, H, { k, ox: -rect.x * k, oy: -rect.y * k });
+    const inkLayer = r ? flatten(r, W, H) : null;
+    const out = makeLayer(W, H);
+    if (!inkLayer || !out) throw new Error('書き出し: 2D コンテキストを作れません');
+    const c = out.ctx;
+    if (!o.transparent) {
+      c.fillStyle = paper;
+      c.fillRect(0, 0, W, H);
+    }
+    c.drawImage(inkLayer.canvas, 0, 0);
+    const b = await toBlobAsync(out.canvas, o.type, o.quality);
+    if (b) return b;
+    const png = await toBlobAsync(out.canvas, 'image/png');
+    if (png) return png;
+    throw new Error('書き出し: 画像化に失敗しました');
+  }
+
+  // ================= 公開 API =================
   function interruptInput(): void {
     if (live) {
       const wasEraser = live.tool === 'eraser';
+      const layer = live.layer;
       live = null;
       livePaint = null;
+      liveOn = null;
       clearLayer(liveLayer);
-      // 消し込み途中の cache を履歴どおりに戻す
-      if (wasEraser) fullRedraw();
+      // 消し込み途中のレイヤーを履歴どおりに戻す
+      if (wasEraser) {
+        rebuildLayers([layer]);
+        compose();
+      }
     }
+    if (shape) {
+      shape = null;
+      livePaint = null;
+      liveOn = null;
+      clearLayer(liveLayer);
+    }
+    selIn = null;
+    panIn = null;
+    pickIn = null;
+  }
+
+  /** 文書を置き換える（履歴はリセット） */
+  function resetDocument(list: readonly LayerInfo[], newOps: EngineOp[], act: string, w: number, h: number): void {
+    endReplay();
+    interruptInput();
+    const prevList = curList();
+    baseList = list;
+    ops = newOps;
+    units = [];
+    redoUnits = [];
+    listCache = [baseList];
+    version++;
+    const cur = curList();
+    active = cur.some((l) => l.id === act) ? act : cur[cur.length - 1]!.id;
+    selection = null;
+    tf = null;
+    timeOrigin = null;
+    dropAllCkpts();
+    const nw = Math.max(w, cssW);
+    const nh = Math.max(h, cssH);
+    const sizeChanged = nw !== docW || nh !== docH;
+    docW = nw;
+    docH = nh;
+    if (ctx && sizeChanged) reallocBitmaps();
+    fullRedraw();
+    emitChange();
+    emitOps();
+    if (JSON.stringify(prevList) !== JSON.stringify(cur)) emitLayers();
+    emitSelection();
   }
 
   const engine: CanvasEngine = {
@@ -1080,7 +1898,12 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
       el.appendChild(c);
       canvas = c;
       ctx = c.getContext('2d');
-      cache = makeLayer(0, 0);
+      // 作る順: 表示 → レイヤー（下から）→ live → scratch
+      for (const l of curList()) {
+        const b = makeLayer(0, 0);
+        if (b) bms.set(l.id, b);
+      }
+      dispList = curList();
       liveLayer = makeLayer(0, 0);
       scratch = makeLayer(0, 0);
       c.addEventListener('pointerdown', onDown);
@@ -1122,12 +1945,19 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
       }
       canvas = null;
       ctx = null;
-      cache = null;
+      bms.clear();
       liveLayer = null;
       scratch = null;
       mix = null;
       hoverPt = null;
       host = null;
+      touches.clear();
+      gesture = null;
+      if (tf) {
+        tf.base = null;
+        tf.cut = null;
+      }
+      dropAllCkpts();
     },
 
     setTool(t: Tool): void {
@@ -1157,12 +1987,7 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
       }
       penMemory[next.preset] = { size: next.size, opacity: next.opacity };
       pen = next;
-      if (
-        prev.preset !== next.preset ||
-        prev.size !== next.size ||
-        prev.opacity !== next.opacity ||
-        prev.color !== next.color
-      ) {
+      if (prev.preset !== next.preset || prev.size !== next.size || prev.opacity !== next.opacity || prev.color !== next.color) {
         emitToolChange();
       }
     },
@@ -1187,20 +2012,18 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
       const prev = opts;
       opts = { ...opts, ...patch };
       const prevPaper = paper;
-      const prevInk = ink;
+      const prevInk = inkColor;
       if (patch.paperColor !== undefined || patch.inkColor !== undefined) resolveColors();
       const strokeLook =
-        prevPaper !== paper ||
-        prevInk !== ink ||
-        prev.baseWidth !== opts.baseWidth ||
-        prev.silhouette !== opts.silhouette;
-      const view = strokeLook || !sameGrid(prev.grid, opts.grid) || prev.flipped !== opts.flipped;
+        prevPaper !== paper || prevInk !== inkColor || prev.baseWidth !== opts.baseWidth || prev.silhouette !== opts.silhouette;
+      const viewLook = strokeLook || !sameGrid(prev.grid, opts.grid) || prev.flipped !== opts.flipped;
       if (strokeLook) {
+        dropAllCkpts();
         if (replayState) {
-          rebuildCache(replayState.doc, replayState.committed);
+          replayRebuild(replayState);
           compose();
         } else fullRedraw();
-      } else if (view) compose();
+      } else if (viewLook) compose();
     },
 
     setStrokeVisibility(alphas: readonly (number | undefined)[] | null): void {
@@ -1210,6 +2033,7 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
         (next !== null && visibility !== null && next.length === visibility.length && next.every((a, i) => a === visibility![i]));
       if (same) return;
       visibility = next;
+      dropAllCkpts();
       if (!replayState) fullRedraw();
     },
 
@@ -1224,77 +2048,115 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     undo(): void {
       endReplay();
       interruptInput();
-      if (history.undo() === undefined) return;
-      fullRedraw();
-      emitChange();
+      if (tf) {
+        cancelTf();
+        emitSelection();
+      }
+      const start = units.pop();
+      if (start === undefined) return;
+      const listBefore = curList();
+      const affected = new Set<string>();
+      for (let j = start; j < ops.length; j++) {
+        const op = ops[j]!;
+        for (const id of writesOf(op, listAt(j))) affected.add(id);
+        if (op.kind === 'layer-remove' || op.kind === 'layer-merge-down') affected.add(op.layer);
+      }
+      redoUnits.push(ops.splice(start));
+      touched(start);
+      dropCkptsAbove(start);
+      rebuildLayers(affected);
+      afterOps(listBefore);
     },
 
     redo(): void {
       endReplay();
       interruptInput();
-      if (history.redo() === undefined) return;
-      fullRedraw();
-      emitChange();
+      if (tf) {
+        cancelTf();
+        emitSelection();
+      }
+      const unit = redoUnits.pop();
+      if (!unit) return;
+      const listBefore = curList();
+      units.push(ops.length);
+      for (const op of unit) {
+        const j = ops.length;
+        ops.push(op);
+        touched(j);
+        applyOpDisplay(op, j, true);
+        // 作り直したレイヤーをアクティブに（add / duplicate のときと同じ）
+        if (op.kind === 'layer-add') active = op.layer.id;
+        if (op.kind === 'layer-duplicate') active = op.newId;
+      }
+      afterOps(listBefore);
     },
 
     clear(): void {
       endReplay();
       interruptInput();
-      if (history.present.strokes.length === 0) return;
-      history.commit({ strokes: [], styles: [] });
-      fullRedraw();
-      emitChange();
+      settleTransform();
+      const unit: EngineOp[] = curList()
+        .filter((l) => !l.locked && hasContent(l.id))
+        .map((l) => ({ kind: 'layer-clear', layer: l.id }));
+      pushUnit(unit);
     },
 
-    canUndo: () => history.canUndo(),
-    canRedo: () => history.canRedo(),
+    canUndo: () => units.length > 0,
+    canRedo: () => redoUnits.length > 0,
 
-    getStrokes: () => copyDrawing(flat(current()).strokes),
+    getStrokes: () => copyDrawing(ink().strokes),
 
     getStyles(): (StrokeStyle | undefined)[] {
-      const doc = current();
-      const out = flat(doc).styles.map(copyStyle);
-      // 返した配列から、同じ時点の生の履歴を引けるようにする（historyOf。保存側が消しゴム込みで残すため）
-      historyByStyles.set(out, doc);
+      const out = ink().styles.map(copyStyle);
+      // 返した配列から、同じ時点の生の履歴（アクティブレイヤー）を引けるようにする
+      historyByStyles.set(out, activeHistory().doc);
       return out;
     },
 
-    getHistory: () => docToHistory(current()),
+    getHistory: () => docToHistory(activeHistory().doc),
 
     loadHistory(h: { strokes: Drawing; styles?: (StrokeStyle | undefined)[] }): void {
       engine.loadStrokes(h.strokes, h.styles);
     },
 
     loadStrokes(d: Drawing, styles?: (StrokeStyle | undefined)[]): void {
-      endReplay();
-      interruptInput();
       const strokes = copyDrawing(d);
-      const st: Styles = strokes.map((_, i) => sanitizeStyle(styles?.[i]));
-      history.reset({ strokes, styles: st });
-      timeOrigin = null;
-      fullRedraw();
-      emitChange();
+      const list = [newLayerInfo(FIRST_ID, layerName(1))];
+      resetDocument(
+        list,
+        strokes.map((s, i) => ({ kind: 'stroke', layer: FIRST_ID, points: s, style: sanitizeStyle(styles?.[i]) })),
+        FIRST_ID,
+        0,
+        0,
+      );
     },
 
     replay(o: { speed: number }): Promise<void> {
       endReplay();
       interruptInput();
       if (!ctx || typeof requestAnimationFrame === 'undefined') return Promise.resolve();
-      const doc = current();
-      const sched = buildReplaySchedule(doc.strokes, { speed: o.speed });
+      const strokeOf: number[] = [];
+      const drawing: Drawing = [];
+      for (const op of ops) {
+        if (op.kind === 'stroke') {
+          strokeOf.push(drawing.length);
+          drawing.push(op.points);
+        } else strokeOf.push(-1);
+      }
+      const sched = buildReplaySchedule(drawing, { speed: o.speed });
       return new Promise<void>((resolve) => {
         replayState = {
-          doc,
           schedule: sched,
+          strokeOf,
+          opIdx: 0,
           start: performance.now(),
-          committed: 0,
           partial: -1,
           partialCtrl: 0,
           partialDot: false,
           raf: 0,
           resolve,
         };
-        rebuildCache(doc, 0);
+        resetDisplayTo0();
         clearLayer(liveLayer);
         compose();
         replayStep();
@@ -1307,59 +2169,28 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
 
     toWebp(maxEdge: number, quality = 0.85, o?: ToWebpOptions): Promise<Blob> {
       if (typeof document === 'undefined') return Promise.reject(new Error('toWebp: document がありません'));
-      if (!host) resolveColors();
-      const doc = current();
-      const visible = flat(doc);
-      const crop = o?.crop ?? true;
-      // 切り詰めは「消しゴムで消えた点を除いた線」の範囲
-      const cropped = crop ? cropRect(visible.strokes, opts.baseWidth, visible.styles) : null;
-      let rect: Rect;
-      if (cropped) {
-        rect = cropped;
-      } else {
-        const sz = cssW > 0 && cssH > 0 ? { width: cssW, height: cssH } : strokeBounds(visible.strokes);
-        rect = { x: 0, y: 0, width: Math.max(1, sz.width), height: Math.max(1, sz.height) };
-      }
-      const k = exportScale(rect, maxEdge, dpr, cropped !== null);
-      const W = Math.max(1, Math.round(rect.width * k));
-      const H = Math.max(1, Math.round(rect.height * k));
-      const paints = doc.styles.map((s) => (isEraserStyle(s) ? null : normalPaint(s)));
-      // 作業用レイヤーは必要なときだけ（出力 canvas より先に作る）。線は透明な層に描いて（消しゴム込み）紙に重ねる
-      const layer = paints.some((p) => p !== null && needsLayer(p.pen)) ? makeLayer(W, H) : null;
-      const inkLayer = makeLayer(W, H);
-      const out = document.createElement('canvas');
-      out.width = W;
-      out.height = H;
-      const c = out.getContext('2d');
-      if (!c || !inkLayer) return Promise.reject(new Error('toWebp: 2D コンテキストを作れません'));
-      const xf: Xf = { k, ox: -rect.x * k, oy: -rect.y * k };
-      doc.strokes.forEach((s, i) => {
-        const p = paints[i];
-        const st = doc.styles[i];
-        if (p) paintStroke(inkLayer.ctx, s, p, xf, layer, { w: W, h: H });
-        else if (isEraserStyle(st)) paintEraser(inkLayer.ctx, s, st.size, xf);
+      return exportImage(maxEdge, {
+        crop: o?.crop ?? true,
+        transparent: false,
+        type: 'image/webp',
+        quality,
+        fullSize: () => (cssW > 0 && cssH > 0 ? { width: cssW, height: cssH } : docW > 0 && docH > 0 ? { width: docW, height: docH } : strokeBounds(ink().strokes)),
       });
-      c.fillStyle = paper;
-      c.fillRect(0, 0, out.width, out.height);
-      c.drawImage(inkLayer.canvas, 0, 0);
-      return new Promise<Blob>((resolve, reject) => {
-        out.toBlob(
-          (b) => {
-            if (b) {
-              resolve(b);
-              return;
-            }
-            out.toBlob((png) => (png ? resolve(png) : reject(new Error('toWebp: 画像化に失敗しました'))), 'image/png');
-          },
-          'image/webp',
-          quality,
-        );
+    },
+
+    toPng(maxEdge: number, o?: ToPngOptions): Promise<Blob> {
+      if (typeof document === 'undefined') return Promise.reject(new Error('toPng: document がありません'));
+      return exportImage(maxEdge, {
+        crop: o?.crop ?? false,
+        transparent: o?.transparent ?? false,
+        type: 'image/png',
+        fullSize: () => (docW > 0 && docH > 0 ? { width: docW, height: docH } : strokeBounds(ink().strokes)),
       });
     },
 
     size: () => ({ width: cssW, height: cssH }),
 
-    on(event: 'strokeend' | 'change' | 'toolchange', cb: (s: Stroke) => void): () => void {
+    on(event: string, cb: (s: Stroke) => void): () => void {
       if (event === 'strokeend') {
         strokeEndCbs.add(cb);
         return () => {
@@ -1367,11 +2198,321 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
         };
       }
       const f = cb as unknown as () => void;
-      const set = event === 'toolchange' ? toolChangeCbs : changeCbs;
+      const set =
+        event === 'toolchange'
+          ? toolChangeCbs
+          : event === 'layerschange'
+            ? layersCbs
+            : event === 'viewchange'
+              ? viewCbs
+              : event === 'selectionchange'
+                ? selectionCbs
+                : event === 'opsend'
+                  ? opsCbs
+                  : changeCbs;
       set.add(f);
       return () => {
         set.delete(f);
       };
+    },
+
+    // ---------------- レイヤー ----------------
+    getLayers: () => curList().map(copyInfo),
+    getActiveLayer: () => active,
+
+    setActiveLayer(id: string): void {
+      if (id === active || !findLayer(id)) return;
+      settleTransform();
+      active = id;
+      if (visibility) {
+        dropAllCkpts();
+        fullRedraw();
+      }
+      emitLayers();
+    },
+
+    addLayer(o?: { name?: string; index?: number }): LayerInfo {
+      endReplay();
+      interruptInput();
+      settleTransform();
+      const list = curList();
+      const id = uniqueId();
+      const name = o?.name?.trim() ? o.name.trim().slice(0, 100) : layerName(nextLayerNumber());
+      const ai = list.findIndex((l) => l.id === active);
+      const index = o?.index !== undefined && Number.isFinite(o.index) ? Math.max(0, Math.min(list.length, Math.round(o.index))) : ai + 1;
+      const info = newLayerInfo(id, name);
+      active = id;
+      pushUnit([{ kind: 'layer-add', layer: info, index }]);
+      return copyInfo(info);
+    },
+
+    removeLayer(id: string): void {
+      const list = curList();
+      const i = list.findIndex((l) => l.id === id);
+      if (i < 0 || list.length <= 1) return;
+      endReplay();
+      interruptInput();
+      settleTransform();
+      if (active === id) active = (list[i - 1] ?? list[i + 1])!.id;
+      pushUnit([{ kind: 'layer-remove', layer: id }]);
+    },
+
+    duplicateLayer(id: string): LayerInfo {
+      const src = findLayer(id);
+      if (!src) throw new Error(`duplicateLayer: レイヤー ${id} がありません`);
+      endReplay();
+      interruptInput();
+      settleTransform();
+      const newId = uniqueId();
+      active = newId;
+      pushUnit([{ kind: 'layer-duplicate', layer: id, newId }]);
+      return copyInfo(findLayer(newId)!);
+    },
+
+    mergeDown(id: string): void {
+      const list = curList();
+      const i = list.findIndex((l) => l.id === id);
+      if (i <= 0 || list[i - 1]!.locked) return;
+      endReplay();
+      interruptInput();
+      settleTransform();
+      if (active === id) active = list[i - 1]!.id;
+      pushUnit([{ kind: 'layer-merge-down', layer: id }]);
+    },
+
+    moveLayer(id: string, index: number): void {
+      const list = curList();
+      const i = list.findIndex((l) => l.id === id);
+      if (i < 0 || !Number.isFinite(index)) return;
+      const to = Math.max(0, Math.min(list.length - 1, Math.round(index)));
+      if (to === i) return;
+      endReplay();
+      settleTransform();
+      pushUnit([{ kind: 'layer-move', layer: id, index: to }]);
+    },
+
+    setLayer(id: string, patch: Partial<Omit<LayerInfo, 'id'>>): void {
+      const cur = findLayer(id);
+      if (!cur) return;
+      const p = sanitizePatch(patch);
+      const changed = (Object.keys(p) as (keyof typeof p)[]).filter((k) => p[k] !== cur[k]);
+      if (changed.length === 0) return;
+      const clean: Partial<Omit<LayerInfo, 'id'>> = {};
+      for (const k of changed) (clean as Record<string, unknown>)[k] = p[k];
+      endReplay();
+      // 不透明度のスライダーは続けて動かしても 1 手にまとめる
+      const lastStart = units[units.length - 1];
+      const last = ops[ops.length - 1];
+      if (
+        changed.length === 1 &&
+        changed[0] === 'opacity' &&
+        lastStart === ops.length - 1 &&
+        redoUnits.length === 0 &&
+        last &&
+        last.kind === 'layer-set' &&
+        last.layer === id &&
+        Object.keys(last.patch).length === 1 &&
+        'opacity' in last.patch
+      ) {
+        const listBefore = curList();
+        ops[ops.length - 1] = { kind: 'layer-set', layer: id, patch: clean };
+        touched(ops.length - 1);
+        dispList = curList();
+        afterOps(listBefore);
+        return;
+      }
+      pushUnit([{ kind: 'layer-set', layer: id, patch: clean }]);
+    },
+
+    clearLayer(id: string): void {
+      const l = findLayer(id);
+      if (!l || l.locked || !hasContent(id)) return;
+      endReplay();
+      interruptInput();
+      settleTransform();
+      pushUnit([{ kind: 'layer-clear', layer: id }]);
+    },
+
+    async getLayerThumbnail(id: string, size: number): Promise<Blob> {
+      if (typeof document === 'undefined') throw new Error('getLayerThumbnail: document がありません');
+      const W0 = docW > 0 ? docW : strokeBounds(ink().strokes).width;
+      const H0 = docH > 0 ? docH : strokeBounds(ink().strokes).height;
+      const k = Math.max(1, size) / Math.max(1, W0, H0);
+      const W = Math.max(1, Math.round(W0 * k));
+      const H = Math.max(1, Math.round(H0 * k));
+      const out = makeLayer(W, H);
+      if (!out) throw new Error('getLayerThumbnail: 2D コンテキストを作れません');
+      const bm = !replayState ? bms.get(id) : undefined;
+      if (bm && ctx) {
+        out.ctx.imageSmoothingEnabled = true;
+        out.ctx.drawImage(bm.canvas, 0, 0, W, H);
+      } else {
+        const r = renderDoc(W, H, { k, ox: 0, oy: 0 });
+        const l = r?.layers.get(id);
+        if (l && r?.list.some((x) => x.id === id)) out.ctx.drawImage(l.canvas, 0, 0);
+      }
+      const b = (await toBlobAsync(out.canvas, 'image/png')) ?? null;
+      if (!b) throw new Error('getLayerThumbnail: 画像化に失敗しました');
+      return b;
+    },
+
+    // ---------------- 塗りつぶし・スポイト ----------------
+    setFill(o: Partial<FillOptions>): void {
+      const next = { ...fillOpts };
+      if (o.tolerance !== undefined && Number.isFinite(o.tolerance)) next.tolerance = Math.min(255, Math.max(0, Math.round(o.tolerance)));
+      if (o.reference === 'layer' || o.reference === 'all') next.reference = o.reference;
+      if (next.tolerance !== fillOpts.tolerance || next.reference !== fillOpts.reference) {
+        fillOpts = next;
+        emitToolChange();
+      }
+    },
+    getFill: () => ({ ...fillOpts }),
+
+    pickColor(x: number, y: number): string | null {
+      if (!ctx || !Number.isFinite(x) || !Number.isFinite(y)) return null;
+      const px = Math.floor(x * dpr);
+      const py = Math.floor(y * dpr);
+      if (px < 0 || py < 0 || px >= bmW() || py >= bmH()) return null;
+      const one = makeLayer(1, 1);
+      if (!one) return null;
+      for (const l of dispList) {
+        const bm = bms.get(l.id);
+        if (!bm || !l.visible) continue;
+        one.ctx.globalAlpha = l.opacity;
+        one.ctx.globalCompositeOperation = compositeOp(l.blend);
+        one.ctx.drawImage(bm.canvas, -px, -py);
+      }
+      const d = readPixels(one, 0, 0, 1, 1)?.data;
+      if (!d || d[3]! < PICK_MIN_ALPHA) return null;
+      return toHex(d[0]!, d[1]!, d[2]!);
+    },
+
+    // ---------------- 選択と変形 ----------------
+    getSelection: () => {
+      const s = selectionShown();
+      return s ? copyMask(s) : null;
+    },
+
+    setSelection(mask: SelectionMask | null): void {
+      settleTransform();
+      const next = mask ? sanitizeMask(mask) : null;
+      if (next === null && selection === null) return;
+      selection = next;
+      compose();
+      emitSelection();
+    },
+
+    selectAll(): void {
+      const w = docW > 0 ? docW : cssW;
+      const h = docH > 0 ? docH : cssH;
+      if (!(w > 0 && h > 0)) return;
+      engine.setSelection({ kind: 'rect', x: 0, y: 0, w, h });
+    },
+
+    transformSelection(matrix: Mat): void {
+      if (!selection || !isFiniteMat(matrix) || replayState) return;
+      if (!tf) {
+        if (!activeEditable()) return;
+        const bm = bms.get(active);
+        let base: Layer | null = null;
+        let cut: Layer | null = null;
+        if (bm && ctx) {
+          const env = dispEnv();
+          cut = cutMask(bm, selection, env);
+          base = env.make();
+          if (base) {
+            copyLayer(base, bm);
+            drawDeleteOp(base, selection, env);
+          }
+        }
+        tf = { layer: active, mask: selection, matrix: [...matrix] as Mat, base, cut };
+      } else tf.matrix = [...matrix] as Mat;
+      compose();
+      emitSelection();
+    },
+
+    commitTransform(): void {
+      const t = tf;
+      if (!t) return;
+      tf = null;
+      if (isIdentity(t.matrix)) {
+        compose();
+        emitSelection();
+        return;
+      }
+      selection = transformMask(t.mask, t.matrix);
+      pushUnit([{ kind: 'transform', layer: t.layer, mask: copyMask(t.mask), matrix: [...t.matrix] as Mat }]);
+      emitSelection();
+    },
+
+    cancelTransform(): void {
+      if (!tf) return;
+      tf = null;
+      compose();
+      emitSelection();
+    },
+
+    deleteSelection(): void {
+      settleTransform();
+      if (!selection || !activeEditable()) return;
+      endReplay();
+      pushUnit([{ kind: 'delete', layer: active, mask: copyMask(selection) }]);
+    },
+
+    isTransforming: () => tf !== null,
+
+    // ---------------- ビュー ----------------
+    getView: () => ({ ...view }),
+
+    setView(patch: Partial<ViewState>): void {
+      const next: ViewState = { ...view };
+      if (patch.zoom !== undefined) next.zoom = clampZoom(patch.zoom);
+      if (patch.panX !== undefined && Number.isFinite(patch.panX)) next.panX = patch.panX;
+      if (patch.panY !== undefined && Number.isFinite(patch.panY)) next.panY = patch.panY;
+      if (patch.rotationDeg !== undefined) next.rotationDeg = normalizeDeg(patch.rotationDeg);
+      if (next.zoom === view.zoom && next.panX === view.panX && next.panY === view.panY && next.rotationDeg === view.rotationDeg) return;
+      view = next;
+      compose();
+      emitView();
+    },
+
+    resetView(): void {
+      engine.setView({ ...DEFAULT_VIEW });
+    },
+
+    fitView(): void {
+      engine.setView(fitViewFor(docW, docH, cssW, cssH));
+    },
+
+    toCanvasPoint(clientX: number, clientY: number): { x: number; y: number } {
+      if (!canvas) return { x: clientX, y: clientY };
+      return toPoint({ clientX, clientY });
+    },
+
+    toClientPoint(x: number, y: number): { x: number; y: number } {
+      if (!canvas) return { x, y };
+      const rect = canvas.getBoundingClientRect();
+      const s = isIdentityView(view) ? { x, y } : apply(viewMatrix(view), x, y);
+      const sx = opts.flipped ? rect.width - s.x : s.x;
+      return { x: sx + rect.left, y: s.y + rect.top };
+    },
+
+    // ---------------- 文書 ----------------
+    getDocument(): CanvasDocument {
+      return {
+        v: 2,
+        width: docW,
+        height: docH,
+        layers: baseList.map(copyInfo),
+        active,
+        ops: ops.map((op) => exportOp(op, opts.baseWidth)),
+      };
+    },
+
+    loadDocument(doc: CanvasDocument): void {
+      const d = sanitizeDocument(doc);
+      if (!d) throw new Error('loadDocument: レイヤーがありません');
+      resetDocument(d.layers, d.ops, d.active, d.width, d.height);
     },
   };
 

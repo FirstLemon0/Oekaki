@@ -14,6 +14,7 @@ import { Calibrate } from './ui/screens/Calibrate';
 import { Review } from './ui/screens/Review';
 import { CritiqueRoute } from './ui/screens/CritiqueScreen';
 import './ui/lesson/lesson.css';
+import './ui/paint/paint.css';
 
 /** レール・下ナビを出さない全画面のルート（レッスン・キャンバス・批評） */
 function isFullscreen(r: Route): boolean {

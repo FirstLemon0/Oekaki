@@ -9,7 +9,7 @@ import type { EraserStyle, GridSpec, PenPreset, PenStyle } from '@/canvas';
 
 export const PEN_STYLE_KEY = 'seichotsu.penStyle';
 export const ERASER_STYLE_KEY = 'seichotsu.eraserStyle';
-/** 「その他」で選んだ任意色の直近 3 つ（新しい順） */
+/** 任意色（HSV ピッカー・スポイト・「その他」）の直近 6 つ（新しい順） */
 export const PEN_RECENT_COLORS_KEY = 'seichotsu.penRecentColors';
 
 export const PEN_PRESET_ORDER: readonly PenPreset[] = ['pencil', 'pen', 'brush', 'marker'];
@@ -25,7 +25,7 @@ export const PEN_OPACITY = { min: 0.1, max: 1 } as const;
 export const ERASER_SIZE = { min: 4, max: 40 } as const;
 /** 消しゴムは太さ（半径）だけ。既定 12 */
 export const DEFAULT_ERASER: EraserStyle = { size: 12 };
-export const RECENT_COLORS_MAX = 3;
+export const RECENT_COLORS_MAX = 6;
 
 function clamp(v: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, v));
@@ -81,7 +81,7 @@ export function parseRecentColors(raw: unknown): string[] {
   return out;
 }
 
-/** 任意色を直近の先頭へ（重複は前へ寄せ、3 つまで） */
+/** 任意色を直近の先頭へ（重複は前へ寄せ、6 つまで） */
 export function pushRecentColor(list: readonly string[], color: string): string[] {
   const c = normalizeColor(color);
   if (!c) return [...list];
@@ -161,3 +161,49 @@ export function gridLabel(key: GridKey): string {
   if (key === 'none') return 'グリッドなし';
   return key.startsWith('d') ? `${key.slice(1)}分割` : `${key.slice(1)}px の方眼`;
 }
+
+// ---------------------------------------------------------------------------
+// 塗りつぶし・図形（お絵描き v2 のフルツール）
+// ---------------------------------------------------------------------------
+
+export const FILL_STYLE_KEY = 'seichotsu.fillStyle';
+export const SHAPE_KEY = 'seichotsu.shapeTool';
+
+export type FillRef = 'layer' | 'all';
+export interface FillPrefs {
+  /** エンジンの許容値 0..255 */
+  tolerance: number;
+  reference: FillRef;
+}
+/** エンジンの既定（許容値 32・このレイヤー） */
+export const DEFAULT_FILL: FillPrefs = { tolerance: 32, reference: 'layer' };
+
+/** 表示の許容値 0..100 → エンジンの 0..255 */
+export function toleranceFromPercent(pct: number): number {
+  return Math.round((clamp(pct, 0, 100) * 255) / 100);
+}
+/** エンジンの 0..255 → 表示の 0..100 */
+export function toleranceToPercent(t: number): number {
+  return Math.round((clamp(t, 0, 255) * 100) / 255);
+}
+
+export function parseFillPrefs(raw: unknown): FillPrefs {
+  if (!isObj(raw)) return { ...DEFAULT_FILL };
+  const tolerance =
+    typeof raw.tolerance === 'number' && Number.isFinite(raw.tolerance) ? clamp(Math.round(raw.tolerance), 0, 255) : DEFAULT_FILL.tolerance;
+  const reference: FillRef = raw.reference === 'all' ? 'all' : 'layer';
+  return { tolerance, reference };
+}
+
+export type ShapeTool = 'shape-line' | 'shape-rect' | 'shape-ellipse';
+export const SHAPE_ORDER: readonly ShapeTool[] = ['shape-line', 'shape-rect', 'shape-ellipse'];
+export const SHAPE_LABEL: Record<ShapeTool, string> = { 'shape-line': '直線', 'shape-rect': '四角', 'shape-ellipse': '楕円' };
+
+export function parseShapeTool(raw: unknown): ShapeTool {
+  return typeof raw === 'string' && (SHAPE_ORDER as readonly string[]).includes(raw) ? (raw as ShapeTool) : 'shape-line';
+}
+
+export const loadFillPrefs = (): FillPrefs => parseFillPrefs(readJson(FILL_STYLE_KEY));
+export const saveFillPrefs = (f: FillPrefs): void => writeJson(FILL_STYLE_KEY, f);
+export const loadShapeTool = (): ShapeTool => parseShapeTool(readJson(SHAPE_KEY));
+export const saveShapeTool = (t: ShapeTool): void => writeJson(SHAPE_KEY, t);
