@@ -2,7 +2,7 @@
  * お絵描き v2 の小パネルとピル: 塗りつぶし・図形・ズーム率。
  * 小パネルはペン・消しゴムと同じ glass の ls-toolpanel（選択中のツールをもう一度タップ／長押しで開く）。
  */
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { CanvasEngine } from '@/canvas';
 import { Slider } from '../components';
 import { SHAPE_LABEL, SHAPE_ORDER, toleranceFromPercent, toleranceToPercent, type FillPrefs, type ShapeTool } from '../screens/canvasPrefs';
@@ -16,7 +16,7 @@ export function FillPanel({ prefs, onChange }: { prefs: FillPrefs; onChange: (ne
       <label class="ls-toolpanel__row">
         <span class="ls-toolpanel__label">許容値</span>
         <Slider value={pct} min={0} max={100} onInput={(v) => onChange({ ...prefs, tolerance: toleranceFromPercent(v) })} label="塗りつぶしの許容値" width={150} />
-        <span class="num ls-pop__val">{pct}</span>
+        <span class="num ls-pop__val">{pct}%</span>
       </label>
       <div class="ls-toolpanel__row">
         <span class="ls-toolpanel__label">境界</span>
@@ -40,7 +40,7 @@ export function FillPanel({ prefs, onChange }: { prefs: FillPrefs; onChange: (ne
           ))}
         </div>
       </div>
-      <p class="ls-toolpanel__note">色はペンの色を使います。「すべて」は見えている絵全体の線を境界にして、今のレイヤーに塗ります。</p>
+      <p class="ls-toolpanel__note">ペンの色で塗ります。「すべて」は見えている絵全体の線を境界にして、今のレイヤーに塗ります。</p>
     </div>
   );
 }
@@ -69,13 +69,30 @@ export function ShapePanel({ shape, onPick }: { shape: ShapeTool; onPick: (s: Sh
   );
 }
 
-/** 右上のズーム率（mono）。タップで「全体を表示」。回転していれば「回転を戻す」も出す */
+const ZOOM_LONG_PRESS_MS = 400;
+
+/**
+ * 右上のズーム率（mono）。フルツールの画面だけに出す（採点する画面は 2 本指のズーム等を切るので出さない）。
+ * タップで「全体を表示」（fitView。収まるなら 100% に戻る）。長押しで回転も 0° に戻す。
+ * 回転していれば隣に「回転を戻す」ボタンも出す。
+ */
 export function ZoomPill({ engine }: { engine: CanvasEngine }) {
   const [view, setView] = useState(() => engine.getView());
   useEffect(() => {
     setView(engine.getView());
     return engine.on('viewchange', () => setView(engine.getView()));
   }, [engine]);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fired = useRef(false);
+  const clear = () => {
+    if (timer.current !== null) clearTimeout(timer.current);
+    timer.current = null;
+  };
+  useEffect(() => clear, []);
+  const fitAll = (resetRotation: boolean) => {
+    if (resetRotation) engine.setView({ rotationDeg: 0 });
+    engine.fitView();
+  };
   const pct = Math.round(view.zoom * 100);
   const rotated = Math.abs(view.rotationDeg % 360) > 0.05;
   return (
@@ -86,7 +103,32 @@ export function ZoomPill({ engine }: { engine: CanvasEngine }) {
           <span class="num">{Math.round(view.rotationDeg)}°</span>
         </button>
       )}
-      <button type="button" class="pt-zoom__pct" aria-label={`表示 ${pct}%（タップで全体を表示）`} title="全体を表示" onClick={() => engine.fitView()}>
+      <button
+        type="button"
+        class="pt-zoom__pct"
+        aria-label={`表示 ${pct}%（タップで全体を表示・長押しで回転も戻す）`}
+        title="全体を表示（長押しで回転も戻す）"
+        onPointerDown={() => {
+          fired.current = false;
+          clear();
+          timer.current = setTimeout(() => {
+            timer.current = null;
+            fired.current = true;
+            fitAll(true);
+          }, ZOOM_LONG_PRESS_MS);
+        }}
+        onPointerUp={clear}
+        onPointerLeave={clear}
+        onPointerCancel={clear}
+        onContextMenu={(e) => e.preventDefault()}
+        onClick={() => {
+          if (fired.current) {
+            fired.current = false;
+            return;
+          }
+          fitAll(false);
+        }}
+      >
         <span class="num">{pct}%</span>
       </button>
     </div>

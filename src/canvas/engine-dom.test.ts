@@ -32,6 +32,9 @@ interface FakeCanvas {
   remove(): void;
   getBoundingClientRect(): { left: number; top: number; width: number; height: number };
   toBlob(cb: (b: Blob | null) => void, type?: string): void;
+  /** toBlob した時点の大きさ（書き出し後は canvas を大きさ 0 にして手放すため） */
+  bw?: number;
+  bh?: number;
 }
 
 let canvases: FakeCanvas[] = [];
@@ -64,6 +67,8 @@ function makeCanvas(): FakeCanvas {
     remove() {},
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 400, height: 300 }),
     toBlob(cb, type) {
+      c.bw = c.width;
+      c.bh = c.height;
       cb(new Blob(['x'], { type: type ?? 'image/png' }));
     },
   };
@@ -247,9 +252,9 @@ describe('toWebp（偽 DOM）', () => {
     expect(blob.type).toBe('image/webp');
     const out = canvases.at(-1)!;
     const r = cropRect([stroke], 3)!;
-    expect(Math.max(out.width, out.height)).toBeLessThanOrEqual(1024);
-    expect(out.width / out.height).toBeCloseTo(r.width / r.height, 1);
-    expect(out.width).not.toBe(out.height);
+    expect(Math.max(out.bw!, out.bh!)).toBeLessThanOrEqual(1024);
+    expect(out.bw! / out.bh!).toBeCloseTo(r.width / r.height, 1);
+    expect(out.bw!).not.toBe(out.bh!);
     // 原点を切り詰め範囲の左上へずらして描く（線は透明な層に描いてから紙に重ねる）
     const ink = canvases.at(-2)!;
     const tf = ink.calls.find((c) => c.name === 'setTransform')!.args as number[];
@@ -264,7 +269,7 @@ describe('toWebp（偽 DOM）', () => {
     e.loadStrokes([stroke]);
     await e.toWebp(1024, 0.8, { crop: false });
     const out = canvases.at(-1)!;
-    expect([out.width, out.height]).toEqual([400, 300]);
+    expect([out.bw!, out.bh!]).toEqual([400, 300]);
   });
 
   it('ストロークが無ければ紙全体', async () => {
@@ -272,7 +277,7 @@ describe('toWebp（偽 DOM）', () => {
     e.attach(makeHost(400, 300));
     await e.toWebp(200);
     const out = canvases.at(-1)!;
-    expect([out.width, out.height]).toEqual([200, 150]);
+    expect([out.bw!, out.bh!]).toEqual([200, 150]);
   });
 
   it('attach 前（保存時の一時エンジン）でも切り詰めて書き出せる', async () => {
@@ -281,7 +286,7 @@ describe('toWebp（偽 DOM）', () => {
     await e.toWebp(1024);
     const out = canvases.at(-1)!;
     const r = cropRect([stroke], 3)!;
-    expect(out.width / out.height).toBeCloseTo(r.width / r.height, 1);
+    expect(out.bw! / out.bh!).toBeCloseTo(r.width / r.height, 1);
   });
 });
 
@@ -323,10 +328,12 @@ describe('crop（純関数）', () => {
     expect(cropRect([], 3)).toBeNull();
   });
 
-  it('exportScale: 長辺は maxEdge 以下。切り詰め時は最大 4 倍まで拡大、紙全体は DPR まで', () => {
+  it('exportScale: 長辺は maxEdge 以下。upscale（切り詰め・toPng）は最大 4 倍（か DPR）まで拡大、toWebp の紙全体は DPR まで', () => {
     expect(exportScale({ width: 2000, height: 100 }, 1024, 2, true)).toBeCloseTo(1024 / 2000);
     expect(exportScale({ width: 256, height: 100 }, 1024, 1, true)).toBeCloseTo(4);
     expect(exportScale({ width: 100, height: 50 }, 1024, 1, true)).toBe(4);
+    // toPng(2048) で長辺 1472 の紙 → 2048
+    expect(exportScale({ width: 1472, height: 920 }, 2048, 1, true)).toBeCloseTo(2048 / 1472);
     expect(exportScale({ width: 400, height: 300 }, 1024, 2, false)).toBe(2);
     expect(exportScale({ width: 400, height: 300 }, 1024, 0.5, false)).toBe(1);
     expect(exportScale({ width: 4000, height: 300 }, 1024, 2, false)).toBeCloseTo(1024 / 4000);

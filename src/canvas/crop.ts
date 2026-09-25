@@ -65,16 +65,17 @@ export function padRect(b: Rect): Rect {
 
 /**
  * 書き出し倍率。長辺が maxEdge を超えないようにする。
- * - 切り詰め時: 小さな絵は最大 maxUpscale 倍まで拡大して maxEdge に近づける（線はベクタから描き直すので劣化しない）
- * - 紙全体: 従来どおり min(DPR, maxEdge / 長辺)（1 未満の DPR は 1）
+ * - upscale（切り詰め時の toWebp、toPng）: maxEdge が内容より大きければ最大 max(DPR, maxUpscale) 倍まで拡大して近づける
+ *   （線・塗りは ops から描き直すので劣化しない）
+ * - それ以外（toWebp の紙全体）: 従来どおり min(DPR, maxEdge / 長辺)（1 未満の DPR は 1）
  */
 export function exportScale(
   rect: { width: number; height: number },
   maxEdge: number,
   dpr: number,
-  cropped: boolean,
+  upscale: boolean,
   maxUpscale = 4,
 ): number {
   const fit = maxEdge / Math.max(1, rect.width, rect.height);
-  return cropped ? Math.min(fit, Math.max(1, dpr, maxUpscale)) : Math.min(Math.max(1, dpr), fit);
+  return upscale ? Math.min(fit, Math.max(1, dpr, maxUpscale)) : Math.min(Math.max(1, dpr), fit);
 }

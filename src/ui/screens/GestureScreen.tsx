@@ -24,7 +24,7 @@ import { CanvasScreen } from './CanvasScreen';
 import { ReferencePicker, useBlobUrl, useBusy, useCountdown, useEngine } from '../lesson/common';
 import { POSE_VIEWBOX, poseBounds, stickPoseFor, type MannequinPose } from '../lesson/mannequin-poses';
 import { bump, saveDocDrawing, saveStrokes, type LessonSession, type StrokeStyles } from '../lesson/stateBridge';
-import { docForSave, resetCanvas } from '../paint/canvasDoc';
+import { docForSave, exportForSave, resetCanvas, type SavedImage } from '../paint/canvasDoc';
 import type { CanvasDocument } from '../paint/types';
 
 /** three の読み込みがこれ以上かかったら 2D で始める */
@@ -145,7 +145,7 @@ export function GestureScreen({ step, session, lessonId, onFinish, onExit }: Ges
   /** strokes と同じ並びの線ごとの見た目（保存用） */
   const stylesRef = useRef<StrokeStyles>([]);
   /** レイヤー・塗りなどを使った体の文書と画像（見比べのあと「次のポーズ」で保存） */
-  const docRef = useRef<{ doc: CanvasDocument; image: Promise<Blob | undefined> } | null>(null);
+  const docRef = useRef<{ doc: CanvasDocument; image: Promise<SavedImage | undefined> } | null>(null);
   const [refs, setRefs] = useState<ReferenceImage[] | null>(step.source === 'user' ? null : []);
   const [picked, setPicked] = useState(false);
   const { busy, error, run } = useBusy();
@@ -192,11 +192,12 @@ export function GestureScreen({ step, session, lessonId, onFinish, onExit }: Ges
     // ペンを置いたままなら、描きかけの線を確定してから止める
     commitLivePointer(livePointer.current);
     livePointer.current = null;
+    // 先に変形のプレビューを確定する（docForSave が確定させる）。そのあとで線・画像を取り、文書と食い違わないようにする
+    const doc = docForSave(engine);
     setStrokes(engine.getStrokes());
     stylesRef.current = engine.getStyles();
-    // レイヤー・塗りなどを使っていれば文書と画像（紙に付いているうちに書き出す）も取っておく
-    const doc = docForSave(engine);
-    docRef.current = doc ? { doc, image: engine.toWebp(1024).catch(() => undefined) } : null;
+    // レイヤー・塗りなどを使っていれば文書と画像（紙に付いているうちに書き出す。範囲つき）も取っておく
+    docRef.current = doc ? { doc, image: exportForSave(engine, 1024).catch(() => undefined) } : null;
     const api = apiRef.current;
     if (api && useMannequin) {
       savedView.current = { i, state: api.getState() };

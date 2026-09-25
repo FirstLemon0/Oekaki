@@ -11,7 +11,10 @@ import {
   rotateHandlePos,
   rotationFromPointer,
   scaleFromHandle,
+  isSmallSelection,
 } from './transform';
+import { alphaBounds, cropSquare } from './thumb';
+import { hasDrawOps, shouldRescale } from './rules';
 import { exportFileName, isRichDocument, readDrawingDoc, rescaleDocument } from './canvasDoc';
 import { rescaleMap } from '../lesson/drillSetup';
 import { engineIndexOfRow, nextLayerName } from './LayerPanel';
@@ -178,5 +181,45 @@ describe('レイヤーパネル', () => {
   it('表示の行（上＝手前）とエンジンの添字（下＝奥）', () => {
     expect(engineIndexOfRow(0, 3)).toBe(2);
     expect(engineIndexOfRow(2, 3)).toBe(0);
+  });
+});
+
+describe('レビュー対応（2026-09-25）', () => {
+  const box = { x: 100, y: 100, w: 200, h: 100 };
+  it('回転ハンドルを下に出すとき: 位置は下辺の下、真下が 0°', () => {
+    const below = rotateHandlePos(box, IDENTITY_STATE, 40, -1);
+    expect(below).toEqual({ x: 200, y: 150 + 50 + 40 });
+    expect(rotationFromPointer(box, IDENTITY_STATE, { x: 200, y: 400 }, -1)).toBe(0);
+    expect(rotationFromPointer(box, IDENTITY_STATE, { x: 0, y: 150 }, -1)).toBe(90);
+    expect(rotationFromPointer(box, IDENTITY_STATE, { x: 200, y: 0 }, -1)).toBe(180);
+  });
+  it('小さい選択（画面上の短辺 40px 未満）', () => {
+    expect(isSmallSelection({ x: 0, y: 0, w: 200, h: 30 }, IDENTITY_STATE, 1)).toBe(true);
+    expect(isSmallSelection({ x: 0, y: 0, w: 200, h: 30 }, IDENTITY_STATE, 2)).toBe(false);
+    expect(isSmallSelection({ x: 0, y: 0, w: 200, h: 100 }, { ...IDENTITY_STATE, sy: 0.3 }, 1)).toBe(true);
+  });
+  it('サムネイル: 不透明な画素の外接矩形と正方形の切り出し', () => {
+    const w = 10;
+    const h = 8;
+    const data = new Uint8ClampedArray(w * h * 4);
+    const on = (x: number, y: number) => (data[(y * w + x) * 4 + 3] = 255);
+    on(2, 3);
+    on(6, 5);
+    expect(alphaBounds(data, w, h)).toEqual({ x: 2, y: 3, w: 5, h: 3 });
+    expect(alphaBounds(new Uint8ClampedArray(w * h * 4), w, h)).toBeNull();
+    const sq = cropSquare({ x: 2, y: 3, w: 5, h: 3 }, 1, 0);
+    expect(sq).toEqual({ x: 2, y: 2, w: 5, h: 5 });
+  });
+  it('再スケールは縦横の入れ替わりか幅 20% 以上の変化のときだけ', () => {
+    expect(shouldRescale({ width: 1200, height: 800 }, { width: 1200, height: 500 })).toBe(false); // キーボード
+    expect(shouldRescale({ width: 1200, height: 800 }, { width: 1100, height: 800 })).toBe(false);
+    expect(shouldRescale({ width: 1200, height: 800 }, { width: 900, height: 800 })).toBe(true);
+    expect(shouldRescale({ width: 1200, height: 800 }, { width: 800, height: 1200 })).toBe(true);
+    expect(shouldRescale({ width: 1200, height: 800 }, { width: 1200, height: 800 })).toBe(false);
+  });
+  it('戻る確認: 描画 op（塗りだけでも）があるか', () => {
+    expect(hasDrawOps({ ops: [] })).toBe(false);
+    expect(hasDrawOps({ ops: [{ kind: 'layer-add', layer: { id: 'b', name: 'b', visible: true, opacity: 1, locked: false, blend: 'normal' }, index: 1 }] })).toBe(false);
+    expect(hasDrawOps({ ops: [{ kind: 'fill', layer: 'a', x: 1, y: 1, color: '#000000', tolerance: 32, reference: 'layer' }] })).toBe(true);
   });
 });

@@ -19,7 +19,7 @@ import { xpForDrillScore, xpForEvent } from '@/data/xp';
 import type { CounterKind, Drawing, DrawingKind, Progress, StrokeDrawing } from '@/data/types';
 import type { CritiqueResult } from '@/critic';
 import { createCanvasEngine, flattenHistory, historyOf, isNonInkStyle, type CanvasEngine, type StrokeHistory, type StrokeStyle } from '@/canvas';
-import { docForSave, hasContent } from '../paint/canvasDoc';
+import { docForSave, exportForSave, hasContent, type SavedImage } from '../paint/canvasDoc';
 import type { CanvasDocument } from '../paint/types';
 import type { Lesson } from '@/content/schema';
 import { completedIds, counters, critiques, drillStats, nextNode, path, profile, progress, reloadData, saveProfile, streak, uiPrefs } from '../state';
@@ -62,22 +62,33 @@ export interface LessonSession {
   finish: { streakBefore: number | null; lessonDone: boolean; streakAfter: number | null; completedBumped: boolean };
   /**
    * 直前に終えた描くステップ（trace / construct / copy / free）のキャンバス。
-   * construct の keepPrevious で、その線を残したまま始めるために使う（消しゴム・補助線を含む生の履歴と紙の大きさ）。
+   * construct の keepPrevious で、その絵を残したまま始めるために使う（文書ごと＝レイヤー・塗りも含む。紙の大きさつき）。
    */
   lastCanvas: CanvasCarry | null;
 }
 
 /** ステップをまたいで引き継ぐキャンバス */
 export interface CanvasCarry {
+  /** アクティブレイヤーの生の履歴（文書が無いときの後方互換） */
   history: StrokeHistory;
+  /** 文書ごと（レイヤー・塗り・変形を含む）。あれば loadDocument で引き継ぐ */
+  doc?: CanvasDocument;
   size: { width: number; height: number };
 }
 
 /** 描くステップを終えたときに、そのキャンバスを覚えておく（次の construct の keepPrevious 用） */
-export function rememberCanvas(session: LessonSession | undefined, engine: { getHistory(): StrokeHistory; size(): { width: number; height: number } }): void {
+export function rememberCanvas(
+  session: LessonSession | undefined,
+  engine: { getHistory(): StrokeHistory; size(): { width: number; height: number }; getDocument?: () => CanvasDocument },
+): void {
   if (!session) return;
   const size = engine.size();
-  session.lastCanvas = size.width > 0 && size.height > 0 ? { history: engine.getHistory(), size } : null;
+  if (!(size.width > 0 && size.height > 0)) {
+    session.lastCanvas = null;
+    return;
+  }
+  const doc = engine.getDocument?.();
+  session.lastCanvas = { history: engine.getHistory(), ...(doc ? { doc } : {}), size };
 }
 
 const sessions = new Map<string, LessonSession>();
@@ -229,6 +240,7 @@ export async function saveStrokes(
  * レイヤー等を使った絵（契約 1b の CanvasDocument）を保存する。meta.doc に文書をそのまま入れる。
  * strokes / strokeStyles はペンの線（全レイヤー、下から順）で、採点・一覧の互換のために従来どおり持つ。
  * image を渡さなければ一時エンジンで文書から描く（紙色つき・切り詰め）。
+ * image が SavedImage（exportForSave の結果）なら、画像が写す範囲を meta.contentRect に残す（ギャラリーの再生で縦横比を合わせる）。
  */
 export async function saveDocDrawing(
   doc: CanvasDocument,
@@ -237,16 +249,18 @@ export async function saveDocDrawing(
   kind: DrawingKind,
   lessonId: string | null,
   session?: LessonSession,
-  image?: Blob,
+  image?: Blob | SavedImage,
 ): Promise<Drawing | null> {
   if (!hasContent(doc)) return null;
-  let img = image;
+  const saved: SavedImage | undefined = !image ? undefined : 'image' in image ? image : { image };
+  let img = saved?.image;
   if (!img) {
     const tmp = createCanvasEngine();
     tmp.loadDocument(doc);
     img = await tmp.toWebp(1024);
   }
   const meta: Record<string, unknown> = { doc };
+  if (saved?.contentRect) meta.contentRect = { ...saved.contentRect };
   if (styles && styles.some((s) => s !== undefined)) meta.strokeStyles = strokes.map((_, i) => styles[i] ?? null);
   const d = await saveDrawing({ kind, lessonId, image: img, strokes, meta });
   session?.drawingIds.push(d.id);
@@ -267,7 +281,7 @@ export async function saveCanvas(
   const doc = docForSave(engine);
   if (!doc) return saveStrokes(engine.getStrokes(), kind, lessonId, session, engine.getStyles());
   if (!hasContent(doc)) return null;
-  const image = await engine.toWebp(1024);
+  const image = await exportForSave(engine, 1024);
   return saveDocDrawing(doc, engine.getStrokes(), engine.getStyles(), kind, lessonId, session, image);
 }
 

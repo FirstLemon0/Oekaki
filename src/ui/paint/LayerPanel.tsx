@@ -5,18 +5,24 @@
  * - 各行 56px: サムネイル 40（getLayerThumbnail）、名前（タップで改名）、目（表示）、鍵（ロック）。アクティブ行は accent-soft
  * - 行の長押し（400ms）でつかんで上下へ動かすと並べ替え。アクティブ行は下部の「上へ／下へ」でも動かせる
  * - 下部: アクティブ行の不透明度（ドラッグ中もその場で反映。続けての変更はエンジンが 1 手にまとめる）と合成（通常／乗算／スクリーン）
- * - フッタ: 追加・複製・下と結合・削除（削除は確認）
+ * - フッタ: 削除（左端。確認つき）・追加・複製・下と結合。削除を左端に置くのは、縦向きのシートで右下の「終わる」「完了」と
+ *   同じ位置に来ないため
  * サムネイルは線を描き終えたとき（opsend）とレイヤーが変わったときに、少し待ってから作り直す（描いている間は動かさない）。
+ * サムネイルは描いた範囲で切り出す（thumb.ts。紙の隅に小さく描いても見える）。
  */
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { CanvasEngine } from '@/canvas';
 import { Button, Modal } from '../components';
 import { PaintIcon } from './PaintIcon';
 import type { BlendMode, LayerInfo } from './types';
+import { cropThumbnail } from './thumb';
 
 const ROW_H = 56;
 const LONG_PRESS_MS = 400;
 const THUMB_DEBOUNCE_MS = 300;
+/** エンジンから受け取る元の大きさ（切り出してから THUMB_PX に縮める） */
+const THUMB_SOURCE_PX = 256;
+const THUMB_PX = 80;
 
 export const BLEND_OPTIONS: { value: BlendMode; label: string }[] = [
   { value: 'normal', label: '通常' },
@@ -65,7 +71,8 @@ function useThumbnails(engine: CanvasEngine, layers: readonly LayerInfo[]): Map<
       void Promise.all(
         list.map((l) =>
           engine
-            .getLayerThumbnail(l.id, 80)
+            .getLayerThumbnail(l.id, THUMB_SOURCE_PX)
+            .then((b) => cropThumbnail(b, THUMB_PX))
             .then((b) => [l.id, URL.createObjectURL(b)] as const)
             .catch(() => null),
         ),
@@ -236,7 +243,16 @@ function LayerRow({
   );
 }
 
-export function LayerPanel({ engine, onClose }: { engine: CanvasEngine; onClose: () => void }) {
+export function LayerPanel({
+  engine,
+  onClose,
+  style,
+}: {
+  engine: CanvasEngine;
+  onClose: () => void;
+  /** 位置の上書き（左利きで構築の手順カードの下に置くとき） */
+  style?: Record<string, string>;
+}) {
   const { layers, active } = useLayers(engine);
   const thumbs = useThumbnails(engine, layers);
   const rows = [...layers].reverse();
@@ -320,7 +336,7 @@ export function LayerPanel({ engine, onClose }: { engine: CanvasEngine; onClose:
   };
 
   return (
-    <aside class="pt-layers" aria-label="レイヤー" data-testid="layer-panel">
+    <aside class="pt-layers" aria-label="レイヤー" data-testid="layer-panel" style={style}>
       <header class="pt-layers__head">
         <span class="pt-layers__title">レイヤー</span>
         <span class="num pt-layers__count">{count}</span>
@@ -372,7 +388,7 @@ export function LayerPanel({ engine, onClose }: { engine: CanvasEngine; onClose:
           </label>
           <div class="pt-layers__row">
             <span class="pt-layers__label">合成</span>
-            <div class="pt-seg" role="radiogroup" aria-label="合成モード">
+            <div class="pt-seg pt-seg--blend" role="radiogroup" aria-label="合成モード">
               {BLEND_OPTIONS.map((o) => (
                 <button
                   key={o.value}
@@ -399,6 +415,12 @@ export function LayerPanel({ engine, onClose }: { engine: CanvasEngine; onClose:
         </div>
       )}
       <footer class="pt-layers__foot">
+        <button type="button" class="pt-footbtn is-danger" disabled={!activeLayer || count <= 1} onClick={() => setConfirmDelete(true)}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5" />
+          </svg>
+          <span>削除</span>
+        </button>
         <button type="button" class="pt-footbtn" onClick={add}>
           <PaintIcon name="add-layer" size={22} />
           <span>追加</span>
@@ -410,12 +432,6 @@ export function LayerPanel({ engine, onClose }: { engine: CanvasEngine; onClose:
         <button type="button" class="pt-footbtn" disabled={!activeLayer || activeRow >= count - 1} onClick={mergeDown}>
           <PaintIcon name="merge" size={22} />
           <span>下と結合</span>
-        </button>
-        <button type="button" class="pt-footbtn is-danger" disabled={!activeLayer || count <= 1} onClick={() => setConfirmDelete(true)}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5" />
-          </svg>
-          <span>削除</span>
         </button>
       </footer>
       <Modal

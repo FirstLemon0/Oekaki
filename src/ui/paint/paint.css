@@ -47,6 +47,9 @@
 }
 .pt-seg__item::after { content: ''; position: absolute; inset: -4px 0; }
 .pt-seg__item.is-selected { background: var(--color-surface); color: var(--color-ink); font-weight: 500; box-shadow: var(--shadow-1); }
+/* 合成モード（通常／乗算／スクリーン）: 「スクリーン」が詰まらないよう 12px・最後の項目を広めに */
+.pt-seg--blend .pt-seg__item { font-size: 12px; padding: 0 2px; }
+.pt-seg--blend .pt-seg__item:last-child { flex: 1.5; }
 
 /* ロック中の案内（下中央。描いている間も動かない静的な表示） */
 .pt-locknote {
@@ -123,6 +126,9 @@
   border: 1.5px solid var(--color-accent);
 }
 .pt-handle.is-corner .pt-handle__dot { width: 16px; height: 16px; }
+/* 小さい選択: 四隅だけ（外へずらす）。当たり判定を少し小さくして、中央（移動）をつかめるように */
+.pt-handle.is-small { width: 40px; height: 40px; margin: -20px 0 0 -20px; }
+.pt-handle.is-small .pt-handle__dot { width: 14px; height: 14px; }
 .pt-handle.is-rotate .pt-handle__dot { width: 18px; height: 18px; border-radius: 50%; background: var(--color-accent); border-color: var(--color-surface); }
 .pt-handle:focus-visible .pt-handle__dot { outline: 2px solid var(--color-ink); outline-offset: 2px; }
 
@@ -282,6 +288,8 @@
 .pt-layers__order { display: flex; align-items: center; gap: 2px; margin-left: -8px; }
 .pt-layers__hint { margin-left: 6px; font-size: 12px; color: var(--color-ink-2); }
 .pt-layers__foot { flex: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; padding: 4px; border-top: 1px solid var(--color-line); }
+/* 削除は左端（右下の「終わる」「完了」と同じ位置に来ない）。ほかと少し離す */
+.pt-layers__foot .pt-footbtn.is-danger { margin-right: 6px; box-shadow: 1px 0 0 var(--color-line); border-radius: 10px 0 0 10px; }
 .pt-footbtn {
   min-height: 56px;
   display: flex;
@@ -351,17 +359,20 @@
   .is-full .ls-task { top: 304px; }
   .is-full .ls-canvas__center { top: 188px; }
   .is-full .pt-xbar { top: 304px; }
+  /* 下からのシート。右下の「終わる」「完了」（下端 16 + 高さ 56）に重ならないよう、その上で止める */
   .pt-layers,
   .is-left .pt-layers {
     top: auto;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: 8px;
+    right: 8px;
+    bottom: 88px;
     width: auto;
-    height: min(52dvh, 600px);
-    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
-    border-bottom: 0;
+    height: min(46dvh, 560px);
+    border-radius: var(--radius-sheet);
     background: var(--color-surface);
   }
   .ls-pop.ls-toolpanel.pt-penpanel { max-height: calc(100dvh - 220px); }
 }
+
+/* 左利きでレイヤーパネルを開き、手順カードの下に置く高さが無いとき: カードを畳む（パネルを閉じたら戻る） */
+.ls-canvas__topleft.is-folded-by-layers { visibility: hidden; pointer-events: none; }

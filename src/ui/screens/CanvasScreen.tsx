@@ -32,6 +32,15 @@
  *
  * 紙の大きさが変わったとき（画面の回転など）は、描いた線を「中心合わせ・短辺の比で拡縮」して動かす。
  * お手本（fitTemplate）やドリルの手がかりも同じ規則で作り直されるので、線と目標がずれない。
+ * 写し直すのは縦横が入れ替わったか幅が 20% 以上変わったときだけ（rules.shouldRescale）。ソフトキーボードなどで
+ * 高さだけ変わったときは写さない（loadDocument / loadHistory で Undo 履歴が消えるため）。onSize・guide もそのときだけ更新する。
+ *
+ * 2 本指のズーム・パン・回転（エンジンの gestures）はフルツールの画面だけ。採点する画面（ドリル・なぞり・校正・復習）は
+ * gestures: false にし、ズーム率のピルも手のひらも出さない。
+ * 戻るときの確認は、getDocument().ops に描画 op（線・塗り・変形・削除）があるかで決める（塗りだけの絵でも確かめる）。
+ * スポイト: 指（ペン）を離したときに、拾えた色（墨なら色なし）をペンに入れて直近の色に記憶し、前のツールへ戻る
+ * （同じ色を拾ったときも戻る）。何も無い所（透明）だったら、エンジンのペンを UI の今の設定に戻してスポイトのまま。
+ * ペン専用のときは、指が触れても小パネルを閉じない（手のひらで閉じない）。
  */
 import type { ComponentChildren } from 'preact';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
@@ -73,6 +82,7 @@ import { FillPanel, ShapePanel, ZoomPill } from '../paint/PaintPanels';
 import { LayerPanel } from '../paint/LayerPanel';
 import { isSelectTool, releaseSelection, SelectionOverlay } from '../paint/SelectionOverlay';
 import { isRichDocument, rescaleDocument, settleTransform } from '../paint/canvasDoc';
+import { hasDrawOps, shouldRescale } from '../paint/rules';
 
 /** 採点するドリルで使う固定のペン（「ペン」の既定・墨） */
 function lockedPen(): PenStyle {
@@ -80,6 +90,11 @@ function lockedPen(): PenStyle {
 }
 
 const LONG_PRESS_MS = 400;
+/** レイヤーパネルの既定の上端（paint.css の .pt-layers top）と、下端の余白（完了ボタンの上） */
+const LAYER_DEFAULT_TOP = 72;
+const LAYER_BOTTOM_GAP = 88;
+/** カードの下に置くときに要る最低の高さ（足りなければカードを畳む） */
+const LAYER_MIN_H = 320;
 
 /** lesson.css の縦向きレイアウトと同じ条件 */
 const PORTRAIT_QUERY = '(orientation: portrait), (max-width: 900px)';
@@ -270,8 +285,8 @@ export function CanvasScreen(props: CanvasScreenProps) {
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
   const paperRef = useRef<HTMLDivElement>(null);
   const exitRef = useRef<HTMLDivElement>(null);
-  /** 履歴の本数（消しゴム・補助線を含む）。1 本以上で、保存していなければ離脱を確かめる */
-  const [histLen, setHistLen] = useState(() => engine.getHistory().strokes.length);
+  /** 描画 op（線・塗り・変形・削除）があるか。あって保存していなければ離脱を確かめる */
+  const [drawn, setDrawn] = useState(() => hasDrawOps(engine.getDocument()));
   /** 離脱の確認（「戻る」を選んだら呼ぶ） */
   const [leaveAsk, setLeaveAsk] = useState<(() => void) | null>(null);
   /** 開いたときに見つかった下書き（続きから／捨てる を選ぶまで） */
@@ -288,6 +303,13 @@ export function CanvasScreen(props: CanvasScreenProps) {
   useEffect(() => {
     engine.setOptions({ penOnly: prefs.penOnly, leftHanded: prefs.leftHanded });
   }, [engine, prefs.penOnly, prefs.leftHanded]);
+
+  // 2 本指のズーム・パン・回転はフルツールの画面だけ（採点する画面では切る）
+  useEffect(() => {
+    engine.setOptions({ gestures: full });
+  }, [engine, full]);
+  const penOnlyRef = useRef(prefs.penOnly);
+  penOnlyRef.current = prefs.penOnly;
 
   useEffect(() => {
     engine.setOptions({ grid: gridSpecOf(grid), flipped, silhouette });
@@ -331,23 +353,51 @@ export function CanvasScreen(props: CanvasScreenProps) {
     saveFillPrefs(next);
   };
 
-  // スポイト: エンジンが setPen({color}) して 'toolchange' を出す。ペンの色に反映して直近に記憶し、前のツールへ戻る
+  // スポイト: エンジンは押している間 setPen({color}) する（拾えなければ色なし）。指（ペン）を離したときに
+  // その位置が透明かどうかを pickColor で確かめ、拾えたらペンの色へ（墨なら色なし）・直近の色へ入れて前のツールへ戻る。
+  // 同じ色でも戻る。透明（空振り）なら、エンジンのペンを UI の今の設定に戻してスポイトのまま。
   useEffect(() => {
     if (!full) return;
-    return engine.on('toolchange', () => {
-      const picked = normalizeColor(engine.getPen().color);
+    const el = paperRef.current;
+    if (!el) return;
+    let pressed: number | null = null;
+    const onDown = (e: PointerEvent) => {
+      if (toolRef.current !== 'eyedropper' || pressed !== null) return;
+      if (penOnlyRef.current && e.pointerType === 'touch') return;
+      pressed = e.pointerId;
+    };
+    const onUp = (e: PointerEvent) => {
+      if (pressed === null || e.pointerId !== pressed) return;
+      pressed = null;
+      if (toolRef.current !== 'eyedropper') return;
       const cur = penStyleRef.current;
-      if (!picked || picked === normalizeColor(cur.color)) return;
-      const next: PenStyle = { ...cur, color: picked };
+      const p = engine.toCanvasPoint(e.clientX, e.clientY);
+      const hit = e.type === 'pointerup' ? engine.pickColor(p.x, p.y) : null;
+      if (hit === null) {
+        // 空振り: UI とエンジンのペンをそろえる（エンジンが色なしにしていても戻す）
+        engine.setPen({ ...cur, color: cur.color });
+        return;
+      }
+      const picked = normalizeColor(engine.getPen().color);
+      const next: PenStyle = { ...cur };
+      if (picked) next.color = picked;
+      else delete next.color; // 墨（テーマの色）
       setPenStyle(next);
       savePenStyle(next);
-      rememberColor(picked);
-      if (toolRef.current === 'eyedropper') {
-        const back = beforeDropper.current;
-        engine.setTool(back);
-        setTool(back);
-      }
-    });
+      engine.setPen({ ...next, color: next.color });
+      if (picked) rememberColor(picked);
+      const back = beforeDropper.current;
+      engine.setTool(back);
+      setTool(back);
+    };
+    el.addEventListener('pointerdown', onDown, true);
+    window.addEventListener('pointerup', onUp, true);
+    window.addEventListener('pointercancel', onUp, true);
+    return () => {
+      el.removeEventListener('pointerdown', onDown, true);
+      window.removeEventListener('pointerup', onUp, true);
+      window.removeEventListener('pointercancel', onUp, true);
+    };
   }, [engine, full]);
 
   useEffect(() => {
@@ -365,6 +415,11 @@ export function CanvasScreen(props: CanvasScreenProps) {
     if (full && isSelectTool(tool) && !isSelectTool(t)) releaseSelection(engine);
     if (t === 'eyedropper' && tool !== 'eyedropper') beforeDropper.current = tool === 'fill' ? 'fill' : 'pen';
     engine.setTool(t); // 描画直後の最初のホバーから消しゴムの輪を出すため、effect を待たずに渡す
+    // 図形・塗りはペンの色を使う（プレビューも）。エンジンのペンを UI の今の設定にそろえてから描かせる
+    if (!lockPen && (t === 'fill' || t === 'shape-line' || t === 'shape-rect' || t === 'shape-ellipse')) {
+      const cur = penStyleRef.current;
+      engine.setPen({ ...cur, color: cur.color });
+    }
     setTool(t);
   };
 
@@ -397,7 +452,11 @@ export function CanvasScreen(props: CanvasScreenProps) {
   useEffect(() => {
     const el = paperRef.current;
     if (!el) return;
-    const close = () => setPanel(null);
+    const close = (e: PointerEvent) => {
+      // ペン専用: 指（手のひら）が触れても閉じない
+      if (penOnlyRef.current && e.pointerType === 'touch') return;
+      setPanel(null);
+    };
     el.addEventListener('pointerdown', close, true);
     return () => el.removeEventListener('pointerdown', close, true);
   }, []);
@@ -408,12 +467,11 @@ export function CanvasScreen(props: CanvasScreenProps) {
     if (collapsed || hasSheet) setPanel(null);
   }, [collapsed, hasSheet]);
 
-  // Undo/Redo の可否・履歴の本数を追う（フルツールはレイヤー・塗りなどの操作も数える）
+  // Undo/Redo の可否・描いた内容があるかを追う（線の本数ではなく ops の描画 op で見る。塗りだけの絵も数える）
   useEffect(() => {
     const read = () => {
       setTick((t) => t + 1);
-      const n = engine.getHistory().strokes.length;
-      setHistLen(full ? Math.max(n, engine.getStrokes().length, engine.canUndo() ? 1 : 0) : n);
+      setDrawn(hasDrawOps(engine.getDocument()));
     };
     const offs = [engine.on('change', read)];
     if (full) offs.push(engine.on('opsend', read), engine.on('layerschange', read));
@@ -421,7 +479,7 @@ export function CanvasScreen(props: CanvasScreenProps) {
   }, [engine, full]);
 
   // 保存していない線があるあいだ: 戻る・端末の戻る・閉じるで確かめる
-  const dirty = histLen > 0 && props.saved !== true && draftOffer === null;
+  const dirty = drawn && props.saved !== true && draftOffer === null;
   useEffect(() => {
     if (!dirty) return;
     return armLeaveGuard(
@@ -562,17 +620,50 @@ export function CanvasScreen(props: CanvasScreenProps) {
     };
   }, [hasTopLeft, prefs.leftHanded, collapsed]);
 
+  // 左利き（横向き）でレイヤーパネル（左寄せ）を開いたとき: 構築の手順カードと重ならないよう、パネルをカードの下に置く。
+  // 下に十分な高さ（LAYER_MIN_H）が無いときはカードを畳む（パネルを閉じたら戻る）
+  const topLeftRef = useRef<HTMLDivElement>(null);
+  const [layerTop, setLayerTop] = useState<number | 'fold' | null>(null);
+  const layerBeside = full && layersOpen && prefs.leftHanded && hasTopLeft && topLeftPos !== null && !topLeftPos.portrait && !props.sheet;
+  useLayoutEffect(() => {
+    if (!layerBeside) {
+      setLayerTop(null);
+      return;
+    }
+    const stage = stageRef.current;
+    const card = topLeftRef.current;
+    if (!stage || !card) return;
+    const place = () => {
+      const s = stage.getBoundingClientRect();
+      const c = card.getBoundingClientRect();
+      const top = Math.round(c.bottom - s.top + 12);
+      const room = s.height - top - LAYER_BOTTOM_GAP;
+      const next = room >= LAYER_MIN_H ? Math.max(LAYER_DEFAULT_TOP, top) : 'fold';
+      setLayerTop((prev) => (prev === next ? prev : prev === 'fold' ? prev : next));
+    };
+    place();
+    const ro = new ResizeObserver(place);
+    ro.observe(stage);
+    ro.observe(card);
+    return () => ro.disconnect();
+  }, [layerBeside]);
+
   const onSizeRef = useRef(props.onSize);
   onSizeRef.current = props.onSize;
   const onRescaleRef = useRef(props.onRescale);
   onRescaleRef.current = props.onRescale;
   const prevSize = useRef<Size | null>(null);
+  /** 線・目標・guide の座標の基準になっている紙の大きさ（写し直したときだけ変わる） */
+  const [layoutSize, setLayoutSize] = useState<Size>({ width: 0, height: 0 });
   useEffect(() => {
     if (size.width <= 0 || size.height <= 0) return;
     const prev = prevSize.current;
+    // 回転などで紙の大きさが変わった: 描いた線を同じ規則で動かす（目標は onSize で作り直される）。
+    // 高さだけの小さな変化（ソフトキーボード）では写さない（Undo 履歴を消さない）
+    if (prev !== null && !shouldRescale(prev, size)) return;
     prevSize.current = size;
-    // 回転などで紙の大きさが変わった: 描いた線を同じ規則で動かす（目標は onSize で作り直される）
-    const resized = prev !== null && (prev.width !== size.width || prev.height !== size.height);
+    setLayoutSize(size);
+    const resized = prev !== null;
     if (resized && full) {
       // フルツール: 旧 API（loadHistory）はレイヤーを消すので、文書ごと座標を写して loadDocument で戻す
       const doc = engine.getDocument();
@@ -696,7 +787,10 @@ export function CanvasScreen(props: CanvasScreenProps) {
             onClick={() => (isShape ? pickTool(tool) : pickTool(shape))}
             onLongPress={() => longPressTool(shape)}
           >
-            <PaintIcon name={shape} />
+            <span class="ls-tool__pen">
+              <PaintIcon name={shape} />
+              <span class="ls-tool__dot" style={{ background: penDotColor(penStyle, lockPen) }} aria-hidden="true" />
+            </span>
           </ToolButton>
           {panel === 'shape' && <ShapePanel shape={shape} onPick={pickShape} />}
         </div>
@@ -773,16 +867,16 @@ export function CanvasScreen(props: CanvasScreenProps) {
       <div class="ls-canvas__stage" ref={stageRef}>
         <div class="ls-canvas__paper" ref={paperRef}>
           <CanvasView engine={engine} />
-          {props.guide && size.width > 0 && (
+          {props.guide && layoutSize.width > 0 && (
             <svg
               class="ls-guide"
-              viewBox={`0 0 ${size.width} ${size.height}`}
-              width={size.width}
-              height={size.height}
+              viewBox={`0 0 ${layoutSize.width} ${layoutSize.height}`}
+              width={layoutSize.width}
+              height={layoutSize.height}
               aria-hidden="true"
               style={flipped ? { transform: 'scaleX(-1)' } : undefined}
             >
-              {props.guide(size)}
+              {props.guide(layoutSize)}
             </svg>
           )}
           {props.sheet && <div class="ls-canvas__blocker" aria-hidden="true" />}
@@ -795,7 +889,14 @@ export function CanvasScreen(props: CanvasScreenProps) {
         )}
 
         {full && !props.sheet && (
-          <SelectionOverlay engine={engine} paperRef={paperRef} tool={tool} onActiveChange={setSelActive} />
+          <SelectionOverlay
+            engine={engine}
+            paperRef={paperRef}
+            tool={tool}
+            onActiveChange={setSelActive}
+            penOnly={prefs.penOnly}
+            locked={activeLocked}
+          />
         )}
 
         {props.topCenter ? (
@@ -808,7 +909,7 @@ export function CanvasScreen(props: CanvasScreenProps) {
           <div class="ls-counterbox">
             {props.counterExtra}
             {props.counter && <div class="ls-counter num">{props.counter}</div>}
-            <ZoomPill engine={engine} />
+            {full && <ZoomPill engine={engine} />}
           </div>
         )}
         {props.mini && (props.counter || props.counterExtra) && (
@@ -818,11 +919,25 @@ export function CanvasScreen(props: CanvasScreenProps) {
           </div>
         )}
 
-        {full && layersOpen && !props.sheet && <LayerPanel engine={engine} onClose={() => setLayersOpen(false)} />}
+        {full && layersOpen && !props.sheet && (
+          <LayerPanel
+            engine={engine}
+            onClose={() => setLayersOpen(false)}
+            style={layerTop !== null && layerTop !== 'fold' ? { top: `${layerTop}px` } : undefined}
+          />
+        )}
 
         {props.topLeft && (
           <div
-            class={topLeftPos?.portrait ? 'ls-canvas__topleft is-portrait' : 'ls-canvas__topleft'}
+            ref={topLeftRef}
+            class={[
+              'ls-canvas__topleft',
+              topLeftPos?.portrait ? 'is-portrait' : '',
+              layerTop === 'fold' ? 'is-folded-by-layers' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            aria-hidden={layerTop === 'fold' ? 'true' : undefined}
             data-testid="canvas-topleft"
             style={
               topLeftPos
@@ -946,10 +1061,14 @@ export function CanvasScreen(props: CanvasScreenProps) {
         </div>
 
         {prefs.penOnly && <div class="ls-penonly">ペンのみ — 指では描けません</div>}
-        {full && activeLocked && !isSelectTool(tool) && tool !== 'hand' && tool !== 'eyedropper' && (
+        {full && activeLocked && tool !== 'hand' && tool !== 'eyedropper' && !props.sheet && (
           <div class="pt-locknote" role="status">
             <PaintIcon name="lock" size={18} />
-            <span>このレイヤーはロック中です。描くときはレイヤーの鍵を外します</span>
+            <span>
+              {isSelectTool(tool)
+                ? 'このレイヤーはロック中です。変形するときはレイヤーの鍵を外します'
+                : 'このレイヤーはロック中です。描くときはレイヤーの鍵を外します'}
+            </span>
           </div>
         )}
 

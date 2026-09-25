@@ -89,9 +89,12 @@ export function applyLayerOp(list: readonly LayerInfo[], op: EngineOp): readonly
       return next;
     }
     case 'layer-merge-down': {
+      // 下のレイヤーの不透明度・合成は結合で画素に焼き込むので、結合後は不透明度 1・通常になる（名前・表示・ロックは残る）
       const i = at(op.layer);
       if (i <= 0) return list;
-      return list.filter((_, k) => k !== i);
+      const next = list.filter((_, k) => k !== i);
+      next[i - 1] = { ...list[i - 1]!, opacity: 1, blend: 'normal' };
+      return next;
     }
     case 'layer-duplicate': {
       const i = at(op.layer);
@@ -256,7 +259,8 @@ export function sanitizeOp(op: unknown): EngineOp | null {
     case 'fill': {
       const x = Number(o.x);
       const y = Number(o.y);
-      const color = normalizeHexColor(o.color);
+      // 'ink' は墨（テーマの墨色に描画時に解決する記号）
+      const color = o.color === 'ink' ? 'ink' : normalizeHexColor(o.color);
       if (!layer || !Number.isFinite(x) || !Number.isFinite(y) || !color) return null;
       const tol = Number(o.tolerance);
       return {

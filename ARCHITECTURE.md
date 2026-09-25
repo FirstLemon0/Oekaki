@@ -184,3 +184,13 @@ on(event: 'layerschange' | 'viewchange' | 'selectionchange' | 'opsend', cb: () =
 - レイヤーの表示・不透明度・合成は `globalAlpha` と `globalCompositeOperation` で合成。ロック中のレイヤーには描けない（入力を無視し 'toolchange' で UI に知らせる必要はない。UI 側がロック表示する）。
 - 保存: `Drawing.meta.doc = getDocument()`（レイヤーが 2 枚以上、または stroke 以外の op があるときだけ。それ以外は従来の `history`）。ギャラリーの再生は `doc` があれば `loadDocument` → `replay`。
 - `toWebp` は従来どおり紙色を敷いた合成結果（クロップ既定）。透過が要るときは `toPng({ transparent: true })`。
+
+### 契約 1b への追加（2026-09-25 レビュー対応）
+- `CanvasOptions.gestures: boolean`（既定 true）。false のとき 2 本指のズーム・パン・回転を無効にする（採点する画面で使う。手のひらツールも無効）。
+- `undo()` は変形プレビュー中なら `cancelTransform()` だけを行う（直前の線は消さない）。Undo/Redo は選択範囲もその時点の状態に戻す（移動を Undo したら枠も戻る）。
+- `fitView()` は内容が収まるなら zoom 1.0（100%）に戻す。収まらないときだけ縮小。拡大表示中はその倍率で描き直してぼやけない。
+- `toPng(maxEdge, { transparent, crop, inkColor? })`: `inkColor` で墨（色なし）の線・塗りの色を指定できる（透過書き出しはライトの墨 #2B2A28 を渡す）。
+- 塗りつぶし・スポイトの「墨」は色として固定せず記号のまま保存する: `fill.color` は `string | 'ink'`、`pickColor` が墨相当を拾ったら `'ink'` 相当（UI は `setPen({ color: undefined })`）。描画時にテーマの墨に解決する。
+- 書き出し・結合・サムネイルは「紙色の上で」合成する（乗算・スクリーンが画面と同じ見た目になる）。透過書き出しだけ透明の上で合成する。
+- `getHistory()`（後方互換）は最後の `layer-clear` より後の op だけを返す（「全部消す」の後に消した線が採点・再生に残らない）。
+- 塗りの領域計算は端末の DPR に依存しない固定解像度（CSS px × 1）で行い、結果を拡大して適用する（端末で塗りが変わらない）。

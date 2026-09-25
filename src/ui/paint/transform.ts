@@ -139,20 +139,30 @@ export function scaleFromHandle(
 /**
  * 回転ハンドルの位置（キャンバス座標）。反転に関係なく「見た目の上辺」の中央から gap だけ外。
  * gap はキャンバス座標（画面で一定の距離にしたいときは呼び出し側がズームで割る）。
+ * side = -1 は「見た目の下辺」の中央から外（選択が上端に近く、上に出すと変形バーに隠れるとき）。
  */
-export function rotateHandlePos(box: Box, s: TransformState, gap: number): { x: number; y: number } {
+export function rotateHandlePos(box: Box, s: TransformState, gap: number, side: 1 | -1 = 1): { x: number; y: number } {
   const c = centerOf(box, s);
-  const d = (box.h / 2) * s.sy + gap;
+  const d = ((box.h / 2) * s.sy + gap) * side;
   const r = (s.rot * Math.PI) / 180;
   return { x: c.x + d * Math.sin(r), y: c.y - d * Math.cos(r) };
 }
 
-/** 回転ハンドルのドラッグ → 角度（度、-180..180）。ハンドルは上辺の中央の上にあるので、真上が 0°。15° に吸着（±3°） */
-export function rotationFromPointer(box: Box, s: TransformState, p: { x: number; y: number }): number {
+/** 回転ハンドルのドラッグ → 角度（度、-180..180）。ハンドルは上辺の中央の上にあるので、真上が 0°（side = -1 は下辺の下にあり、真下が 0°）。15° に吸着（±3°） */
+export function rotationFromPointer(box: Box, s: TransformState, p: { x: number; y: number }, side: 1 | -1 = 1): number {
   const c = centerOf(box, s);
-  let deg = (Math.atan2(p.y - c.y, p.x - c.x) * 180) / Math.PI + 90;
+  let deg = (Math.atan2(p.y - c.y, p.x - c.x) * 180) / Math.PI + (side === 1 ? 90 : -90);
   deg = ((deg % 360) + 360) % 360;
   if (deg > 180) deg -= 360;
   const snap = Math.round(deg / 15) * 15;
   return Math.abs(deg - snap) <= 3 ? (snap === -180 ? 180 : snap) : Math.round(deg * 10) / 10;
+}
+
+/**
+ * 小さい選択（画面上の短辺が SMALL_SELECTION_PX 未満）か。小さいときは辺のハンドルを出さず四隅だけにし、
+ * 四隅を外へずらして中央（移動）をつかめるようにする。
+ */
+export const SMALL_SELECTION_PX = 40;
+export function isSmallSelection(box: Box, s: TransformState, zoom: number): boolean {
+  return Math.min(box.w * s.sx, box.h * s.sy) * zoom < SMALL_SELECTION_PX;
 }

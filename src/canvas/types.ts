@@ -59,7 +59,9 @@ export interface ViewState {
  */
 export type CanvasOp =
   | { kind: 'stroke'; layer: string; points: Stroke; style: StrokeStyle }
-  | { kind: 'fill'; layer: string; x: number; y: number; color: string; tolerance: number; reference: 'layer' | 'all' }
+  /** color は `#RRGGBB` か 'ink'（墨。描画時にテーマの墨色へ解決する） */
+  | { kind: 'fill'; layer: string; x: number; y: number; color: string | 'ink'; tolerance: number; reference: 'layer' | 'all' }
+  /** mask は変形前の選択範囲（Undo で選択範囲もここへ戻る。Redo で transformMask(mask, matrix)） */
   | { kind: 'transform'; layer: string; mask: SelectionMask; matrix: Mat }
   | { kind: 'delete'; layer: string; mask: SelectionMask }
   | { kind: 'layer-add'; layer: LayerInfo; index: number }
@@ -95,6 +97,8 @@ export interface ToPngOptions {
   transparent?: boolean;
   /** 既定 false（紙全体）。true で内容の範囲＋余白（toWebp と同じ規則） */
   crop?: boolean;
+  /** 墨（色なし）の線・塗りの色。既定はいまのテーマの墨。透過書き出しはライトの墨 #2B2A28 を渡す */
+  inkColor?: string;
 }
 
 /** ペンの種類。見た目のパラメータは PEN_PRESETS（pen.ts）。 */
@@ -186,6 +190,11 @@ export interface CanvasOptions {
    * タッチは penOnly 中は常に無視。
    */
   allowMouse: boolean;
+  /**
+   * 契約 1b への追加: 2 本指のズーム・パン・回転と手のひらツール。既定 true。
+   * false（採点する画面）では 2 本目の指を無視し、'hand' ツールでもビューを動かさない。
+   */
+  gestures: boolean;
 }
 
 export interface ToWebpOptions {
@@ -209,6 +218,7 @@ export interface CanvasEngine {
    * 消しゴムストロークには掛からない（消しゴムはいつも効く）。
    */
   setStrokeVisibility(alphas: readonly (number | undefined)[] | null): void;
+  /** 変形プレビュー中は cancelTransform() だけ（直前の操作は取り消さない）。Undo/Redo は選択範囲もその時点に戻す */
   undo(): void;
   redo(): void;
   clear(): void;
@@ -221,7 +231,10 @@ export interface CanvasEngine {
   getStrokes(): Drawing;
   /** getStrokes() と同じ順・同じ長さのスタイル。undefined は旧データ（baseWidth のペン）。 */
   getStyles(): (StrokeStyle | undefined)[];
-  /** 再生・保存用: 消しゴム・補助線を含む生の履歴（コピー）。 */
+  /**
+   * 再生・保存用: アクティブレイヤーの消しゴム・補助線を含む生の履歴（コピー）。
+   * そのレイヤーを最後に空にした op（layer-clear＝「全部消す」、作り直し）より後の線だけ。
+   */
   getHistory(): StrokeHistory;
   /** getHistory() の結果を読み戻す（loadStrokes(h.strokes, h.styles) と同じ）。履歴はリセット。 */
   loadHistory(h: { strokes: Drawing; styles?: (StrokeStyle | undefined)[] }): void;
@@ -275,8 +288,11 @@ export interface CanvasEngine {
 
   setFill(opts: Partial<FillOptions>): void;
   getFill(): FillOptions;
-  /** 見えているレイヤーの合成結果の色 `#RRGGBB`（紙色は含めない）。透明なら null */
-  pickColor(x: number, y: number): string | null;
+  /**
+   * 見えているレイヤーの合成結果の色 `#RRGGBB`（紙色は含めない）。透明なら null。
+   * 墨（いまのテーマの墨色）と同じ色なら 'ink'（UI は setPen({ color: undefined }) にする）
+   */
+  pickColor(x: number, y: number): string | 'ink' | null;
 
   getSelection(): SelectionMask | null;
   setSelection(mask: SelectionMask | null): void;
@@ -291,6 +307,7 @@ export interface CanvasEngine {
   getView(): ViewState;
   setView(patch: Partial<ViewState>): void;
   resetView(): void;
+  /** 内容が画面に収まるなら 100%（収まる位置へ）、収まらないときだけ紙全体が入るように縮小 */
   fitView(): void;
   toCanvasPoint(clientX: number, clientY: number): { x: number; y: number };
   toClientPoint(x: number, y: number): { x: number; y: number };

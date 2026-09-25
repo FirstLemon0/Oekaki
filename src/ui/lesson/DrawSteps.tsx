@@ -32,6 +32,7 @@ import {
 } from './stateBridge';
 import { ImportView, StepFrame } from './StepViews';
 import { LsIcon } from './LsIcon';
+import { drawOpCount, engineHasContent, rescaleDocument } from '../paint/canvasDoc';
 
 export interface StepCtx {
   node: PathNode;
@@ -236,7 +237,8 @@ export function CopyView({ step, ctx }: { step: CopyStep; ctx: StepCtx }) {
   const { busy, error, run } = useBusy();
   const overlay = useRefOverlay(source, comparing, 0.55, 'accent');
 
-  useEffect(() => engine.on('change', () => setN(engine.getStrokes().length)), [engine]);
+  // 描いてあるか（塗りだけ・別レイヤーだけでも押せる。レイヤーを足しただけ・全部消したあとは押せない）
+  useEffect(() => engine.on('change', () => setN(engineHasContent(engine) ? 1 : 0)), [engine]);
 
   if (!source) {
     return (
@@ -297,27 +299,35 @@ export function ConstructView({ step, ctx }: { step: ConstructStep; ctx: StepCtx
     step.reference === 'builtin' && step.refId ? { kind: 'builtin', id: step.refId } : null,
   );
   const needPick = step.reference === 'user' && !source;
-  /** keepPrevious: 直前の描くステップの線（開いた時点のもの）。紙の大きさが決まったら一度だけ読み込む */
+  /** keepPrevious: 直前の描くステップの絵（開いた時点のもの。文書ごと）。紙の大きさが決まったら一度だけ読み込む */
   const [carry] = useState(() => (step.keepPrevious ? ctx.session.lastCanvas : null));
-  const carried = useRef<{ done: boolean; historyLen: number }>({ done: false, historyLen: 0 });
+  /** 引き継いだ時点の描く op の数（これより増えたら「ここで描いた」） */
+  const carried = useRef<{ done: boolean; drawOps: number }>({ done: false, drawOps: 0 });
   const stage = step.stages[k]!;
   const last = k + 1 >= step.stages.length;
 
   const onSize = (size: Size) => {
     if (!carry || carried.current.done || size.width <= 0 || size.height <= 0) return;
     carried.current.done = true;
-    const h = carryHistory(carry.history, carry.size, size);
-    if (h.strokes.length === 0) return;
-    engine.loadHistory(h);
-    carried.current.historyLen = h.strokes.length;
+    if (carry.doc && carry.doc.ops.length > 0) {
+      // 文書ごと（レイヤー・塗り・変形も）引き継ぐ。紙の大きさが違えば同じ規則（中心合わせ・短辺の比）で写す
+      const same = carry.size.width === size.width && carry.size.height === size.height;
+      engine.loadDocument(same ? carry.doc : rescaleDocument(carry.doc, carry.size, size));
+    } else {
+      const h = carryHistory(carry.history, carry.size, size);
+      if (h.strokes.length === 0) return;
+      engine.loadHistory(h);
+    }
+    carried.current.drawOps = drawOpCount(engine.getDocument());
   };
 
   const finish = async () => {
     const ok = await run(async () => {
       const r = rec.current;
       if (r.saved === null) r.saved = (await saveCanvas(engine, 'lesson', ctx.node.lesson.id, ctx.session)) !== null;
-      // 累計（counter があれば count ぶん）。何も描かずに進んだとき（引き継いだ線だけのときも）は足さない
-      const drewHere = engine.getHistory().strokes.length > carried.current.historyLen;
+      // 累計（counter があれば count ぶん）。何も描かずに進んだとき（引き継いだ絵だけのときも）は足さない
+      // 描く op（線・塗り・変形・削除）で数えるので、別のレイヤーに描いても・塗っただけでも数える
+      const drewHere = drawOpCount(engine.getDocument()) > carried.current.drawOps;
       if (r.saved && drewHere && !r.bumped) {
         await bumpForStep(step, ctx.session);
         r.bumped = true;
@@ -493,8 +503,9 @@ export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
   const { busy, error, run } = useBusy();
   const second = useRef<StoredDrawing | null>(null);
 
-  useEffect(() => engine.on('change', () => setN(engine.getStrokes().length)), [engine]);
-  useEffect(() => engine2.on('change', () => setN2(engine2.getStrokes().length)), [engine2]);
+  // 描いてあるか（塗りだけ・別レイヤーだけでも押せる。レイヤーを足しただけ・全部消したあとは押せない）
+  useEffect(() => engine.on('change', () => setN(engineHasContent(engine) ? 1 : 0)), [engine]);
+  useEffect(() => engine2.on('change', () => setN2(engineHasContent(engine2) ? 1 : 0)), [engine2]);
 
   const builtins = ctx.node.lesson.steps.flatMap((s) =>
     (s.type === 'copy' || s.type === 'construct') && s.reference === 'builtin' && s.refId ? [s.refId] : [],
@@ -637,7 +648,8 @@ export function FreeStepView({ step, ctx }: { step: FreeStep; ctx: StepCtx }) {
   const [n, setN] = useState(0);
   /** 保存済みの絵（Before/After の記録だけ失敗したときに、絵を二重に保存しない） */
   const saved = useRef<StoredDrawing | null>(null);
-  useEffect(() => engine.on('change', () => setN(engine.getStrokes().length)), [engine]);
+  // 描いてあるか（塗りだけ・別レイヤーだけでも押せる。レイヤーを足しただけ・全部消したあとは押せない）
+  useEffect(() => engine.on('change', () => setN(engineHasContent(engine) ? 1 : 0)), [engine]);
   const kind = freeDrawingKind(step.save);
 
   /** 保存 → Before/After なら profile に記録 → 次へ */
@@ -712,7 +724,8 @@ export function CritiqueStepView({ step, ctx }: { step: CritiqueStep; ctx: StepC
   const [drawing, setDrawing] = useState<StoredDrawing | null>(null);
   const { busy, error, run } = useBusy();
   const [n, setN] = useState(0);
-  useEffect(() => engine.on('change', () => setN(engine.getStrokes().length)), [engine]);
+  // 描いてあるか（塗りだけ・別レイヤーだけでも押せる。レイヤーを足しただけ・全部消したあとは押せない）
+  useEffect(() => engine.on('change', () => setN(engineHasContent(engine) ? 1 : 0)), [engine]);
 
   if (drawing) return <CritiqueStage ctx={ctx} drawing={drawing} rubricId={step.rubric} task={step.instruction} />;
 

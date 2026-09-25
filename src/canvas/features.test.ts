@@ -246,6 +246,9 @@ interface FakeCanvas {
   remove(): void;
   getBoundingClientRect(): { left: number; top: number; width: number; height: number };
   toBlob(cb: (b: Blob | null) => void, type?: string): void;
+  /** toBlob した時点の大きさ（書き出し後は canvas を大きさ 0 にして手放すため） */
+  bw?: number;
+  bh?: number;
 }
 
 let canvases: FakeCanvas[] = [];
@@ -283,6 +286,8 @@ function makeCanvas(): FakeCanvas {
     remove() {},
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 400, height: 300 }),
     toBlob(cb, type) {
+      c.bw = c.width;
+      c.bh = c.height;
       cb(new Blob(['x'], { type: type ?? 'image/png' }));
     },
   };
@@ -528,15 +533,20 @@ describe('エンジン: 消しゴム（ラスター）', () => {
     expect(count(main, 'drawImage')).toBeGreaterThan(0);
   });
 
-  it('紙は表示のときに塗り、cache は透明（消した所は紙が見える）', () => {
+  it('紙は表示のときに塗り、cache は透明。シルエットの切り替えはレイヤー画像を描き直さない（合成で黒くする）', () => {
     const { e, main, cache } = setup();
     cache.calls.length = 0;
     main.calls.length = 0;
     e.setOptions({ silhouette: true });
     expect(cache.calls.some((c) => c.name === 'fillRect')).toBe(false);
-    expect(cache.calls.some((c) => c.name === 'clearRect')).toBe(true);
+    // 描き直さない（消去も線の描画もしない）
+    expect(cache.calls.some((c) => c.name === 'clearRect' || c.name === 'stroke')).toBe(false);
     const paper = main.calls.find((c) => c.name === 'fillRect')!;
     expect(paper.state.fillStyle).toBe('#ffffff');
+    // 形を作業用に重ねてから黒で塗る（source-in）
+    const sil = canvases.find((c) => c.calls.some((x) => x.name === 'fillRect' && x.state.globalCompositeOperation === 'source-in'));
+    expect(sil).toBeDefined();
+    expect(main.calls.some((c) => c.name === 'drawImage' && c.args[0] === sil)).toBe(true);
   });
 
   it('再生: 消しゴムも順番どおり cache から消す', () => {
@@ -576,7 +586,7 @@ describe('エンジン: 消しゴム（ラスター）', () => {
     expect(out.calls.findIndex((c) => c.name === 'fillRect')).toBeLessThan(out.calls.indexOf(img));
     const after = cropRect(e.getStrokes(), 3)!;
     expect(after.width).toBeLessThan(before.width);
-    expect(out.width / out.height).toBeCloseTo(after.width / after.height, 1);
+    expect(out.bw! / out.bh!).toBeCloseTo(after.width / after.height, 1);
   });
 });
 
@@ -665,7 +675,7 @@ describe('エンジン: 表示（反転・グリッド）と書き出し', () =>
     const out = canvases.at(-1)!;
     expect(out.calls.some((c) => c.name === 'transform')).toBe(false);
     const r = cropRect([s], 3, styles)!;
-    expect(out.width / out.height).toBeCloseTo(r.width / r.height, 1);
+    expect(out.bw! / out.bh!).toBeCloseTo(r.width / r.height, 1);
     expect(r.x).toBeLessThan(cropRect([s], 3)!.x);
   });
 });

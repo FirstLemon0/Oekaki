@@ -773,6 +773,8 @@
 .ls-timer { display: flex; flex-direction: column; align-items: center; }
 .ls-timer__num { font-size: var(--text-display); font-weight: 500; line-height: 1; }
 .ls-timer__meta { font-size: 12px; color: var(--color-ink-3); letter-spacing: 0.1em; }
+/* ジェスチャー: 上中央のタイマー（top 8px・96px＋12px）を変形バーで隠さないよう、変形バーをタイマーの下へ */
+.ls-gesture-track .pt-xbar { top: 136px; }
 
 .ls-compare, .ls-mark { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--color-paper); }
 .ls-compare__head, .ls-mark__head {
@@ -1102,6 +1104,7 @@ a.ls-tomorrow:hover { background: var(--color-accent-soft); }
   .ls-pop, .is-left .ls-pop { top: calc(100% + 12px); left: 0; right: auto; }
   .ls-task { top: 148px; max-width: calc(100% - 32px); }
   .ls-canvas__center { top: 140px; }
+  .ls-gesture-track .pt-xbar { top: 268px; }
 
   .ls-sheet { height: auto; max-height: 75%; overflow: auto; padding: 10px var(--sp-5) 20px; }
   .ls-sheet__grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-4); }

@@ -35,13 +35,43 @@ export interface Layer {
   ctx: Ctx;
 }
 
-export function makeLayer(w: number, h: number): Layer | null {
+/**
+ * 透明な作業用 canvas。cpu: true は getImageData を多用する用途（塗りつぶしの領域計算）で、
+ * `willReadFrequently` を付けて CPU 側に置く（GPU からの読み戻しを避ける）。
+ */
+export function makeLayer(w: number, h: number, opts?: { cpu?: boolean }): Layer | null {
   if (typeof document === 'undefined') return null;
   const cv = document.createElement('canvas');
   cv.width = w;
   cv.height = h;
-  const c = cv.getContext('2d');
+  const c = (opts?.cpu ? cv.getContext('2d', { willReadFrequently: true }) : cv.getContext('2d')) as Ctx | null;
   return c ? { canvas: cv, ctx: c } : null;
+}
+
+/** canvas のメモリを明示的に手放す（大きさ 0 にする）。以後その Layer は使わない。 */
+export function freeLayer(l: Layer | null | undefined): void {
+  if (!l) return;
+  l.canvas.width = 0;
+  l.canvas.height = 0;
+}
+
+/** 大きさを変える。keep: 今の中身を左上そろえで残す（紙が広がったとき）。 */
+export function resizeLayer(l: Layer, w: number, h: number, keep: boolean): void {
+  if (l.canvas.width === w && l.canvas.height === h) return;
+  if (!keep || l.canvas.width === 0 || l.canvas.height === 0) {
+    l.canvas.width = w;
+    l.canvas.height = h;
+    return;
+  }
+  const tmp = makeLayer(l.canvas.width, l.canvas.height);
+  if (tmp) tmp.ctx.drawImage(l.canvas, 0, 0);
+  l.canvas.width = w;
+  l.canvas.height = h;
+  if (tmp) {
+    l.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    l.ctx.drawImage(tmp.canvas, 0, 0);
+    freeLayer(tmp);
+  }
 }
 
 export function clearLayer(l: Layer | null): void {

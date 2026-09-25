@@ -541,3 +541,27 @@ describe('backup: お絵描き v2 の文書（meta.doc）', () => {
     expect(back?.meta?.strokeStyles).toEqual([style]);
   });
 });
+
+describe('backup: 文書つきの絵の切り詰め範囲（meta.contentRect）と墨の塗り', () => {
+  it('meta.doc（fill の色が墨 ink）と meta.contentRect が往復で残る', async () => {
+    const doc = {
+      v: 2,
+      width: 800,
+      height: 600,
+      layers: [{ id: 'L1', name: 'レイヤー 1', visible: true, opacity: 1, locked: false, blend: 'normal' }],
+      active: 'L1',
+      ops: [{ kind: 'fill', layer: 'L1', x: 400, y: 300, color: 'ink', tolerance: 32, reference: 'layer' }],
+    };
+    const contentRect = { x: 12.5, y: 0, width: 787.5, height: 600 };
+    const saved = await saveDrawing({ kind: 'free', lessonId: null, image: webp('fill-only'), strokes: [], meta: { doc, contentRect } });
+
+    const bytes = await exportBackup();
+    await clearAllStores();
+    await importBackup(bytes, 'replace');
+
+    const db = await openDb();
+    const back = (await db.get('drawings', saved.id)) as Drawing | undefined;
+    expect(back?.meta?.doc).toEqual(doc);
+    expect(back?.meta?.contentRect).toEqual(contentRect);
+  });
+});

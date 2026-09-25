@@ -330,6 +330,9 @@ interface FakeCanvas {
   setPointerCapture(): void;
   getBoundingClientRect(): { left: number; top: number; width: number; height: number };
   toBlob(cb: (b: Blob | null) => void, type?: string): void;
+  /** toBlob した時点の大きさ（書き出し後は canvas を大きさ 0 にして手放すため） */
+  bw?: number;
+  bh?: number;
 }
 let canvases: FakeCanvas[] = [];
 let rafQueue = new Map<number, FrameRequestCallback>();
@@ -366,6 +369,8 @@ function makeCanvas(): FakeCanvas {
     setPointerCapture() {},
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 400, height: 300 }),
     toBlob(cb, type) {
+      c.bw = c.width;
+      c.bh = c.height;
       cb(new Blob(['x'], { type: type ?? 'image/png' }));
     },
   };
@@ -649,8 +654,10 @@ describe('エンジン v2: ビュー', () => {
     expect(e.getView()).toMatchObject({ zoom: 8, rotationDeg: 90 });
     e.resetView();
     expect(e.getView()).toEqual({ zoom: 1, panX: 0, panY: 0, rotationDeg: 0 });
+    // 紙が画面に収まるので 100%（96% で止めない）
+    e.setView({ zoom: 3, panX: -50 });
     e.fitView();
-    expect(e.getView().zoom).toBeCloseTo(0.96);
+    expect(e.getView()).toEqual({ zoom: 1, panX: 0, panY: 0, rotationDeg: 0 });
   });
 
   it('反転とビューを合わせても toCanvasPoint ↔ toClientPoint は往復する', () => {
@@ -805,8 +812,8 @@ describe('エンジン v2: 文書の往復・再生・後方互換', () => {
     const made = canvases.slice(before);
     const out = made.at(-1)!;
     expect(out.calls.some((c) => c.name === 'fillRect')).toBe(false);
-    const comp = made.at(-2)!;
-    const mult = comp.calls.find((c) => c.name === 'drawImage' && c.state.globalCompositeOperation === 'multiply');
+    // 各レイヤーを書き出しの画像へ直接（紙色 or 透明の上で）不透明度・合成込みで重ねる
+    const mult = out.calls.find((c) => c.name === 'drawImage' && c.state.globalCompositeOperation === 'multiply');
     expect(mult?.state.globalAlpha).toBe(0.6);
     const b2 = canvases.length;
     await e.toPng(512);

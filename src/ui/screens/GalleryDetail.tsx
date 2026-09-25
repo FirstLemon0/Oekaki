@@ -13,6 +13,8 @@
  *
  * お絵描き v2: meta.doc（レイヤー等を使った絵の CanvasDocument）があれば、紙の大きさ（doc.width × doc.height）の
  * 箱に attach して loadDocument → replay（塗りつぶし・変形・レイヤー操作も順に再現）。
+ * 見せる範囲は保存時に残した切り詰め範囲（meta.contentRect）。保存画像と同じ範囲なので縦横比もずれない。
+ * contentRect の無い旧データは従来の推定（線の切り詰め範囲が画像と同じ縦横比ならそこ、違えば紙全体を画像の縦横比で）。
  * 「PNG で書き出す」: 紙色つきの PNG（長辺 2048）をダウンロードする。文書・履歴・線があればエンジンで描き直し、
  * 取込画像はそのまま PNG に変換する。
  */
@@ -26,7 +28,7 @@ import { href, navigate } from '../router';
 import { path } from '../state';
 import { useObjectUrls } from '../useObjectUrl';
 import { readStrokeHistory, readStrokeStyles } from '../lesson/stateBridge';
-import { downloadBlob, exportFileName, readDrawingDoc } from '../paint/canvasDoc';
+import { docSourceRect, downloadBlob, exportFileName, readContentRect, readDrawingDoc } from '../paint/canvasDoc';
 import type { CanvasDocument } from '../paint/types';
 import { PaintIcon } from '../paint/PaintIcon';
 
@@ -141,6 +143,7 @@ function ReplayStage({
   styles,
   history,
   doc,
+  contentRect,
   imageAspect,
   runId,
   onEnd,
@@ -148,6 +151,8 @@ function ReplayStage({
 }: {
   /** レイヤー等を使った絵の文書（あれば紙の大きさの箱で loadDocument → replay） */
   doc: CanvasDocument | undefined;
+  /** 保存画像が写している範囲（meta.contentRect。無ければ推定） */
+  contentRect: Rect | undefined;
   strokes: StrokeDrawing;
   /** strokes と同じ並びの線ごとの見た目（無ければ旧データのペン） */
   styles: (StrokeStyle | undefined)[] | undefined;
@@ -163,11 +168,8 @@ function ReplayStage({
   const hostRef = useRef<HTMLDivElement>(null);
   const rect = useMemo(() => {
     if (!doc) return sourceRect(strokes, imageAspect, styles);
-    // 文書: 切り詰めた範囲が画像と同じ縦横比ならそこを、違えば（塗りが線より広いなど）紙全体を見せる
-    const crop = strokes.length > 0 ? cropRect(strokes, DEFAULT_OPTIONS.baseWidth, styles) : null;
-    if (crop && imageAspect > 0 && Math.abs(crop.width / crop.height - imageAspect) / imageAspect < 0.03) return crop;
-    return { x: 0, y: 0, width: doc.width, height: doc.height };
-  }, [doc, strokes, imageAspect, styles]);
+    return docSourceRect(doc, contentRect, strokes, imageAspect, styles);
+  }, [doc, contentRect, strokes, imageAspect, styles]);
   const [scale, setScale] = useState<{ x: number; y: number } | null>(null);
 
   // 枠の大きさに合わせる
@@ -270,6 +272,7 @@ export function GalleryDetail({ id }: { id: string }) {
   const strokeStyles = useMemo(() => readStrokeStyles(drawing?.meta), [drawing]);
   const strokeHistory = useMemo(() => readStrokeHistory(drawing?.meta), [drawing]);
   const strokeDoc = useMemo(() => readDrawingDoc(drawing?.meta), [drawing]);
+  const contentRect = useMemo(() => readContentRect(drawing?.meta), [drawing]);
   const [exporting, setExporting] = useState(false);
   const urls = useObjectUrls(list);
 
@@ -366,6 +369,7 @@ export function GalleryDetail({ id }: { id: string }) {
             {replayable && mode !== 'idle' && imageAspect > 0 && (
               <ReplayStage
                 doc={strokeDoc}
+                contentRect={contentRect}
                 strokes={strokes ?? NO_STROKES}
                 styles={strokeStyles}
                 history={strokeHistory}
