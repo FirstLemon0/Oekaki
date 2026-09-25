@@ -8,7 +8,7 @@ export type IconName =
   | 'pen' | 'eraser' | 'undo' | 'redo' | 'trash' | 'overlay' | 'grid' | 'flip'
   | 'silhouette' | 'play' | 'help' | 'back' | 'chevron' | 'brush' | 'rotate'
   | 'plus' | 'minus'
-  | 'target' | 'image' | 'close' | 'snow';
+  | 'target' | 'image' | 'close' | 'snow' | 'arrowLeft';
 
 const D: Record<IconName, string> = {
   home: 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
@@ -41,6 +41,7 @@ const D: Record<IconName, string> = {
   target: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
   image: 'M4 5h16v14H4z M4 15l5-5 4 4 3-3 4 4',
   close: 'M6 6l12 12 M18 6L6 18',
+  arrowLeft: 'M19 12H5 M11 6l-6 6 6 6',
 };
 
 export interface IconProps {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dueReviews } from './review';
+import { dueReviews, isReviewSnoozed } from './review';
 import type { DrillStats } from './types';
 
 function stat(overrides: Partial<DrillStats>): DrillStats {
@@ -102,5 +102,27 @@ describe('dueReviews', () => {
     expect(r[0]?.daysSinceLast).toBe(14);
     // 1/15 なら 13 日で、まだ stale ではない
     expect(dueReviews([s], '2026-01-15')).toEqual([]);
+  });
+});
+
+describe('復習のスキップ（期限を 1 日だけ延ばす）', () => {
+  const stale = stat({ bestScore: 80, history: [{ at: '2026-01-01T12:00:00.000Z', score: 80 }] });
+
+  it('スキップした日と翌日は出ない。2 日後からまた出る', () => {
+    const skipped = { line: '2026-02-01' };
+    expect(dueReviews([stale], '2026-02-01', skipped)).toEqual([]);
+    expect(dueReviews([stale], '2026-02-02', skipped)).toEqual([]);
+    expect(dueReviews([stale], '2026-02-03', skipped)).toHaveLength(1);
+  });
+
+  it('ほかの種別のスキップは関係しない', () => {
+    expect(dueReviews([stale], '2026-02-01', { circle: '2026-02-01' })).toHaveLength(1);
+  });
+
+  it('isReviewSnoozed: 無し・未来日・2 日以上前は延ばさない', () => {
+    expect(isReviewSnoozed(null, '2026-02-01')).toBe(false);
+    expect(isReviewSnoozed('2026-02-05', '2026-02-01')).toBe(false);
+    expect(isReviewSnoozed('2026-01-30', '2026-02-01')).toBe(false);
+    expect(isReviewSnoozed('2026-01-31', '2026-02-01')).toBe(true);
   });
 });

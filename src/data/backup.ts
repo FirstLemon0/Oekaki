@@ -77,6 +77,8 @@ const profileSchema = z.object({
   lastMonthlyPromptAt: z.string().nullable(),
   // 後から追加した項目（古いバックアップには無い）
   critiqueAttemptsByDay: z.record(z.string(), z.number()).default({}),
+  unlockedLessonIds: z.array(z.string()).default([]),
+  reviewSkippedOn: z.record(z.string(), z.string()).default({}),
   updatedAt: isoString,
 }) satisfies z.ZodType<Profile>;
 
@@ -171,6 +173,7 @@ const settingsSchema = z.object({
   fontScale: z.enum(['normal', 'large']).default('normal'),
   lastBackupAt: z.string().nullable().default(null),
   backupSnoozedOn: z.string().nullable().default(null),
+  reviewWarmup: z.boolean().default(true),
   updatedAt: isoString,
 });
 
@@ -580,13 +583,20 @@ function reconcileSettings(chosen: Settings, device: Settings | undefined): Sett
   };
 }
 
-/** 読み込み後の profile: AI 批評の試行回数は日ごとに多い方を残す（直近 14 日分）。 */
+/** 読み込み後の profile: AI 批評の試行回数は日ごとに多い方を残す（直近 14 日分）。開放したレッスンは和集合。 */
 function reconcileProfile(chosen: Profile, device: Profile | undefined): Profile {
   const merged: Record<string, number> = { ...(chosen.critiqueAttemptsByDay ?? {}) };
   for (const [day, n] of Object.entries(device?.critiqueAttemptsByDay ?? {})) {
     merged[day] = Math.max(merged[day] ?? 0, n);
   }
-  return { ...chosen, critiqueAttemptsByDay: pruneCritiqueAttempts(merged, todayLocalDate()) };
+  // 開放したレッスンは両方を合わせる（読み込みで隠し機能の開放が消えないように）
+  const unlocked = [...new Set([...(chosen.unlockedLessonIds ?? []), ...(device?.unlockedLessonIds ?? [])])];
+  return {
+    ...chosen,
+    unlockedLessonIds: unlocked,
+    reviewSkippedOn: chosen.reviewSkippedOn ?? {},
+    critiqueAttemptsByDay: pruneCritiqueAttempts(merged, todayLocalDate()),
+  };
 }
 
 async function replaceAll(db: SeichotsuDBHandle, data: BackupPayload): Promise<void> {

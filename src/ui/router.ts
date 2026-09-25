@@ -14,6 +14,7 @@
  *   それ以外                   notFound
  */
 import { signal } from '@preact/signals';
+import { navigateAfterGuard } from './navGuard';
 
 export type Route =
   | { name: 'home' }
@@ -120,6 +121,12 @@ export const route = signal<Route>(parseHash(currentHash()));
 
 export function navigate(to: string, opts: { replace?: boolean } = {}): void {
   const target = to.startsWith('#') ? to : `#${to}`;
+  // 離脱ガード（navGuard）の 1 段が積んであれば、先に戻してから移動する
+  if (typeof history !== 'undefined' && typeof location !== 'undefined') navigateAfterGuard(() => go(target, opts));
+  else go(target, opts);
+}
+
+function go(target: string, opts: { replace?: boolean }): void {
   if (opts.replace) {
     history.replaceState(null, '', target);
     route.value = parseHash(target);

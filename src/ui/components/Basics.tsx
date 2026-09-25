@@ -32,6 +32,27 @@ export function Pill({ icon, iconClass, tone = 'default', class: cls, title, chi
 }
 
 // ---------------------------------------------------------------------------
+// BackPill（「← 戻る」。キャンバス・レッスン・ジェスチャー・批評・自由お絵描き・校正・復習の左上）
+// ---------------------------------------------------------------------------
+
+export interface BackPillProps {
+  onClick: () => void;
+  /** 戻り先の説明（読み上げ・ツールチップ）。見た目の文字はいつも「戻る」 */
+  label?: string;
+  class?: string;
+}
+
+/** 高さ 44、glass 地、1px line 枠、15px 500 の「← 戻る」。DESIGN_SYSTEM §2 */
+export function BackPill({ onClick, label, class: cls }: BackPillProps) {
+  return (
+    <button type="button" class={cx('back-pill', cls)} aria-label={label} title={label ?? '戻る'} onClick={onClick}>
+      <Icon name="arrowLeft" size={20} strokeWidth={2} />
+      <span class="back-pill__text">戻る</span>
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Chip（フィルタピル。高さ 40、選択は墨地）
 // ---------------------------------------------------------------------------
 

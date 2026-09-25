@@ -41,6 +41,8 @@ function defaultProfile(updatedAt: string): Profile {
     calibration: null,
     lastMonthlyPromptAt: null,
     critiqueAttemptsByDay: {},
+    unlockedLessonIds: [],
+    reviewSkippedOn: {},
     updatedAt,
   };
 }
@@ -396,6 +398,7 @@ export function defaultSettings(updatedAt: string): Settings {
     fontScale: 'normal',
     lastBackupAt: null,
     backupSnoozedOn: null,
+    reviewWarmup: true,
     updatedAt,
   };
 }

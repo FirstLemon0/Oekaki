@@ -280,3 +280,25 @@ describe('completeLesson の skipped', () => {
     expect(r.skipped).toBe(false);
   });
 });
+
+describe('実機フィードバックで足した項目（古いデータは既定値）', () => {
+  it('古い settings には reviewWarmup が無くても true（復習を差し込む）', async () => {
+    const db = await openDb();
+    const { reviewWarmup: _omit, ...old } = await updateSettings({ leftHanded: true });
+    await db.put('settings', old as never, 'singleton');
+    const s = await getSettings();
+    expect(s.reviewWarmup).toBe(true);
+    expect(s.leftHanded).toBe(true);
+    expect((await updateSettings({ reviewWarmup: false })).reviewWarmup).toBe(false);
+  });
+
+  it('古い profile には unlockedLessonIds / reviewSkippedOn が無くても空', async () => {
+    const db = await openDb();
+    const { unlockedLessonIds: _a, reviewSkippedOn: _b, ...old } = await updateProfile({ beforeDrawingId: 'd9' });
+    await db.put('profile', old as never, 'singleton');
+    const p = await getProfile();
+    expect(p.unlockedLessonIds).toEqual([]);
+    expect(p.reviewSkippedOn).toEqual({});
+    expect((await updateProfile({ unlockedLessonIds: ['s1-u1-l3'] })).unlockedLessonIds).toEqual(['s1-u1-l3']);
+  });
+});

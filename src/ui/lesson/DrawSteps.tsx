@@ -39,6 +39,8 @@ export interface StepCtx {
   onDone: () => void;
   /** キャンバスから戻る（前のステップへ） */
   onBack: () => void;
+  /** 下書きのキー（draft.ts）。`seichotsu.draft.<lessonId>.<stepIndex>` */
+  draftKey?: string;
 }
 
 /** 重ね表示用の色（お手本・見比べ）。CSS 変数から実色を取る */
@@ -107,10 +109,12 @@ export interface TraceRunnerProps {
   session?: LessonSession;
   onFinish: () => void;
   onExit: () => void;
+  /** 下書きのキー（draft.ts） */
+  draftKey?: string | null;
 }
 
 /** なぞり（レッスンのステップと、箱の追加ドリルで使う） */
-export function TraceRunner({ step, lessonId, session, onFinish, onExit }: TraceRunnerProps) {
+export function TraceRunner({ step, lessonId, session, onFinish, onExit, draftKey }: TraceRunnerProps) {
   const engine = useEngine();
   const count = step.count ?? 1;
   const [i, setI] = useState(0);
@@ -188,6 +192,7 @@ export function TraceRunner({ step, lessonId, session, onFinish, onExit }: Trace
       overlay={overlay}
       onSize={setSize}
       onExit={onExit}
+      draftKey={draftKey}
       onDone={score}
       doneLabel="採点"
       doneDisabled={n === 0 || scored !== null}
@@ -211,7 +216,9 @@ export function TraceRunner({ step, lessonId, session, onFinish, onExit }: Trace
 }
 
 export function TraceView({ step, ctx }: { step: TraceStep; ctx: StepCtx }) {
-  return <TraceRunner step={step} lessonId={ctx.node.lesson.id} session={ctx.session} onFinish={ctx.onDone} onExit={ctx.onBack} />;
+  return (
+    <TraceRunner step={step} lessonId={ctx.node.lesson.id} session={ctx.session} onFinish={ctx.onDone} onExit={ctx.onBack} draftKey={ctx.draftKey} />
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -258,6 +265,7 @@ export function CopyView({ step, ctx }: { step: CopyStep; ctx: StepCtx }) {
       sideMatch
       overlay={overlay}
       onExit={ctx.onBack}
+      draftKey={ctx.draftKey}
       onDone={comparing ? () => void finish() : () => setComparing(true)}
       doneLabel={comparing ? '次へ' : '重ねて見る'}
       doneDisabled={n === 0 || busy}
@@ -335,6 +343,7 @@ export function ConstructView({ step, ctx }: { step: ConstructStep; ctx: StepCtx
       task={step.instruction}
       counter={`${k + 1}/${step.stages.length}`}
       onExit={ctx.onBack}
+      draftKey={ctx.draftKey}
       onSize={onSize}
       side={source ? <RefSide source={source} /> : undefined}
       sideMatch
@@ -556,6 +565,8 @@ export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
         side={side}
         sideMatch
         onExit={() => setPhase('pick')}
+        draftKey={ctx.draftKey}
+        saved={first !== null}
         error={error}
         onDone={() => {
           if (first) {
@@ -595,6 +606,7 @@ export function MoshaView({ step, ctx }: { step: MoshaStep; ctx: StepCtx }) {
       side={side}
       sideMatch
       onExit={() => setPhase('mark')}
+      draftKey={ctx.draftKey ? `${ctx.draftKey}.2` : null}
       error={error}
       onDone={() => {
         void run(async () => {
@@ -653,6 +665,7 @@ export function FreeStepView({ step, ctx }: { step: FreeStep; ctx: StepCtx }) {
       engine={engine}
       task={step.instruction ?? '好きなものを自由に描きましょう。採点はありません。'}
       onExit={ctx.onBack}
+      draftKey={ctx.draftKey}
       doneLabel="終わる"
       doneDisabled={busy}
       error={error}
@@ -721,6 +734,7 @@ export function CritiqueStepView({ step, ctx }: { step: CritiqueStep; ctx: StepC
       engine={engine}
       task={step.instruction}
       onExit={ctx.onBack}
+      draftKey={ctx.draftKey}
       doneLabel="提出へ"
       doneDisabled={n === 0 || busy}
       error={error}

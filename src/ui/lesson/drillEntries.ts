@@ -58,3 +58,57 @@ export function summarizeEntries(entries: readonly DrillEntry[]): ScoreResult | 
     raw: {},
   };
 }
+
+// ---------------------------------------------------------------------------
+// ドリルの薄表示（表示だけ。採点・本数・累計・保存には関係しない）
+// ---------------------------------------------------------------------------
+
+/** 最新の 1 本の前に、薄く残す本数 */
+export const FADED_KEEP = 3;
+/** 薄く残す線の不透明度 */
+export const FADED_ALPHA = 0.3;
+
+/** 採点済みの本の新しさ（0 が最新）→ 表示の不透明度。最新は 1、その前の 3 本は 0.3、それより古い本は 0（出さない） */
+export function fadeAlphaOf(rankFromLatest: number): number {
+  if (rankFromLatest <= 0) return 1;
+  if (rankFromLatest <= FADED_KEEP) return FADED_ALPHA;
+  return 0;
+}
+
+export interface DrillVisibility {
+  /** engine.setStrokeVisibility に渡す（getHistory() の添字ごと） */
+  strokes: number[];
+  /** entries と同じ並びの不透明度（ヒート色の重ねに使う） */
+  entries: number[];
+}
+
+/**
+ * ドリルの表示用の透明度を決める。
+ * - 「紙を替える」を押した時点の履歴の本数 paperFrom より前の線は、全部出さない（採点済みの本・補助線とも）
+ * - それより後の採点済みの本は、新しい順に fadeAlphaOf
+ * - 採点に対応しない線（補助線・採点前の線）は、紙を替えた後ならそのまま
+ * 消しゴムは engine 側でいつも効く（ここの値は使われない）。
+ */
+export function drillVisibility(h: StrokeHistory, entries: readonly DrillEntry[], paperFrom = 0): DrillVisibility {
+  const order = new Map<string, number>();
+  h.strokes.forEach((s, i) => {
+    if (!isNonInkStyle(h.styles[i])) order.set(strokeKey(s), i);
+  });
+  const lastIndexOf = (e: DrillEntry) => Math.max(-1, ...e.keys.map((k) => order.get(k) ?? -1));
+  const shown = entries.map((e) => lastIndexOf(e) >= paperFrom);
+  const entryAlpha: number[] = new Array<number>(entries.length).fill(0);
+  let rank = 0;
+  for (let i = entries.length - 1; i >= 0; i--) {
+    if (!shown[i]) continue;
+    entryAlpha[i] = fadeAlphaOf(rank);
+    rank += 1;
+  }
+  const strokes: number[] = h.strokes.map((_, i) => (i < paperFrom ? 0 : 1));
+  entries.forEach((e, ei) => {
+    for (const k of e.keys) {
+      const i = order.get(k);
+      if (i !== undefined && i >= paperFrom) strokes[i] = entryAlpha[ei]!;
+    }
+  });
+  return { strokes, entries: entryAlpha };
+}

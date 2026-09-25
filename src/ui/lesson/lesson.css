@@ -57,12 +57,12 @@
   text-align: center;
 }
 
-/* ヘッダ 80: ✕、進捗セグメント、mono「2/7」 */
+/* ヘッダ 80: 「← 戻る」、進捗セグメント、mono「2/7」 */
 .ls-head {
   height: 80px;
   flex: none;
   display: grid;
-  grid-template-columns: 48px 1fr auto;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: var(--sp-5);
   padding: 0 var(--sp-5);
@@ -290,7 +290,7 @@
   color: var(--color-ink);
   cursor: pointer;
 }
-.ls-canvas__exit { position: absolute; top: 16px; left: 16px; z-index: 4; }
+.ls-canvas__exit { position: absolute; top: 16px; left: 16px; z-index: 5; }
 .ls-glass.btn { background: var(--glass); border-color: var(--glass-line); }
 
 /* 課題ピル（上中央） */
@@ -441,6 +441,11 @@
   cursor: pointer;
 }
 .ls-toolbar__grip { width: 4px; height: 20px; border-radius: 2px; background: var(--color-ink-3); }
+/* 取っ手と「反対側へ」（横向きは縦に、縦向きは横に並べる） */
+.ls-toolbar__handles { display: flex; flex-direction: column; gap: 8px; }
+/* 反対側へ（取っ手の下。左右矢印） */
+.ls-toolbar__swap { color: var(--color-ink-2); }
+.ls-toolbar__swap:hover { color: var(--color-ink); }
 .ls-toolbar__pop-host { position: relative; }
 /* ペン・消しゴムの小パネルはツールバー全体（取っ手・グリッドを含む）の外側に出す */
 .ls-toolbar__pop-host.is-static { position: static; }
@@ -844,7 +849,7 @@
   height: 80px;
   flex: none;
   display: grid;
-  grid-template-columns: 48px 1fr auto;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: var(--sp-4);
   padding: 0 var(--sp-5);
@@ -1077,22 +1082,26 @@ a.ls-tomorrow:hover { background: var(--color-accent-soft); }
   .ls-canvas.has-side { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 36%) minmax(0, 1fr); }
   .ls-canvas.has-side.has-side-match { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
   .ls-canvas__side { border-right: 0; border-bottom: 1px solid var(--color-line); }
-  .ls-toolbar-wrap,
-  .is-left .ls-toolbar-wrap {
-    top: 16px;
-    left: 50%;
+  /* 上端の「戻る」・カウンターの下の段に横並び。右利きは左寄せ、左利き（反対側へ）は右寄せ */
+  .ls-toolbar-wrap {
+    top: 72px;
+    left: 16px;
     right: auto;
-    transform: translateX(-50%);
+    transform: none;
     flex-direction: row;
   }
+  .is-left .ls-toolbar-wrap { left: auto; right: 16px; flex-direction: row-reverse; }
   .ls-toolbar { flex-direction: row; }
   .ls-toolbar__sep { width: 1px; height: auto; margin: 6px 4px; }
   /* 取っ手は右横、グリッドはその下に縦（横に並べるとカウンターに重なる） */
-  .ls-toolbar__aside, .is-left .ls-toolbar__aside { flex-direction: column; align-items: flex-start; }
+  .ls-toolbar__aside { flex-direction: column; align-items: flex-start; }
+  .is-left .ls-toolbar__aside { flex-direction: column; align-items: flex-end; }
+  .ls-toolbar__handles { flex-direction: row; gap: 6px; }
+  .is-left .ls-toolbar__handles { flex-direction: row-reverse; }
   .ls-gridseg__item { height: 32px; }
   .ls-pop, .is-left .ls-pop { top: calc(100% + 12px); left: 0; right: auto; }
-  .ls-task { top: 92px; max-width: calc(100% - 32px); }
-  .ls-canvas__center { top: 84px; }
+  .ls-task { top: 148px; max-width: calc(100% - 32px); }
+  .ls-canvas__center { top: 140px; }
 
   .ls-sheet { height: auto; max-height: 75%; overflow: auto; padding: 10px var(--sp-5) 20px; }
   .ls-sheet__grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-4); }

@@ -26,11 +26,27 @@ const RECENT_WINDOW = 3;
 const SCORE_DROP_RATIO = 0.8;
 const STALE_DAYS = 14;
 
-export function dueReviews(stats: DrillStats[], today: string): DueReview[] {
+/**
+ * スキップで延ばしている間か。スキップした日（skippedOn）と翌日は出さない（期限を 1 日だけ延ばす）。
+ * 2 日後からはまた出る。
+ */
+export function isReviewSnoozed(skippedOn: string | null | undefined, today: string): boolean {
+  if (!skippedOn) return false;
+  const d = diffDays(skippedOn, today);
+  return d >= 0 && d <= 1;
+}
+
+/**
+ * skippedOn: ドリル種別 → 復習をスキップした日（profile.reviewSkippedOn）。延ばしている間の種別は除く。
+ */
+export function dueReviews(stats: DrillStats[], today: string, skippedOn: Readonly<Record<string, string>> = {}): DueReview[] {
   const result: DueReview[] = [];
 
   for (const stat of stats) {
     if (stat.history.length === 0) {
+      continue;
+    }
+    if (isReviewSnoozed(skippedOn[stat.drillType], today)) {
       continue;
     }
 

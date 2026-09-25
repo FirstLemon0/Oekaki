@@ -418,6 +418,8 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
   let composeDirty = false;
   let timeOrigin: number | null = null;
   let replayState: ReplayState | null = null;
+  /** 表示だけの透明度（履歴の添字ごと）。null はすべて 1 */
+  let visibility: readonly (number | undefined)[] | null = null;
 
   // ---------- 色・スタイル ----------
   function lookupVar(name: string): string {
@@ -486,7 +488,18 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
     }
     // 補助線はシルエット（形だけを見る表示）には出さない
     if (isGuideStyle(st) && opts.silhouette) return;
-    paintStroke(cache.ctx, s, viewPaint(st), { k: dpr, ox: 0, oy: 0 }, scratch, devSize());
+    const paint = viewPaint(st);
+    // 再生中は表示用の透明度を掛けない（描いた順をそのまま見せる）
+    const a = replayState ? 1 : visibilityAt(i);
+    if (a <= 0) return;
+    const shown = a < 1 ? { ...paint, pen: { ...paint.pen, opacity: paint.pen.opacity * a } } : paint;
+    paintStroke(cache.ctx, s, shown, { k: dpr, ox: 0, oy: 0 }, scratch, devSize());
+  }
+
+  function visibilityAt(i: number): number {
+    const v = visibility?.[i];
+    if (v === undefined || !Number.isFinite(v)) return 1;
+    return Math.min(1, Math.max(0, v));
   }
 
   /** cache を透明にして、doc の先頭 upto 本（消しゴムを含む）を描く。紙は compose で塗る。 */
@@ -1188,6 +1201,16 @@ export function createCanvasEngine(init?: Partial<CanvasOptions>): CanvasEngine 
           compose();
         } else fullRedraw();
       } else if (view) compose();
+    },
+
+    setStrokeVisibility(alphas: readonly (number | undefined)[] | null): void {
+      const next = alphas && alphas.some((a) => a !== undefined && a !== 1) ? [...alphas] : null;
+      const same =
+        next === visibility ||
+        (next !== null && visibility !== null && next.length === visibility.length && next.every((a, i) => a === visibility![i]));
+      if (same) return;
+      visibility = next;
+      if (!replayState) fullRedraw();
     },
 
     setOverlay(o: OverlaySpec | null): void {

@@ -10,7 +10,7 @@ import { downscaleToWebp } from '@/data/images';
 import { getCritique, getDrawing, getTodayCritiqueAttempts, recordCritiqueAttempt } from '@/data/repo';
 import type { Critique, Drawing } from '@/data/types';
 import type { Rubric } from '@/content/schema';
-import { Button, Icon } from '../components';
+import { BackPill, Button, Icon } from '../components';
 import { href, navigate } from '../router';
 import { curriculum, path, settings } from '../state';
 import { useBlobUrl } from '../lesson/common';
@@ -137,7 +137,7 @@ export function CritiqueScreen(props: CritiqueScreenProps) {
     <div class="ls-critique">
       <header class="ls-chead">
         {props.onBack ? (
-          <Button variant="icon" icon="back" label="戻る" onClick={props.onBack} />
+          <BackPill onClick={props.onBack} />
         ) : (
           <span class="ls-chead__spacer" />
         )}

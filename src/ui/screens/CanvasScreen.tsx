@@ -24,15 +24,24 @@
  * 設定は端末内の好み（localStorage、canvasPrefs）。採点するドリル（lockPen）ではペン・墨に固定する。
  * 紙に触れたらパネルは閉じる（描いている間は出さない）。左右反転は絵だけ（グリッドは固定）。
  *
+ * 左上の「← 戻る」ピル（BackPill）。保存していない線があるときは、戻る・端末の戻る・閉じるで確認を出す（navGuard）。
+ * 描いている間は線が変わるたび（1 秒まとめて）に下書きを sessionStorage へ保存し（draftKey があるとき）、
+ * 同じステップを開き直したら「続きから／捨てる」を出す。保存が済んで画面を離れたら下書きは消す。
+ * ツールバーの取っ手の下に「反対側へ」（左右矢印）: ツールバー・グリッド欄・完了ボタンを反対側へ移す（設定の利き手と連動）。
+ * ドリルでは「紙を替える」（onNewPaper）で表示上の線を消せる（本数・累計はそのまま）。
+ *
  * 紙の大きさが変わったとき（画面の回転など）は、描いた線を「中心合わせ・短辺の比で拡縮」して動かす。
  * お手本（fitTemplate）やドリルの手がかりも同じ規則で作り直されるので、線と目標がずれない。
  */
 import type { ComponentChildren } from 'preact';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { CanvasView, PEN_PRESETS, type CanvasEngine, type EraserStyle, type OverlaySpec, type PenStyle, type Tool } from '@/canvas';
+import { CanvasView, PEN_PRESETS, type CanvasEngine, type EraserStyle, type OverlaySpec, type PenStyle, type StrokeHistory, type Tool } from '@/canvas';
 import type { StrokePoint } from '@/scoring';
-import { Icon, Slider } from '../components';
-import { uiPrefs } from '../state';
+import { BackPill, Button, Icon, Modal, Slider } from '../components';
+import { saveSettings, uiPrefs } from '../state';
+import { href, navigate } from '../router';
+import { armLeaveGuard, requestLeave } from '../navGuard';
+import { clearDraft, loadDraft, saveDraft, type Draft } from '../draft';
 import { LsIcon } from '../lesson/LsIcon';
 import { rescaleMap, type Size } from '../lesson/drillSetup';
 import {
@@ -121,7 +130,18 @@ export interface CanvasScreenProps {
    * 採点は線の精度を見るため。パネルにはその旨だけ出す。
    */
   lockPen?: boolean;
+  /** 下書きの保存先（draft.ts の draftKey）。無ければ下書きを保存しない */
+  draftKey?: string | null;
+  /** 今の線は保存済み（戻っても消えない）。true のあいだは離脱の確認を出さない */
+  saved?: boolean;
+  /** 下書きを戻すとき（既定は engine.loadHistory）。ドリルは採点し直す */
+  onRestoreDraft?: (h: StrokeHistory) => void;
+  /** 「紙を替える」（ドリルの薄表示）。渡したときだけツールバーに出す */
+  onNewPaper?: () => void;
 }
+
+/** 下書きの保存は線が変わってから 1 秒まとめて */
+const DRAFT_DEBOUNCE_MS = 1000;
 
 function ToolButton({
   icon,
@@ -213,6 +233,20 @@ export function CanvasScreen(props: CanvasScreenProps) {
   const [replaying, setReplaying] = useState(false);
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
   const paperRef = useRef<HTMLDivElement>(null);
+  const exitRef = useRef<HTMLDivElement>(null);
+  /** 履歴の本数（消しゴム・補助線を含む）。1 本以上で、保存していなければ離脱を確かめる */
+  const [histLen, setHistLen] = useState(() => engine.getHistory().strokes.length);
+  /** 離脱の確認（「戻る」を選んだら呼ぶ） */
+  const [leaveAsk, setLeaveAsk] = useState<(() => void) | null>(null);
+  /** 開いたときに見つかった下書き（続きから／捨てる を選ぶまで） */
+  const draftKey = props.draftKey ?? null;
+  const [draftOffer, setDraftOffer] = useState<Draft | null>(() => (draftKey ? loadDraft(draftKey) : null));
+  const draftOfferRef = useRef(draftOffer);
+  draftOfferRef.current = draftOffer;
+  const savedRef = useRef(props.saved === true);
+  savedRef.current = props.saved === true;
+  const onExitRef = useRef(props.onExit);
+  onExitRef.current = props.onExit;
 
   // 設定の反映
   useEffect(() => {
@@ -283,8 +317,80 @@ export function CanvasScreen(props: CanvasScreenProps) {
     if (collapsed || hasSheet) setPanel(null);
   }, [collapsed, hasSheet]);
 
-  // Undo/Redo の可否を追う
-  useEffect(() => engine.on('change', () => setTick((t) => t + 1)), [engine]);
+  // Undo/Redo の可否・履歴の本数を追う
+  useEffect(
+    () =>
+      engine.on('change', () => {
+        setTick((t) => t + 1);
+        setHistLen(engine.getHistory().strokes.length);
+      }),
+    [engine],
+  );
+
+  // 保存していない線があるあいだ: 戻る・端末の戻る・閉じるで確かめる
+  const dirty = histLen > 0 && props.saved !== true && draftOffer === null;
+  useEffect(() => {
+    if (!dirty) return;
+    return armLeaveGuard(
+      (proceed) => setLeaveAsk(() => proceed),
+      () => {
+        const exit = onExitRef.current;
+        if (exit) exit();
+        else navigate(href.home());
+      },
+    );
+  }, [dirty]);
+
+  // 下書き: 線が変わるたび 1 秒まとめて保存。画面を離れたら（保存して進んだ・戻るを選んだ）消す
+  useEffect(() => {
+    if (!draftKey) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const off = engine.on('change', () => {
+      // 下書きを戻すか決めるまでは上書きしない
+      if (draftOfferRef.current) return;
+      if (timer !== null) clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = null;
+        if (savedRef.current) clearDraft(draftKey);
+        else saveDraft(draftKey, engine.getHistory(), engine.size());
+      }, DRAFT_DEBOUNCE_MS);
+    });
+    return () => {
+      off();
+      if (timer !== null) clearTimeout(timer);
+      clearDraft(draftKey);
+    };
+  }, [engine, draftKey]);
+  useEffect(() => {
+    if (draftKey && props.saved) clearDraft(draftKey);
+  }, [draftKey, props.saved]);
+
+  const restoreDraft = () => {
+    const d = draftOffer;
+    setDraftOffer(null);
+    if (!d) return;
+    let h = d.history;
+    const cur = engine.size();
+    if (cur.width > 0 && cur.height > 0 && (cur.width !== d.size.width || cur.height !== d.size.height)) {
+      const map = rescaleMap(d.size, cur);
+      h = { strokes: h.strokes.map((st) => st.map(map)), styles: h.styles };
+    }
+    if (props.onRestoreDraft) props.onRestoreDraft(h);
+    else engine.loadHistory(h);
+  };
+  const discardDraft = () => {
+    if (draftKey) clearDraft(draftKey);
+    setDraftOffer(null);
+  };
+
+  const exit = () => {
+    const fn = props.onExit;
+    if (fn) requestLeave(fn);
+  };
+
+  const swapSide = () => {
+    void saveSettings({ leftHanded: !prefs.leftHanded });
+  };
 
   // 重ね（不透明度の変更は少し待ってから反映。画像の読み直しでちらつかないように）
   useEffect(() => {
@@ -331,7 +437,11 @@ export function CanvasScreen(props: CanvasScreenProps) {
       const portrait = mq?.matches ?? s.height > s.width;
       let next: { left: number; top: number; portrait: boolean };
       if (portrait) next = { left: 16, top: Math.round(b.bottom - s.top + 12), portrait };
-      else if (prefs.leftHanded) next = { left: 80, top: 16, portrait };
+      else if (prefs.leftHanded) {
+        // 左利き: ツールバーは右端。左上の「戻る」の右隣に置く
+        const ex = exitRef.current?.getBoundingClientRect();
+        next = { left: ex ? Math.round(ex.right - s.left + 12) : 16, top: 16, portrait };
+      }
       else next = { left: Math.round(b.right - s.left + 12), top: 16, portrait };
       setTopLeftPos((prev) => (prev && prev.left === next.left && prev.top === next.top && prev.portrait === next.portrait ? prev : next));
     };
@@ -447,9 +557,9 @@ export function CanvasScreen(props: CanvasScreenProps) {
         </div>
 
         {props.onExit && (
-          <button type="button" class="ls-glass-btn ls-canvas__exit" aria-label={props.exitLabel ?? '戻る'} title={props.exitLabel ?? '戻る'} onClick={props.onExit}>
-            <Icon name="back" size={24} />
-          </button>
+          <div class="ls-canvas__exit" ref={exitRef}>
+            <BackPill label={props.exitLabel ?? '戻る'} onClick={exit} />
+          </div>
         )}
 
         {props.topCenter ? <div class="ls-canvas__center">{props.topCenter}</div> : !props.topLeft && taskPill}
@@ -519,6 +629,11 @@ export function CanvasScreen(props: CanvasScreenProps) {
               <ToolButton icon="undo" label="元に戻す" disabled={!engine.canUndo()} onClick={() => engine.undo()} />
               {!props.mini && <ToolButton icon="redo" label="やり直す" disabled={!engine.canRedo()} onClick={() => engine.redo()} />}
               <ToolButton icon="trash" label="全部消す" disabled={!engine.canUndo() && engine.getStrokes().length === 0} onClick={() => engine.clear()} />
+              {props.onNewPaper && (
+                <ToolButton label="紙を替える（本数・累計はそのまま）" onClick={props.onNewPaper}>
+                  <LsIcon name="newpaper" size={24} />
+                </ToolButton>
+              )}
               {!props.mini && (
                 <>
                   <div class="ls-toolbar__pop-host">
@@ -551,6 +666,7 @@ export function CanvasScreen(props: CanvasScreenProps) {
             </div>
           )}
           <div class="ls-toolbar__aside">
+            <div class="ls-toolbar__handles">
             <button
               type="button"
               class="ls-toolbar__handle"
@@ -560,6 +676,10 @@ export function CanvasScreen(props: CanvasScreenProps) {
             >
               <span aria-hidden="true" class="ls-toolbar__grip" />
             </button>
+            <button type="button" class="ls-toolbar__handle ls-toolbar__swap" aria-label="ツールバーを反対側へ" title="ツールバーを反対側へ" onClick={swapSide}>
+              <LsIcon name="swap" size={22} />
+            </button>
+            </div>
             {!collapsed && !props.mini && (
               <div class="ls-gridseg" role="radiogroup" aria-label="グリッド">
                 <span class="ls-gridseg__label" aria-hidden="true">
@@ -594,6 +714,48 @@ export function CanvasScreen(props: CanvasScreenProps) {
 
         {props.sheet}
       </div>
+      <Modal
+        open={leaveAsk !== null}
+        onClose={() => setLeaveAsk(null)}
+        title="描いた線が消えます。戻りますか？"
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setLeaveAsk(null)}>
+              描き続ける
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                const go = leaveAsk;
+                setLeaveAsk(null);
+                if (draftKey) clearDraft(draftKey);
+                go?.();
+              }}
+            >
+              戻る
+            </Button>
+          </>
+        }
+      >
+        <p>まだ保存していません。残したいときは「描き続ける」を選んで、完了のボタンで保存しましょう。</p>
+      </Modal>
+      <Modal
+        open={draftOffer !== null}
+        onClose={restoreDraft}
+        title="描きかけがあります"
+        actions={
+          <>
+            <Button variant="secondary" onClick={discardDraft}>
+              捨てる
+            </Button>
+            <Button variant="primary" onClick={restoreDraft}>
+              続きから
+            </Button>
+          </>
+        }
+      >
+        <p>前に開いたときの線が残っています。続きから描きますか？</p>
+      </Modal>
     </div>
   );
 }

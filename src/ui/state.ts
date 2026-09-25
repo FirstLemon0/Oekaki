@@ -140,7 +140,14 @@ export const nextNode = computed(() => path.value.find((n) => !completedIds.valu
 
 export const isFirstRun = computed(() => progress.value.length === 0);
 
-export const reviews = computed<DueReview[]>(() => dueReviews(drillStats.value, today.value));
+/** 期限の来た復習。スキップした種別はその日と翌日は出さない（profile.reviewSkippedOn） */
+export const reviews = computed<DueReview[]>(() => dueReviews(drillStats.value, today.value, profile.value?.reviewSkippedOn ?? {}));
+
+/** レッスン開始時に復習を差し込むか（設定 → 練習。既定 ON） */
+export const reviewWarmupOn = computed(() => settings.value?.reviewWarmup !== false);
+
+/** ロックを 10 回タップで開放したレッスン */
+export const unlockedIds = computed(() => new Set(profile.value?.unlockedLessonIds ?? []));
 
 /** 累計 XP（永続化されていないので記録から導出する。表示専用） */
 export const totalXp = computed(() => {
@@ -321,6 +328,21 @@ export async function freezeToday(): Promise<boolean> {
 
 export async function saveProfile(patch: Partial<Omit<Profile, 'updatedAt'>>): Promise<void> {
   profile.value = await updateProfile(patch);
+}
+
+/** 復習をスキップした: その種別の期限を 1 日だけ延ばす（今日と明日は出さない） */
+export async function snoozeReviews(drillTypes: readonly string[]): Promise<void> {
+  if (drillTypes.length === 0) return;
+  const cur = { ...(profile.value?.reviewSkippedOn ?? {}) };
+  for (const t of drillTypes) cur[t] = today.value;
+  await saveProfile({ reviewSkippedOn: cur });
+}
+
+/** ロックしたレッスンを開放する（隠し機能・10 回タップ） */
+export async function unlockLesson(lessonId: string): Promise<void> {
+  const cur = profile.value?.unlockedLessonIds ?? [];
+  if (cur.includes(lessonId)) return;
+  await saveProfile({ unlockedLessonIds: [...cur, lessonId] });
 }
 
 // ---------------------------------------------------------------------------

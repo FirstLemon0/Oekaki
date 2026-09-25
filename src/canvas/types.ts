@@ -112,6 +112,12 @@ export interface CanvasEngine {
   setTool(t: Tool): void;
   setOptions(patch: Partial<CanvasOptions>): void;
   setOverlay(o: OverlaySpec | null): void;
+  /**
+   * 表示だけの透明度（getHistory() の添字ごと。0〜1、undefined は 1、0 は描かない）。null で全部ふつうに戻す。
+   * ドリルで古い線を薄く・隠すために使う。getStrokes() / getStyles() / getHistory()・再生・toWebp には影響しない。
+   * 消しゴムストロークには掛からない（消しゴムはいつも効く）。
+   */
+  setStrokeVisibility(alphas: readonly (number | undefined)[] | null): void;
   undo(): void;
   redo(): void;
   clear(): void;

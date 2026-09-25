@@ -160,10 +160,13 @@ export function DrillIntro({
   step,
   warmup,
   onStart,
+  onSkip,
 }: {
   step: DrillStep;
   warmup: boolean;
   onStart: () => void;
+  /** 復習（ウォームアップ）のときだけ: 飛ばして本編へ */
+  onSkip?: () => void;
 }) {
   const stats = drillStats.value.find((d) => d.drillType === step.drill);
   const last = stats?.history[stats.history.length - 1]?.score ?? null;
@@ -172,9 +175,16 @@ export function DrillIntro({
     <StepFrame
       class="ls-drill"
       footer={
-        <Button variant="primary" icon="pen" class="ls-wide" onClick={onStart}>
-          描く
-        </Button>
+        <>
+          {onSkip && (
+            <Button variant="secondary" onClick={onSkip}>
+              スキップ
+            </Button>
+          )}
+          <Button variant="primary" icon="pen" class="ls-wide" onClick={onStart}>
+            描く
+          </Button>
+        </>
       }
     >
       <div class="ls-drill__grid">

@@ -19,6 +19,7 @@ import type { DueReview } from '@/data/review';
 import { Button, CounterChip, Icon, Modal, showToast } from '../components';
 import { drillName, formatStageOrder, lessonNumber, nf, unitNumber } from '../format';
 import { href, navigate } from '../router';
+import { registerLockTap, unlockHint } from '../unlockTaps';
 import {
   completedIds,
   completedTodayIds,
@@ -42,6 +43,8 @@ import {
   today,
   todayDone,
   totalXp,
+  unlockLesson,
+  unlockedIds,
   uiPrefs,
 } from '../state';
 
@@ -112,7 +115,7 @@ function unitLabel(node: PathNode): string {
 // ---------------------------------------------------------------------------
 
 /** 今日＝未完了の最初のレッスン（前を終えたら日付に関係なくすぐ開く）。それより先はロック */
-type NodeState = 'done' | 'today' | 'locked';
+type NodeState = 'done' | 'today' | 'locked' | 'open';
 
 type PathItem =
   | { kind: 'unit'; key: string; y: number; label: string; skippable: boolean }
@@ -154,6 +157,7 @@ function layoutStage(
   finishedToday: boolean,
   review: DueReview | undefined,
   justDone: string | null,
+  unlocked: ReadonlySet<string> = new Set(),
 ): PathLayout {
   const items: PathItem[] = [];
   const points: { x: number; y: number }[] = [];
@@ -191,6 +195,8 @@ function layoutStage(
     let state: NodeState;
     if (done.has(node.lesson.id)) state = 'done';
     else if (isNext) state = 'today';
+    // 10 回タップで開放したレッスン（隠し機能）: 今日と同じ見た目・ラベル「開放」
+    else if (unlocked.has(node.lesson.id)) state = 'open';
     else state = 'locked';
 
     const isGate = node.lesson.kind === 'graduation';
@@ -215,12 +221,14 @@ function layoutStage(
     } else if (state === 'today') {
       solidEnd = pi;
       gap = true;
+    } else if (state === 'open') {
+      gap = true;
     } else {
       gap = true;
     }
     if (isGate) gateY = y;
     // 今日のノードは題と「今日」ピルぶん下を空ける
-    y += state === 'today' ? STEP_Y + 24 : STEP_Y;
+    y += state === 'today' || state === 'open' ? STEP_Y + 24 : STEP_Y;
   }
 
   return { items, points, solidEnd, justIdx, gateY, height: y };
@@ -243,13 +251,29 @@ function curve(points: { x: number; y: number }[]): string {
 // ノード
 // ---------------------------------------------------------------------------
 
-/** ロック: 左右に 3px 1 回だけ振れて「前のレッスンを終えると開きます」 */
-function shake(el: HTMLElement) {
+/** ロック: 左右に 3px 1 回だけ振れて「前のレッスンを終えると開きます」（隠し開放の途中は「あと n 回で開放」） */
+function shake(el: HTMLElement, hint: string | null) {
   el.classList.remove('st-shake');
   void el.offsetWidth;
   el.classList.add('st-shake');
   el.addEventListener('animationend', () => el.classList.remove('st-shake'), { once: true });
-  showToast('前のレッスンを終えると開きます', 'info', 2000);
+  showToast(hint ?? '前のレッスンを終えると開きます', 'info', 2000);
+}
+
+/** ロックノードのタップ時刻（レッスンごと。3 秒以内に 10 回で開放） */
+const lockTaps = new Map<string, number[]>();
+
+function tapLocked(lessonId: string, el: HTMLElement): void {
+  const r = registerLockTap(lockTaps.get(lessonId) ?? [], Date.now());
+  lockTaps.set(lessonId, r.times);
+  if (!r.unlocked) {
+    shake(el, unlockHint(r));
+    return;
+  }
+  void unlockLesson(lessonId).then(
+    () => showToast('開放しました'),
+    () => showToast('開放できませんでした', 'danger', 3200),
+  );
 }
 
 function NodeView({
@@ -265,24 +289,24 @@ function NodeView({
   const lesson = node.lesson;
   const shape = lesson.kind === 'graduation' ? 'gate' : lesson.kind === 'checkpoint' ? 'cp' : 'lesson';
   const blocked = state === 'locked';
-  const stateLabel = { done: '完了', today: '今日', locked: 'ロック中' }[state];
+  const stateLabel = { done: '完了', today: '今日', locked: 'ロック中', open: '開放' }[state];
   const aria = `${lessonTitle(node)}（${skipped ? '飛ばした · タップで挑戦' : stateLabel}${optional ? ' · 任意' : ''}）`;
 
   const onClick = (e: MouseEvent) => {
     if (blocked) {
-      shake(e.currentTarget as HTMLElement);
+      tapLocked(lesson.id, e.currentTarget as HTMLElement);
       return;
     }
     navigate(href.lesson(lesson.id));
   };
 
   if (shape === 'gate') {
-    const open = state === 'today';
+    const open = state === 'today' || state === 'open';
     return (
-      <div class="pnode pnode--gate" style={{ left: `${item.x - 100}px`, top: `${item.y - 30}px` }} data-today={open ? 'true' : undefined}>
+      <div class="pnode pnode--gate" style={{ left: `${item.x - 100}px`, top: `${item.y - 30}px` }} data-today={state === 'today' ? 'true' : undefined}>
         <button
           type="button"
-          class={`gate gate--${state}${gateJustOpened ? ' gate--opening' : ''}`}
+          class={`gate gate--${state === 'open' ? 'today' : state}${gateJustOpened ? ' gate--opening' : ''}`}
           aria-label={aria}
           aria-disabled={blocked || undefined}
           onClick={onClick}
@@ -321,21 +345,23 @@ function NodeView({
         <path d="M5 12l5 5L20 7" pathLength={30} stroke-dasharray={justDone ? 30 : undefined} />
       </svg>
     );
-  } else if (state === 'today') {
+  } else if (state === 'today' || state === 'open') {
     glyph = <Icon name={shape === 'cp' ? 'image' : 'pen'} size={shape === 'cp' ? 26 : 32} />;
   } else {
     glyph = <Icon name={shape === 'cp' ? 'image' : 'lock'} size={24} />;
   }
 
+  // 開放（隠し機能）は今日と同じ見た目（外輪の呼吸は画面に 1 つだけなので出さない）
+  const look = state === 'open' ? 'today' : state;
   return (
     <div
-      class={`pnode pnode--${state}${optional ? ' pnode--optional' : ''}${skipped ? ' pnode--skipped' : ''}`}
-      style={{ left: `${item.x - 60}px`, top: `${item.y - (state === 'today' ? 36 : 32)}px` }}
+      class={`pnode pnode--${look}${state === 'open' ? ' pnode--open' : ''}${optional ? ' pnode--optional' : ''}${skipped ? ' pnode--skipped' : ''}`}
+      style={{ left: `${item.x - 60}px`, top: `${item.y - (look === 'today' ? 36 : 32)}px` }}
       data-today={state === 'today' ? 'true' : undefined}
     >
       <button
         type="button"
-        class={`node node--${shape} node--${state}${skipped ? ' node--skipped' : ''}${optional ? ' node--optional' : ''}${justDone && !skipped ? ' node--just-done' : ''}`}
+        class={`node node--${shape} node--${look}${state === 'open' ? ' node--open' : ''}${skipped ? ' node--skipped' : ''}${optional ? ' node--optional' : ''}${justDone && !skipped ? ' node--just-done' : ''}`}
         aria-label={aria}
         aria-disabled={blocked || undefined}
         onClick={onClick}
@@ -347,6 +373,7 @@ function NodeView({
         {optional && <span class="pnode__optional">任意</span>}
       </span>
       {state === 'today' && <span class="pnode__tag">今日</span>}
+      {state === 'open' && <span class="pnode__tag">開放</span>}
     </div>
   );
 }
@@ -423,7 +450,7 @@ function PathView({ justDone }: { justDone: string | null }) {
   const cur = currentStageNode();
   const nodes = cur ? path.value.filter((n) => n.stage.id === cur.stage.id) : [];
   const next = nextNode.value;
-  const layout = layoutStage(nodes, completedIds.value, skippedIds.value, next, todayDone.value, reviews.value[0], justDone);
+  const layout = layoutStage(nodes, completedIds.value, skippedIds.value, next, todayDone.value, reviews.value[0], justDone, unlockedIds.value);
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrolled = useRef(false);
 

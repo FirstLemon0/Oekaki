@@ -289,7 +289,10 @@ function PracticeGroup() {
           onChange={(on) => void saveSettings({ notifyTime: on ? lastTime.current : null })}
         />
       </ListRow>
-      <ListRow title="利き手" desc="ツールバーと完了ボタンの位置が入れ替わります">
+      <ListRow title="復習を差し込む" desc="レッスンの始めに、点が落ちたドリルの復習を出します。出ても「スキップ」できます">
+        <Toggle label="復習を差し込む" checked={s?.reviewWarmup !== false} onChange={(v) => void saveSettings({ reviewWarmup: v })} />
+      </ListRow>
+      <ListRow title="利き手" desc="ツールバーと完了ボタンの位置が入れ替わります（キャンバスの「反対側へ」でも切り替わります）">
         <Segment<'right' | 'left'>
           size="sm"
           label="利き手"

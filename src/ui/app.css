@@ -215,6 +215,8 @@
 .node--done.node--skipped { background: var(--color-accent-soft); border: 2px solid var(--color-accent); color: var(--color-accent-text); }
 /* 任意（選択式）: 薄い枠 */
 .node--optional:not(.node--done) { box-shadow: 0 0 0 2px var(--color-paper), 0 0 0 3.5px var(--color-dash); }
+/* 開放（10 回タップの隠し機能）: 今日と同じ見た目。呼吸する外輪は「今日」だけ（画面に 1 つ） */
+.node--open::before { display: none; }
 .node--optional.node--today { box-shadow: none; border-style: dashed; }
 .node--optional.node--today::before { border-style: dashed; }
 .pnode__optional {

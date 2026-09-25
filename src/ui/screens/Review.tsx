@@ -5,10 +5,11 @@
  */
 import type { ComponentChildren } from 'preact';
 import { useMemo, useState } from 'preact/hooks';
-import { Button, Icon } from '../components';
+import { BackPill, Button, Icon } from '../components';
 import { href, navigate } from '../router';
 import { completedIds, path } from '../state';
 import { DrillRunner } from '../lesson/DrillRunner';
+import { draftKey } from '../draft';
 import { TraceRunner } from '../lesson/DrawSteps';
 import { DrillIntro } from '../lesson/StepViews';
 import { average, BOX_REVIEW, boxReviewSteps, DRILL_LABEL, isDrillType, reachedBoxStage, reviewDrillStep } from '../lesson/steps';
@@ -118,6 +119,7 @@ function DrillReview({ drillType }: { drillType: string }) {
         <DrillRunner
           step={step}
           lessonId={null}
+          draftKey={draftKey(`review-${step.drill}`, 0)}
           onExit={() => setPhase('intro')}
           onFinish={(s) => {
             setScores(s);
@@ -147,9 +149,7 @@ function DrillReview({ drillType }: { drillType: string }) {
   return (
     <div class="ls-root">
       <header class="ls-head">
-        <button type="button" class="ls-head__close" aria-label="ホームへ" onClick={() => navigate(href.home())}>
-          <Icon name="back" size={24} />
-        </button>
+        <BackPill label="ホームへ戻る" onClick={() => navigate(href.home())} />
         <span class="ls-head__title">復習</span>
         <span />
       </header>

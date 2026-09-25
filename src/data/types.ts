@@ -43,6 +43,16 @@ export interface Profile {
    * 1 日の上限判定用。直近 14 日分だけ保持する（`recordCritiqueAttempt` が古い日を捨てる）。
    */
   critiqueAttemptsByDay: Record<string, number>;
+  /**
+   * ロックを 10 回タップで開放したレッスン（隠し機能）。既定 []。
+   * 開放したレッスンは「今日」と同じ見た目（ラベルは「開放」）で開ける。
+   */
+  unlockedLessonIds: string[];
+  /**
+   * 復習（ウォームアップ）を「スキップ」した日（ドリル種別 → YYYY-MM-DD）。既定 {}。
+   * スキップした日と翌日は、その種別を復習に出さない（期限を 1 日だけ延ばす。連日は出ない）。
+   */
+  reviewSkippedOn: Record<string, string>;
   updatedAt: string;
 }
 
@@ -207,6 +217,8 @@ export interface Settings {
   lastBackupAt: string | null;
   /** バックアップ通知を「あとで」にした日（YYYY-MM-DD）。 */
   backupSnoozedOn: string | null;
+  /** レッスン開始時に復習（ウォームアップ）を差し込むか。既定 true（古いデータも true）。 */
+  reviewWarmup: boolean;
   updatedAt: string;
 }
 

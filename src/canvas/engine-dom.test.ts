@@ -332,3 +332,49 @@ describe('crop（純関数）', () => {
     expect(exportScale({ width: 4000, height: 300 }, 1024, 2, false)).toBeCloseTo(1024 / 4000);
   });
 });
+
+/* ------------------------------------------------------------------ */
+/* 表示だけの透明度（ドリルの薄表示）                                    */
+/* ------------------------------------------------------------------ */
+
+describe('setStrokeVisibility（偽 DOM）', () => {
+  /** 5 点（4 区間）+ 4 点（3 区間） */
+  const drawing: Drawing = [line(5, 0), line(4, 1000, 0, 50)];
+
+  function setup() {
+    const e = createCanvasEngine();
+    e.attach(makeHost());
+    const cache = canvases[1]!;
+    e.loadStrokes(drawing);
+    cache.calls.length = 0;
+    return { e, cache };
+  }
+
+  it('0 の線は描かない・薄い線は描く。getStrokes / getHistory は変わらない', () => {
+    const { e, cache } = setup();
+    const before = e.getHistory();
+    e.setStrokeVisibility([0, 1]);
+    expect(count(cache, 'quadraticCurveTo')).toBe(3);
+    cache.calls.length = 0;
+    const scratch = canvases[3]!;
+    scratch.calls.length = 0;
+    e.setStrokeVisibility([0.3, 1]);
+    // 薄い線は作業レイヤー（scratch）に描いてから透明度を掛けて cache へ合成する
+    expect(count(cache, 'quadraticCurveTo')).toBe(3);
+    expect(count(scratch, 'quadraticCurveTo')).toBe(4);
+    expect(count(cache, 'drawImage')).toBeGreaterThan(0);
+    expect(e.getStrokes()).toEqual(drawing);
+    expect(e.getHistory()).toEqual(before);
+    expect(e.canUndo()).toBe(false);
+  });
+
+  it('同じ値なら描き直さない。null で元に戻る', () => {
+    const { e, cache } = setup();
+    e.setStrokeVisibility([0, 1]);
+    cache.calls.length = 0;
+    e.setStrokeVisibility([0, 1]);
+    expect(cache.calls.length).toBe(0);
+    e.setStrokeVisibility(null);
+    expect(count(cache, 'quadraticCurveTo')).toBe(7);
+  });
+});

@@ -87,6 +87,17 @@ engine.loadStrokes(strokes, styles);          // 従来の読み込み。styles 
 - シルエット表示は色・不透明度・合成・入り抜き・ざらつきを無視し、従来どおり太い黒（幅倍率 × 3、最低 4 倍）。
 - `PALETTE_COLORS: { label, color }[]`（推奨 14 色）: 墨 #2B2A28／灰 #8E8A80／茶 #7A5230／赤 #C8553D／朱 #D9674A／橙 #E08A2E／黄 #D9A441／若葉 #7BB661／緑 #3E8E7E／青 #3E7EC8／藍 #2F4E8F／紫 #7C5CB8／桃 #D97BA0／白 #FAF8F3。テーマに追従する墨にしたいときは `color` を未指定にする。
 
+### 表示だけの透明度（`setStrokeVisibility`）
+
+```ts
+engine.setStrokeVisibility([0, 0.3, 0.3, 1]); // getHistory() の添字ごと。0 は描かない、undefined は 1
+engine.setStrokeVisibility(null);             // 全部ふつうに戻す
+```
+
+- ドリルで古い線を薄く・隠すための表示専用。`getStrokes()`／`getStyles()`／`getHistory()`・Undo・再生（`replay` 中は全部ふつう）・`toWebp` には影響しない。
+- 消しゴムストロークには掛からない（いつも効く）。薄い線は作業レイヤーに描いてから不透明度を掛けて合成する（区間の継ぎ目が濃くならない）。
+- 同じ値を渡したときは描き直さない。
+
 ### 消しゴム
 
 普通のイラストツールの消しゴム（ラスター）。線の分割は見た目では行わない。

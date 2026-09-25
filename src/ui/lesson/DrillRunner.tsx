@@ -8,6 +8,11 @@
  *   （やり直した本は記録しない。保存に失敗したらシートの中で案内し、押し直せる）
  * - 消しゴムも使える。消しても記録済みの点数は変えない（採点済みの線は消しゴムで削る前の線で対応づける）。
  *   ヒート色は消した所を隠す。「完了」の保存・ハッチングの本数は getStrokes()（消えた区間を除いた線）で数える
+ * - 薄表示（実機フィードバック: 前の線が重なって見えない）: 採点済みの線は最新の 1 本だけふつう、その前の 3 本は
+ *   不透明度 0.3、それより古い線は出さない（engine.setStrokeVisibility。表示だけで、採点・本数・保存は変えない）。
+ *   ツールバーの「紙を替える」で表示上の線を全部消す（本数・累計はそのまま。Undo の対象外・確認なし）。
+ *   ハッチング（セットで採点）には使わない。お手本・手がかり（重ね）はそのまま残る
+ * - 下書き（draftKey）を戻したときは、残っていた線を順に採点し直す
  */
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { DrillStep } from '@/content/schema';
@@ -20,7 +25,7 @@ import { drillSetup, heatBand, isTooShortForDrill, scoreDrill, type DrillSetup, 
 import { ScoreSheet } from './ScoreSheet';
 import { bump, recordDrillScores, saveStrokes, scorers, type LessonSession } from './stateBridge';
 import { counterKindOf, isSetDrill } from './steps';
-import { penStrokesOf, strokeKey, summarizeEntries, syncEntries, type DrillEntry } from './drillEntries';
+import { drillVisibility, penStrokesOf, strokeKey, summarizeEntries, syncEntries, type DrillEntry } from './drillEntries';
 
 function targetOf(setup: DrillSetup): Drawing | null {
   if (setup.curve) return [setup.curve];
@@ -80,8 +85,19 @@ interface EraserMark {
 /**
  * 採点済みの線をヒート色で重ねる（描いた線の上に同じくらいの太さで）。
  * その線より後の消しゴムで消した所は、マスクで隠す（キャンバスと同じ見た目にする）。
+ * alphas（entries と同じ並び）: 薄表示の不透明度。0 の本は出さない。
  */
-function HeatStrokes({ entries, history, size }: { entries: readonly DrillEntry[]; history: StrokeHistory; size: Size }) {
+function HeatStrokes({
+  entries,
+  history,
+  size,
+  alphas,
+}: {
+  entries: readonly DrillEntry[];
+  history: StrokeHistory;
+  size: Size;
+  alphas?: readonly number[];
+}) {
   const erasers: EraserMark[] = [];
   const order = new Map<string, number>();
   history.strokes.forEach((s, i) => {
@@ -92,11 +108,13 @@ function HeatStrokes({ entries, history, size }: { entries: readonly DrillEntry[
   return (
     <>
       {entries.map((e, ei) => {
+        const alpha = alphas?.[ei] ?? 1;
+        if (alpha <= 0) return null;
         const at = Math.max(-1, ...e.keys.map((k) => order.get(k) ?? -1));
         const after = erasers.filter((m) => m.index > at);
         const maskId = after.length > 0 ? `ls-heat-mask-${ei}` : null;
         return (
-          <g key={ei} class="ls-guide__heat" mask={maskId ? `url(#${maskId})` : undefined}>
+          <g key={ei} class="ls-guide__heat" mask={maskId ? `url(#${maskId})` : undefined} opacity={alpha < 1 ? alpha : undefined}>
             {maskId && (
               <mask id={maskId} maskUnits="userSpaceOnUse" x={0} y={0} width={size.width} height={size.height}>
                 <rect x={0} y={0} width={size.width} height={size.height} fill="white" />
@@ -138,9 +156,11 @@ export interface DrillRunnerProps {
   lessonId: string | null;
   onFinish: (scores: number[]) => void;
   onExit: () => void;
+  /** 下書きのキー（draft.ts）。無ければ下書きを保存しない */
+  draftKey?: string | null;
 }
 
-export function DrillRunner({ step, session, lessonId, onFinish, onExit }: DrillRunnerProps) {
+export function DrillRunner({ step, session, lessonId, onFinish, onExit, draftKey }: DrillRunnerProps) {
   const engine = useEngine();
   const setDrill = isSetDrill(step.drill);
   // ハッチングは count 本で 1 セット（1 回だけ採点）
@@ -157,6 +177,12 @@ export function DrillRunner({ step, session, lessonId, onFinish, onExit }: Drill
   // 自己ベストは開いた時点の値（この回を含めない）
   const [best] = useState<number | null>(() => drillStats.value.find((d) => d.drillType === step.drill)?.bestScore ?? null);
   const busyRef = useRef(false);
+  /** 「紙を替える」を押した時点の履歴の本数。これより前の線は表示しない（表示だけ） */
+  const [paperFrom, setPaperFrom] = useState(0);
+  /** 保存が済んだ（下書き・離脱の確認を止める） */
+  const [saved, setSaved] = useState(false);
+  const sizeRef = useRef(size);
+  sizeRef.current = size;
   /** 完了の記録の進み具合（失敗して押し直したときに二重にしない） */
   const done = useRef({ saved: false, recorded: { done: 0 }, bumped: false });
 
@@ -239,6 +265,8 @@ export function DrillRunner({ step, session, lessonId, onFinish, onExit }: Drill
     // 消しゴムを含む履歴から、その本（消しゴムで削る前の線）だけを取り除く
     const h = engine.getHistory();
     const keep = h.strokes.map((s, k) => isEraserStyle(h.styles[k]) || !drop.has(strokeKey(s)));
+    // 紙を替えた位置は、取り除いた本の数だけ前へずらす
+    setPaperFrom((pf) => keep.slice(0, pf).filter(Boolean).length);
     engine.loadHistory({
       strokes: h.strokes.filter((_, k) => keep[k]),
       styles: h.styles.filter((_, k) => keep[k]),
@@ -263,6 +291,7 @@ export function DrillRunner({ step, session, lessonId, onFinish, onExit }: Drill
         // 保存はキャンバスの今の線（消しゴムで消えた区間を除く）。消しゴム込みの履歴も一緒に残る（saveStrokes）
         await saveStrokes(engine.getStrokes(), 'drill', lessonId, session, engine.getStyles());
         d.saved = true;
+        setSaved(true);
       }
       await recordDrillScores(step.drill, scores, d.recorded);
       const ck = counterKindOf(step.counter);
@@ -295,13 +324,43 @@ export function DrillRunner({ step, session, lessonId, onFinish, onExit }: Drill
     setEntries(moved);
   };
 
+  /** 下書きを戻す: 線を読み込んでから、1 本ずつ採点し直す（ハッチングはセットなので線だけ戻す） */
+  const restoreDraft = (h: StrokeHistory) => {
+    engine.loadHistory(h);
+    setPaperFrom(0);
+    if (setDrill) return;
+    const sz = sizeRef.current;
+    const next: DrillEntry[] = [];
+    for (const s of penStrokesOf(h)) {
+      if (next.length >= target) break;
+      if (isTooShortForDrill(s)) continue;
+      const st = drillSetup(step.drill, step.params, sz, next.length);
+      const result = scoreDrill(scorers.value, step.drill, st, [s]);
+      if (!result) continue;
+      next.push({ keys: [strokeKey(s)], anchors: s[0] ? [s[0]] : [], strokes: [s], result, target: targetOf(st) });
+    }
+    live.current.entries = next;
+    live.current.finished = next.length >= target;
+    setEntries(next);
+    if (next.length >= target) setSheet('final');
+  };
+
+  // 薄表示（採点するドリルだけ。ハッチングはセットなので使わない）
+  const visibility = useMemo(
+    () => (setDrill ? null : drillVisibility(history, entries, paperFrom)),
+    [setDrill, history, entries, paperFrom],
+  );
+  useEffect(() => {
+    engine.setStrokeVisibility(visibility ? visibility.strokes : null);
+  }, [engine, visibility]);
+
   const last = entries[entries.length - 1] ?? null;
   const summary = sheet === 'final' ? summarizeEntries(entries) : null;
 
   const guide = (sz: Size) => (
     <>
       {!finished && <DrillGuideSvg setup={setup} size={sz} />}
-      {!setDrill && <HeatStrokes entries={entries} history={history} size={sz} />}
+      {!setDrill && <HeatStrokes entries={entries} history={history} size={sz} alphas={visibility?.entries} />}
     </>
   );
 
@@ -361,6 +420,10 @@ export function DrillRunner({ step, session, lessonId, onFinish, onExit }: Drill
       }
       onExit={onExit}
       exitLabel="ドリルの説明へ戻る"
+      draftKey={draftKey}
+      saved={saved}
+      onRestoreDraft={restoreDraft}
+      onNewPaper={setDrill ? undefined : () => setPaperFrom(engine.getHistory().strokes.length)}
       onSize={setSize}
       onRescale={rescale}
       guide={guide}

@@ -2,7 +2,8 @@
  * レッスン再生（DESIGN_SYSTEM §3 レッスン）。#/lesson/:id と #/lesson/:id/step/:n
  *
  * ヘッダ 80（✕＝ホームへ、8px 進捗セグメント、mono「2/7」）＋ ステップ型ごとの画面。
- * 開始時に復習の該当があれば、先頭に「復習」ステップ（該当ドリル 10 本）を差し込む。
+ * 開始時に復習の該当があれば、先頭に「復習」ステップ（該当ドリル 10 本）を差し込む（設定「復習を差し込む」が ON のとき）。
+ * 復習の説明画面の「スキップ」で本編へ進める（期限は 1 日だけ延ばす）。
  * URL の番号はレッスン本来の番号だけ。復習は表示上の前置き（session.warmupsDone で進める）なので、
  * 再読込しても本来のステップが飛ばない。
  * セッションは画面を離れたら（アンマウントで）捨てる。前回の点数・絵・開始時刻は持ち越さない。
@@ -13,10 +14,11 @@
  * 選択式（lesson.optional）: ヘッダの「この技法は飛ばす」で完了扱い（skipped）にして次のレッスンへ。
  */
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { Button, Sheet, showToast } from '../components';
+import { BackPill, Button, Sheet, showToast } from '../components';
+import { requestLeave } from '../navGuard';
 import { href, navigate } from '../router';
-import { completedIds, path, progress, reviews } from '../state';
-import { LsIcon } from '../lesson/LsIcon';
+import { completedIds, path, progress, reviews, reviewWarmupOn, snoozeReviews } from '../state';
+import { draftKey } from '../draft';
 import { DrillRunner } from '../lesson/DrillRunner';
 import { ConstructView, CopyView, CritiqueStepView, FreeStepView, MoshaView, SubmitStepView, TraceView, type StepCtx } from '../lesson/DrawSteps';
 import { DrillIntro, QuizView, ReadView } from '../lesson/StepViews';
@@ -61,9 +63,7 @@ function Header({
 }) {
   return (
     <header class="ls-head">
-      <button type="button" class="ls-head__close" aria-label="レッスンをやめてホームへ" title="ホームへ" onClick={onClose}>
-        <LsIcon name="close" size={26} />
-      </button>
+      <BackPill label="レッスンをやめてホームへ" onClick={() => requestLeave(onClose)} />
       <div class="ls-progress" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={current + 1} aria-label="レッスンの進み具合">
         {progressSegments(current, total).map((s, i) => (
           <span key={i} class={`ls-progress__seg is-${s}`} />
@@ -87,7 +87,7 @@ export function LessonPlayer({ id, step }: { id: string; step?: number }) {
   const node = useMemo(() => path.value.find((n) => n.lesson.id === id), [id, path.value]);
   // セッションは画面ごとに持つ。開いたときに作り直し（前回の残りを引き継がない）、離れたら捨てる
   const [session, setSession] = useState<LessonSession | null>(() =>
-    node ? resetLessonSession(node.lesson, reviews.value, (step ?? 0) === 0) : null,
+    node ? resetLessonSession(node.lesson, reviews.value, (step ?? 0) === 0 && reviewWarmupOn.value) : null,
   );
   useEffect(() => () => endLessonSession(id), [id]);
   // 復習を 1 つ終えたときの再描画用
@@ -136,7 +136,7 @@ export function LessonPlayer({ id, step }: { id: string; step?: number }) {
   const restart = (k: number | null) => {
     setResumeAt(null);
     // 続きから: 復習を差し込まない。最初から: 開き直した今の復習で作り直す
-    setSession(resetLessonSession(node.lesson, reviews.value, k === null));
+    setSession(resetLessonSession(node.lesson, reviews.value, k === null && reviewWarmupOn.value));
     setDrawing(false);
     navigate(href.lessonStep(id, k ?? 0), { replace: true });
   };
@@ -193,10 +193,28 @@ export function LessonPlayer({ id, step }: { id: string; step?: number }) {
 
   const onBack = () => {
     if (!play.warmup && lessonIndex > 0) goStep(lessonIndex - 1);
-    else setDrawing(false);
+    else if (drawing) setDrawing(false);
+    // 最初のステップのキャンバスから戻る: レッスンをやめてホームへ（前は何も起きなかった）
+    else close();
   };
 
-  const ctx: StepCtx = { node, session, onDone, onBack };
+  /**
+   * 復習（ウォームアップ）をスキップして本編へ。期限は 1 日だけ延ばす（今日と明日は出さない）。
+   * 記録に失敗しても本編へは進む。
+   */
+  const skipWarmups = () => {
+    const w = warmupCount(session.steps);
+    const types = session.steps.slice(0, w).flatMap((p) => (p.step.type === 'drill' ? [p.step.drill] : []));
+    session.warmupsDone = w;
+    setDrawing(false);
+    setTick((t) => t + 1);
+    void snoozeReviews(types).catch(() => undefined);
+  };
+
+  /** 下書きのキー: レッスン本来の番号（復習は `w-<種別>`） */
+  const stepDraftKey = draftKey(id, play.warmup && st.type === 'drill' ? `w-${st.drill}` : lessonIndex);
+
+  const ctx: StepCtx = { node, session, onDone, onBack, draftKey: stepDraftKey };
 
   if (summary) {
     const lastDrill = [...node.lesson.steps].reverse().find((s) => s.type === 'drill');
@@ -227,9 +245,18 @@ export function LessonPlayer({ id, step }: { id: string; step?: number }) {
     case 'drill':
       if (drawing) {
         fullscreen = true;
-        body = <DrillRunner step={st} session={session} lessonId={id} onFinish={() => ctx.onDone()} onExit={() => setDrawing(false)} />;
+        body = (
+          <DrillRunner
+            step={st}
+            session={session}
+            lessonId={id}
+            draftKey={stepDraftKey}
+            onFinish={() => ctx.onDone()}
+            onExit={() => setDrawing(false)}
+          />
+        );
       } else {
-        body = <DrillIntro step={st} warmup={play.warmup} onStart={() => setDrawing(true)} />;
+        body = <DrillIntro step={st} warmup={play.warmup} onStart={() => setDrawing(true)} onSkip={play.warmup ? skipWarmups : undefined} />;
       }
       break;
     case 'quiz':

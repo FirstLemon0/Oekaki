@@ -1,6 +1,6 @@
 /** components/Icon に無いアイコン（閉じる・課題・画像・補助線・拡大）。24×24、stroke 2、currentColor */
 import type { JSX } from 'preact';
-export type LsIconName = 'close' | 'task' | 'image' | 'collapse' | 'expand' | 'marker' | 'guide' | 'zoom';
+export type LsIconName = 'close' | 'task' | 'image' | 'collapse' | 'expand' | 'marker' | 'guide' | 'zoom' | 'swap' | 'newpaper';
 
 const PATHS: Record<LsIconName, JSX.Element> = {
   close: <path d="M6 6l12 12M18 6 6 18" />,
@@ -27,6 +27,15 @@ const PATHS: Record<LsIconName, JSX.Element> = {
   ),
   /** 補助線: 点線の斜め線 */
   guide: <path d="M4.5 19.5 19.5 4.5" stroke-dasharray="0.1 4.2" stroke-width={2.6} />,
+  /** 反対側へ: 左右の矢印 */
+  swap: <path d="M4 9h15M15 5l4 4-4 4M20 15H5M9 11l-4 4 4 4" />,
+  /** 紙を替える: 角の折れた新しい紙に＋ */
+  newpaper: (
+    <>
+      <path d="M13.5 3H6.5a1.5 1.5 0 0 0-1.5 1.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8.5z" />
+      <path d="M13.5 3v5.5H19M12 11.5v6M9 14.5h6" />
+    </>
+  ),
   /** 拡大: 虫眼鏡に＋ */
   zoom: (
     <>
