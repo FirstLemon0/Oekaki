@@ -24,7 +24,6 @@ import {
   completedIds,
   completedTodayIds,
   counters,
-  curriculum,
   freezeAvailability,
   freezeToday,
   isFirstRun,
@@ -158,6 +157,7 @@ function layoutStage(
   review: DueReview | undefined,
   justDone: string | null,
   unlocked: ReadonlySet<string> = new Set(),
+  prevDone: (node: PathNode) => boolean = () => false,
 ): PathLayout {
   const items: PathItem[] = [];
   const points: { x: number; y: number }[] = [];
@@ -195,8 +195,9 @@ function layoutStage(
     let state: NodeState;
     if (done.has(node.lesson.id)) state = 'done';
     else if (isNext) state = 'today';
-    // 10 回タップで開放したレッスン（隠し機能）: 今日と同じ見た目・ラベル「開放」
-    else if (unlocked.has(node.lesson.id)) state = 'open';
+    // 10 回タップで開放したレッスン（隠し機能）と、その先で「前を終えた」レッスン:
+    // 今日と同じ見た目・ラベル「開放」（今日は未完了の最初の 1 本だけ）
+    else if (unlocked.has(node.lesson.id) || prevDone(node)) state = 'open';
     else state = 'locked';
 
     const isGate = node.lesson.kind === 'graduation';
@@ -252,26 +253,36 @@ function curve(points: { x: number; y: number }[]): string {
 // ---------------------------------------------------------------------------
 
 /** ロック: 左右に 3px 1 回だけ振れて「前のレッスンを終えると開きます」（隠し開放の途中は「あと n 回で開放」） */
-function shake(el: HTMLElement, hint: string | null) {
+function shake(el: HTMLElement, hint: string | null, lockedMsg: string) {
   el.classList.remove('st-shake');
   void el.offsetWidth;
   el.classList.add('st-shake');
   el.addEventListener('animationend', () => el.classList.remove('st-shake'), { once: true });
-  showToast(hint ?? '前のレッスンを終えると開きます', 'info', 2000);
+  showToast(hint ?? lockedMsg, 'info', 2000);
 }
 
-/** ロックノードのタップ時刻（レッスンごと。3 秒以内に 10 回で開放） */
+/** ロックのタップ時刻（ノード・門・次ステージのバナーごと。3 秒以内に 10 回で開放） */
 const lockTaps = new Map<string, number[]>();
 
-function tapLocked(lessonId: string, el: HTMLElement): void {
-  const r = registerLockTap(lockTaps.get(lessonId) ?? [], Date.now());
-  lockTaps.set(lessonId, r.times);
-  if (!r.unlocked) {
-    shake(el, unlockHint(r));
+/**
+ * ロックを 1 回叩く。届いたら lessonId を開放して doneMsg を出す。
+ * key はタップを数える単位（ノードはレッスン id、バナーは `stage:<id>`）。
+ */
+function tapLocked(
+  key: string,
+  lessonId: string | undefined,
+  el: HTMLElement,
+  lockedMsg = '前のレッスンを終えると開きます',
+  doneMsg = '開放しました',
+): void {
+  const r = registerLockTap(lockTaps.get(key) ?? [], Date.now());
+  lockTaps.set(key, r.times);
+  if (!r.unlocked || !lessonId) {
+    shake(el, unlockHint(r), lockedMsg);
     return;
   }
   void unlockLesson(lessonId).then(
-    () => showToast('開放しました'),
+    () => showToast(doneMsg),
     () => showToast('開放できませんでした', 'danger', 3200),
   );
 }
@@ -294,7 +305,7 @@ function NodeView({
 
   const onClick = (e: MouseEvent) => {
     if (blocked) {
-      tapLocked(lesson.id, e.currentTarget as HTMLElement);
+      tapLocked(lesson.id, lesson.id, e.currentTarget as HTMLElement);
       return;
     }
     navigate(href.lesson(lesson.id));
@@ -405,12 +416,26 @@ function currentStageNode(): PathNode | undefined {
 function StageBanner() {
   const node = currentStageNode();
   if (!node) return null;
-  const sp = stageProgress(path.value, completedIds.value, node.stage.id);
+  return <StageBannerOf stage={node.stage} />;
+}
+
+/** ステージの見出し（上部の固定バナー。top を渡すとパスの中に置く＝開放したステージの見出し） */
+function StageBannerOf({ stage, top }: { stage: PathNode['stage']; top?: number }) {
+  const sp = stageProgress(path.value, completedIds.value, stage.id);
+  const inPath = top !== undefined;
   return (
-    <div class="stage-banner">
+    <div
+      class={`stage-banner${inPath ? ' stage-banner--in-path' : ''}`}
+      style={inPath ? { top: `${top}px` } : undefined}
+      data-stage={stage.id}
+    >
       <div class="stage-banner__text">
-        <span class="stage-banner__kicker">STAGE {formatStageOrder(node.stage.order)}</span>
-        <h1 class="stage-banner__title">{node.stage.title}</h1>
+        <span class="stage-banner__kicker">STAGE {formatStageOrder(stage.order)}</span>
+        {inPath ? (
+          <h2 class="stage-banner__title">{stage.title}</h2>
+        ) : (
+          <h1 class="stage-banner__title">{stage.title}</h1>
+        )}
       </div>
       <div class="stage-banner__progress">
         <span class="stage-banner__bar" aria-hidden="true">
@@ -425,20 +450,36 @@ function StageBanner() {
   );
 }
 
-function NextStageBanner({ top }: { top: number }) {
-  const node = currentStageNode();
-  const cur = curriculum.value;
-  if (!node || !cur) return null;
-  const nextStage = [...cur.stages].sort((a, b) => a.order - b.order).find((s) => s.order > node.stage.order);
-  if (!nextStage) return null;
+/**
+ * 次ステージ（ロック）。隠し機能: 3 秒以内に 10 回タップで、そのステージの最初のレッスンを開放する。
+ * 開放後はこの帯をやめ、パスの中に通常のステージ見出し＋ノードとして並べる（PathView）。
+ */
+function NextStageBanner({ top, first }: { top: number; first: PathNode }) {
+  const stage = first.stage;
+  const n = formatStageOrder(stage.order);
   return (
-    <div class="stage-next" style={{ top: `${top}px` }} role="note" aria-label={`次のステージ ${nextStage.title}（ロック中）`}>
+    <button
+      type="button"
+      class="stage-next"
+      style={{ top: `${top}px` }}
+      aria-label={`次のステージ ${stage.title}（ロック中）`}
+      aria-disabled="true"
+      onClick={(e) =>
+        tapLocked(
+          `stage:${stage.id}`,
+          first.lesson.id,
+          e.currentTarget as HTMLElement,
+          '前のステージを終えると開きます',
+          `ステージ ${n} を開放しました`,
+        )
+      }
+    >
       <div>
-        <span class="stage-next__kicker">STAGE {formatStageOrder(nextStage.order)}</span>
-        <span class="stage-next__title">{nextStage.title}</span>
+        <span class="stage-next__kicker">STAGE {n}</span>
+        <span class="stage-next__title">{stage.title}</span>
       </div>
       <Icon name="lock" size={18} />
-    </div>
+    </button>
   );
 }
 
@@ -446,11 +487,52 @@ function NextStageBanner({ top }: { top: number }) {
 // パス
 // ---------------------------------------------------------------------------
 
+/** パス配列をステージごとに（並び順のまま）分ける */
+function groupByStage(nodes: PathNode[]): PathNode[][] {
+  const out: PathNode[][] = [];
+  for (const n of nodes) {
+    const last = out[out.length - 1];
+    if (last && last[0]!.stage.id === n.stage.id) last.push(n);
+    else out.push([n]);
+  }
+  return out;
+}
+
+/** パスの中に置くステージ見出しの高さと、その下の余白 */
+const IN_PATH_BANNER_H = 64;
+const SEGMENT_GAP = 24;
+
 function PathView({ justDone }: { justDone: string | null }) {
   const cur = currentStageNode();
-  const nodes = cur ? path.value.filter((n) => n.stage.id === cur.stage.id) : [];
+  const done = completedIds.value;
+  const unlocked = unlockedIds.value;
+  const all = path.value;
+  /** パスで 1 つ前のレッスンを終えている（開放したレッスンの完了も数える） */
+  const prevDone = (n: PathNode) => {
+    const p = all[n.index - 1];
+    return !!p && done.has(p.lesson.id);
+  };
   const next = nextNode.value;
-  const layout = layoutStage(nodes, completedIds.value, skippedIds.value, next, todayDone.value, reviews.value[0], justDone, unlockedIds.value);
+
+  // 表示するステージ: 今のステージ＋その後ろで「最初のレッスンが開いている」ステージ（開放・完了・前を終えた）。
+  // 最初に開いていないステージがロックの帯になる。
+  const groups = groupByStage(all);
+  const gi = cur ? groups.findIndex((g) => g[0]!.stage.id === cur.stage.id) : -1;
+  const shown: PathNode[][] = [];
+  let lockedStage: PathNode | undefined;
+  if (gi >= 0) {
+    shown.push(groups[gi]!);
+    for (let i = gi + 1; i < groups.length; i++) {
+      const first = groups[i]![0]!;
+      if (done.has(first.lesson.id) || unlocked.has(first.lesson.id) || prevDone(first)) shown.push(groups[i]!);
+      else {
+        lockedStage = first;
+        break;
+      }
+    }
+  }
+  const nodes = shown[0] ?? [];
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrolled = useRef(false);
 
@@ -467,29 +549,62 @@ function PathView({ justDone }: { justDone: string | null }) {
 
   if (nodes.length === 0) return <div class="path-scroll" />;
 
-  const { points, solidEnd, justIdx } = layout;
+  // ステージごとに並べて縦に積む（2 つ目以降はパスの中の見出しの下から）
+  const items: PathItem[] = [];
+  const points: { x: number; y: number }[] = [];
+  const segments: { from: number; to: number }[] = [];
+  const headers: { stage: PathNode['stage']; top: number }[] = [];
+  let solidEnd = -1;
+  let justIdx = -1;
+  let gateY: number | null = null;
+  let offset = 0;
+  let bottom = 0;
+  shown.forEach((seg, si) => {
+    const lay = layoutStage(seg, done, skippedIds.value, next, todayDone.value, reviews.value[0], justDone, unlocked, prevDone);
+    const dpi = points.length;
+    for (const p of lay.points) points.push({ x: p.x, y: p.y + offset });
+    for (const it of lay.items) {
+      items.push(it.kind === 'unit' ? { ...it, y: it.y + offset } : { ...it, y: it.y + offset, pi: it.pi + dpi });
+    }
+    segments.push({ from: dpi, to: points.length });
+    // 若葉の実線は今のステージの中だけ（後ろのステージは手前が途切れている）
+    if (si === 0) {
+      solidEnd = lay.solidEnd;
+      gateY = lay.gateY;
+    }
+    if (lay.justIdx >= 0 && justIdx < 0) justIdx = lay.justIdx + dpi;
+    const lastY = (lay.points[lay.points.length - 1]?.y ?? 0) + offset;
+    bottom = lay.gateY !== null ? lay.gateY + offset + 30 + 40 : lastY + 88;
+    const following = shown[si + 1];
+    if (following) {
+      headers.push({ stage: following[0]!.stage, top: bottom });
+      offset = bottom + IN_PATH_BANNER_H + SEGMENT_GAP;
+    }
+  });
+
   // 完了アニメ中は「直近完了ノードまで」を実線、その先 1 区間を伸ばす
   const growing = justIdx >= 0 && justIdx < solidEnd;
   const solidPts = points.slice(0, (growing ? justIdx : solidEnd) + 1);
   const growPts = growing ? points.slice(justIdx, justIdx + 2) : [];
-  const gateItem = layout.items.find(
-    (it): it is Extract<PathItem, { kind: 'node' }> => it.kind === 'node' && it.node.lesson.kind === 'graduation',
+  const gateItem = items.find(
+    (it): it is Extract<PathItem, { kind: 'node' }> =>
+      it.kind === 'node' && it.node.lesson.kind === 'graduation' && it.y === gateY,
   );
   const gateJustOpened =
     !!gateItem && gateItem.state === 'today' && justDone !== null && points[justIdx + 1]?.y === gateItem.y;
-  const lastY = points[points.length - 1]?.y ?? 0;
-  const bottom = layout.gateY !== null ? layout.gateY + 30 + 40 : lastY + 88;
   const height = bottom + 52 + 40;
 
   return (
     <div class="path-scroll" ref={scrollRef}>
       <div class="path" style={{ height: `${height}px` }}>
         <svg class="path__svg" width={PATH_W} height={height} viewBox={`0 0 ${PATH_W} ${height}`} fill="none" aria-hidden="true">
-          <path class="path__todo" d={curve(points)} />
+          {segments.map((s) => (
+            <path key={s.from} class="path__todo" d={curve(points.slice(s.from, s.to))} />
+          ))}
           {solidPts.length > 1 && <path class="path__done" d={curve(solidPts)} />}
           {growPts.length > 1 && <path class="path__done path__grow" d={curve(growPts)} pathLength={1} />}
         </svg>
-        {layout.items.map((item) => {
+        {items.map((item) => {
           switch (item.kind) {
             case 'unit':
               return (
@@ -511,7 +626,10 @@ function PathView({ justDone }: { justDone: string | null }) {
               );
           }
         })}
-        <NextStageBanner top={bottom} />
+        {headers.map((h) => (
+          <StageBannerOf key={h.stage.id} stage={h.stage} top={h.top} />
+        ))}
+        {lockedStage && <NextStageBanner top={bottom} first={lockedStage} />}
       </div>
     </div>
   );

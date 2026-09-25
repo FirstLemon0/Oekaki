@@ -155,6 +155,49 @@ test.describe('実機フィードバック 3', () => {
     await expect(page).toHaveURL(/#\/lesson\//);
   });
 
+  test('10 回タップ開放（次ステージ）: ロックの帯を叩くとそのステージの最初が開き、帯は次へ送られる', async ({ page }) => {
+    await gotoApp(page);
+    const banner = page.getByRole('button', { name: '次のステージ 線と手のコントロール（ロック中）' });
+    await expect(banner).toBeVisible();
+    for (let i = 0; i < 3; i++) await banner.click({ force: true });
+    await expect(page.getByText('あと7回で開放').first()).toBeVisible();
+    for (let i = 0; i < 7; i++) await banner.click({ force: true });
+    await expect(page.getByText('ステージ 1 を開放しました').first()).toBeVisible();
+    // 帯は通常のステージ見出しに、ステージ 1 の最初が「開放」、2 本目はロックのまま
+    await expect(banner).toHaveCount(0);
+    await expect(page.locator('.stage-banner--in-path[data-stage]')).toContainText('線と手のコントロール');
+    await expect(page.getByRole('button', { name: /^L1 短い水平線（開放）$/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^L2 垂直と斜めの線（ロック中）$/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: '次のステージ 顔のミニ体験（ロック中）' })).toBeVisible();
+    // 「今日」は変わらない（未完了の最初のレッスン）
+    await expect(page.locator('.pnode[data-today="true"]')).toContainText('このアプリの約束');
+    await page.getByRole('button', { name: /^L1 短い水平線（開放）$/ }).click();
+    await expect(page).toHaveURL(/#\/lesson\/s1-u1-l1/);
+  });
+
+  test('10 回タップ開放（門・模写チェックポイント）: 開放した門は「卒業課題へ」で押せる', async ({ page }) => {
+    await gotoApp(page);
+    const banner = page.getByRole('button', { name: '次のステージ 線と手のコントロール（ロック中）' });
+    for (let i = 0; i < 10; i++) await banner.click({ force: true });
+    await expect(page.getByText('ステージ 1 を開放しました').first()).toBeVisible();
+
+    const cp = page.getByRole('button', { name: /^模写チェックポイント（カップ・葉）（ロック中/ });
+    for (let i = 0; i < 10; i++) await cp.click({ force: true });
+    await expect(page.getByRole('button', { name: /^模写チェックポイント（カップ・葉）（開放/ })).toBeVisible();
+
+    const gate = page.getByRole('button', { name: /^卒業課題：小物の線画（ロック中/ });
+    await expect(gate).toBeVisible();
+    for (let i = 0; i < 3; i++) await gate.click({ force: true });
+    await expect(page.getByText('あと7回で開放').first()).toBeVisible();
+    for (let i = 0; i < 7; i++) await gate.click({ force: true });
+    const opened = page.getByRole('button', { name: /^卒業課題：小物の線画（開放/ });
+    await expect(opened).toBeVisible();
+    await expect(opened).toHaveText('卒業課題へ');
+    await expect(opened).toHaveClass(/gate--today/);
+    await opened.click();
+    await expect(page).toHaveURL(/#\/lesson\/s1-u5-l3/);
+  });
+
   test('ドリルの薄表示: 古い線は薄く・隠す。「紙を替える」でも本数はそのまま', async ({ page }) => {
     const lesson = allLessons().find((l) => l.steps.some((s) => s.type === 'drill' && s.drill === 'line' && Number(s.count) >= 7));
     test.skip(!lesson, '直線 7 本以上のドリルが教材に無い');

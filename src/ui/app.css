@@ -118,6 +118,8 @@
 .stage-banner__bar > span { display: block; height: 100%; border-radius: inherit; background: var(--color-accent); transition: width var(--motion-path) var(--ease-out); }
 .stage-banner__count { font-size: 0.9375rem; }
 .stage-banner__of { opacity: 0.5; }
+/* 隠し開放したステージの見出し（パスの中に置く。見た目は上部のバナーと同じ） */
+.stage-banner--in-path { position: absolute; left: 0; right: 0; width: auto; }
 
 .path-scroll {
   flex: 1;
@@ -247,7 +249,7 @@
 .node--just-done .node__check path { stroke-dasharray: 30; stroke-dashoffset: 30; animation: stDrawCheck 300ms ease-out 200ms forwards; }
 
 /* 首振りは individual transform（rotate を壊さない） */
-.node.st-shake, .gate.st-shake { animation: stShakeX 0.4s ease-in-out; }
+.node.st-shake, .gate.st-shake, .stage-next.st-shake { animation: stShakeX 0.4s ease-in-out; }
 @keyframes stShakeX { 0%, 100% { translate: 0 0; } 25% { translate: -3px 0; } 75% { translate: 3px 0; } }
 
 /* 門 200×60 */
@@ -295,6 +297,8 @@
   justify-content: space-between;
   padding: 0 22px;
 }
+/* 隠し開放の 10 回タップを受けるためボタンにした（見た目はロックの帯のまま） */
+button.stage-next { border: 0; font: inherit; text-align: left; cursor: default; -webkit-tap-highlight-color: transparent; }
 .stage-next > div { display: flex; flex-direction: column; }
 .stage-next svg { color: var(--color-ink-3); }
 .stage-next__kicker { font-size: 0.625rem; letter-spacing: 0.12em; opacity: 0.7; line-height: 1.4; }
