@@ -9,12 +9,15 @@ import { Gallery } from './ui/screens/Gallery';
 import { GalleryDetail } from './ui/screens/GalleryDetail';
 import { Placeholder } from './ui/screens/Placeholder';
 import { LessonPlayer, isReviewLessonId } from './ui/screens/LessonPlayer';
-import { FreeDraw } from './ui/screens/FreeDraw';
 import { Calibrate } from './ui/screens/Calibrate';
 import { Review } from './ui/screens/Review';
 import { CritiqueRoute } from './ui/screens/CritiqueScreen';
+import { lazyScreen } from './ui/lazyScreen';
 import './ui/lesson/lesson.css';
 import './ui/paint/paint.css';
+
+/** 自由お絵描きは遅延の route（入口の静的な依存に入れない。UR-002 で埋め込みのペイントに替わる画面） */
+const FreeDraw = lazyScreen(() => import('./ui/screens/FreeDraw').then((m) => m.FreeDraw));
 
 /** レール・下ナビを出さない全画面のルート（レッスン・キャンバス・批評） */
 function isFullscreen(r: Route): boolean {

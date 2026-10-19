@@ -19,7 +19,13 @@ data/settings.json          … API キー・モデル・利き手・テーマ�
 data/references.json        … 取り込んだ模写用画像の情報
 images/drawing/<id>.webp    … 描いた絵の画像本体
 images/reference/<id>.webp  … 取り込んだ模写用画像の本体
+data/ogDocs.json            … （任意）新しいお絵描きの文書の情報
+data/ogDocs/<id>.ognk       … （任意）新しいお絵描きの文書の本体（続きから描くためのレイヤーつきの文書）
 ```
+
+- `data/ogDocs*` は 2026-10（DB v2）から入る**任意**のエントリです。zip の版（`manifest.json` の `version`）は 1 のままなので、
+  古い版のアプリでも読み込めます（古い版は `.ognk` を読まずに飛ばし、絵の画像・進捗・設定はそのまま戻ります）。
+- 新しい版のアプリは、`data/ogDocs*` の無い古い zip もそのまま読み込めます。対応する絵の無い文書は取り込みません。
 
 **API キーも `data/settings.json` に含まれます。** zip ファイルは他人に渡さない・共有フォルダで公開しないよう注意してください。
 

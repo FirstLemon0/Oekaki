@@ -6,6 +6,9 @@
  * - `data/*.json`        … 各ストアのレコード（画像 Blob は含めない）
  * - `images/drawing/<id>.<webp|png|jpg|gif>`   … drawings の画像本体
  * - `images/reference/<id>.<webp|png|jpg|gif>` … references の画像本体
+ * - `data/ogDocs.json` と `data/ogDocs/<id>.ognk` … 新しいお絵描きの文書（DB v2 の ogDocs。**任意**のエントリ）。
+ *   manifest の版は 1 のまま（ADR-0007 D6-3）。古いアプリはこの 2 つを読まないので、古い版でも画像と進捗は取り込める。
+ *   新しいアプリは、無ければ何もしない（古い版のバックアップ）。対応する絵が無い文書は取り込まない（孤児を作らない）。
  *   拡張子は中身の先頭バイトで決める（`toWebp` が PNG にフォールバックした絵もある）。
  *   旧形式の zip は全部 `.webp` 名なので、読み込み時も中身から型を判定する。
  *
@@ -41,6 +44,7 @@ import {
   getCounters,
   getSettings,
   listReferences,
+  listOgDocs,
   pruneCritiqueAttempts,
 } from './repo';
 import type {
@@ -48,6 +52,7 @@ import type {
   Critique,
   DrillStats,
   Drawing,
+  OgDocRecord,
   Profile,
   ReferenceImage,
   Settings,
@@ -185,6 +190,17 @@ const referenceMetaSchema = z.object({
 });
 type ReferenceMeta = z.infer<typeof referenceMetaSchema>;
 
+/** data/ogDocs.json の 1 件（bytes は data/ogDocs/<id>.ognk に別に置く） */
+const ogDocMetaSchema = z.object({
+  id: z.string().min(1),
+  drawingId: z.string().min(1),
+  format: z.literal('ognk'),
+  ogContract: z.string(),
+  embedApi: z.number(),
+  updatedAt: isoString,
+});
+type OgDocMeta = z.infer<typeof ogDocMetaSchema>;
+
 const manifestSchema = z.object({
   version: z.number(),
   exportedAt: isoString,
@@ -197,6 +213,8 @@ const manifestSchema = z.object({
 const IMAGE_EXTS = ['webp', 'png', 'jpg', 'gif'] as const;
 const drawingImagePath = (id: string, ext: string) => `images/drawing/${id}.${ext}`;
 const referenceImagePath = (id: string, ext: string) => `images/reference/${id}.${ext}`;
+const OG_DOCS_JSON = 'data/ogDocs.json';
+export const ogDocPath = (id: string) => `data/ogDocs/${id}.ognk`;
 
 const ALL_STORES = [
   'profile',
@@ -208,6 +226,8 @@ const ALL_STORES = [
   'counters',
   'settings',
   'references',
+  // DB v2（任意のエントリ。置き換えの消去・put・merge に入れて孤児を残さない）
+  'ogDocs',
 ] as const;
 
 /** Blob.type を画像の型として正規化する。画像でなければ null。 */
@@ -297,7 +317,7 @@ class ZipBlobWriter {
  * UI はこちらを使うとよい（`exportBackup` は互換のためのバイト列版）。
  */
 export async function exportBackupBlob(): Promise<Blob> {
-  const [profile, progress, drillStats, drawings, critiques, streak, counters, settings, references] =
+  const [profile, progress, drillStats, drawings, critiques, streak, counters, settings, references, ogDocs] =
     await Promise.all([
       getProfile(),
       listProgress(),
@@ -308,6 +328,7 @@ export async function exportBackupBlob(): Promise<Blob> {
       getCounters(),
       getSettings(),
       listReferences(),
+      listOgDocs(),
     ]);
 
   const drawingMetas: DrawingMeta[] = drawings.map(({ image: _image, ...meta }) => meta);
@@ -329,6 +350,8 @@ export async function exportBackupBlob(): Promise<Blob> {
   w.addDeflated('data/counters.json', json(counters));
   w.addDeflated('data/settings.json', json(exportedSettings));
   w.addDeflated('data/references.json', json(referenceMetas));
+  const ogDocMetas: OgDocMeta[] = ogDocs.map(({ bytes: _bytes, ...meta }) => meta);
+  w.addDeflated(OG_DOCS_JSON, json(ogDocMetas));
 
   const addImage = async (image: Blob, pathFor: (ext: string) => string) => {
     const bytes = await blobToBytes(image);
@@ -340,6 +363,10 @@ export async function exportBackupBlob(): Promise<Blob> {
   }
   for (const r of references) {
     await addImage(r.image, (ext) => referenceImagePath(r.id, ext));
+  }
+  // .ognk はすでに zip（圧縮済み）なので無圧縮で格納する
+  for (const d of ogDocs) {
+    w.addStored(ogDocPath(d.id), await blobToBytes(d.bytes));
   }
 
   return w.finish();
@@ -470,6 +497,8 @@ interface BackupPayload {
   counters: Counters;
   settings: Settings;
   references: ReferenceImage[];
+  /** 任意（古いバックアップには無い）。 */
+  ogDocs: OgDocRecord[];
 }
 
 async function readJson<T>(
@@ -542,6 +571,21 @@ export async function importBackup(input: Uint8Array | Blob, mode: ImportMode): 
     references.push({ ...meta, image: await entryImageBlob(zip, entry) });
   }
 
+  // 任意のエントリ: 新しいお絵描きの文書。一覧が無い（古い版）なら空。本体が欠けた文書は飛ばす
+  const ogDocs: OgDocRecord[] = [];
+  if (entries.has(OG_DOCS_JSON)) {
+    const ogMetas = await readJson(zip, entries, OG_DOCS_JSON, z.array(ogDocMetaSchema));
+    for (const meta of ogMetas) {
+      const entry = entries.get(ogDocPath(meta.id));
+      if (!entry) continue;
+      const bytes =
+        entry.method === 0
+          ? (await entryRawSlice(zip, entry)).slice(0, entry.compressedSize, 'application/zip')
+          : new Blob([(await entryBytes(zip, entry)) as Uint8Array<ArrayBuffer>], { type: 'application/zip' });
+      ogDocs.push({ ...meta, bytes });
+    }
+  }
+
   const payload: BackupPayload = {
     profile,
     progress,
@@ -552,6 +596,7 @@ export async function importBackup(input: Uint8Array | Blob, mode: ImportMode): 
     counters,
     settings,
     references,
+    ogDocs,
   };
 
   const db = await openDb();
@@ -610,6 +655,7 @@ async function replaceAll(db: SeichotsuDBHandle, data: BackupPayload): Promise<v
   const countersStore = tx.objectStore('counters');
   const settingsStore = tx.objectStore('settings');
   const referencesStore = tx.objectStore('references');
+  const ogDocsStore = tx.objectStore('ogDocs');
 
   // 消す前に、端末側に残すもの（API キー等）を読んでおく
   const [deviceProfile, deviceSettings] = await Promise.all([
@@ -627,7 +673,10 @@ async function replaceAll(db: SeichotsuDBHandle, data: BackupPayload): Promise<v
     countersStore.clear(),
     settingsStore.clear(),
     referencesStore.clear(),
+    ogDocsStore.clear(),
   ]);
+
+  const drawingIds = new Set(data.drawings.map((d) => d.id));
 
   await Promise.all([
     profileStore.put(reconcileProfile(data.profile, deviceProfile), SINGLETON_KEY),
@@ -639,6 +688,7 @@ async function replaceAll(db: SeichotsuDBHandle, data: BackupPayload): Promise<v
     ...data.drawings.map((item) => drawingsStore.put(item)),
     ...data.critiques.map((item) => critiquesStore.put(item)),
     ...data.references.map((item) => referencesStore.put(item)),
+    ...data.ogDocs.filter((item) => drawingIds.has(item.drawingId)).map((item) => ogDocsStore.put(item)),
   ]);
 
   await tx.done;
@@ -655,6 +705,7 @@ async function mergeAll(db: SeichotsuDBHandle, data: BackupPayload): Promise<voi
   const countersStore = tx.objectStore('counters');
   const settingsStore = tx.objectStore('settings');
   const referencesStore = tx.objectStore('references');
+  const ogDocsStore = tx.objectStore('ogDocs');
 
   const [currentProfile, currentStreak, currentCounters, currentSettings] = await Promise.all([
     profileStore.get(SINGLETON_KEY),
@@ -687,6 +738,12 @@ async function mergeAll(db: SeichotsuDBHandle, data: BackupPayload): Promise<voi
   for (const item of data.references) {
     const existing = await referencesStore.get(item.id);
     await referencesStore.put(newer(existing, item));
+  }
+  // 文書は対応する絵が（取り込み後に）ある分だけ。絵と同じく新しい方を残す
+  for (const item of data.ogDocs) {
+    if (!(await drawingsStore.getKey(item.drawingId))) continue;
+    const existing = await ogDocsStore.get(item.id);
+    await ogDocsStore.put(newer(existing, item));
   }
 
   await tx.done;

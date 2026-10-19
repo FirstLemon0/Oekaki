@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# pre-push フック（ADR-0007 D5-4）。tools/safe-push.sh が .git/hooks/pre-push に入れる（tools/install-hooks.sh でも入る）。
+# 拒否するもの:
+#   - fast-forward でない更新（force-push。リモートの先頭が手元のコミットの祖先でない）
+#   - ブランチの削除
+#   - リモートの先頭を手元が知らない更新（先に git fetch して確かめる）
+#   - push する範囲のコミットに .zip が 1 つでもある
+# 標準入力: <local ref> <local sha> <remote ref> <remote sha>（1 行に 1 つ）
+set -euo pipefail
+
+reject() {
+  echo "pre-push: 拒否しました: $*" >&2
+  exit 1
+}
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ -n "${local_ref:-}" ] || continue
+  if [[ "${local_sha}" =~ ^0+$ ]]; then
+    reject "ブランチの削除（${remote_ref}）"
+  fi
+  range=()
+  if [[ "${remote_sha}" =~ ^0+$ ]]; then
+    # 新しいブランチ: リモートにまだ無いコミットだけを見る
+    range=("${local_sha}" --not --remotes)
+  else
+    git cat-file -e "${remote_sha}^{commit}" 2>/dev/null || reject "リモートの先頭 ${remote_sha} を手元が知りません（git fetch してから。force で上書きしない）"
+    git merge-base --is-ancestor "${remote_sha}" "${local_sha}" || reject "fast-forward でない更新です（${remote_ref}。force-push はしない）"
+    range=("${remote_sha}..${local_sha}")
+  fi
+  # grep -q は使わない（pipefail の下で git log が SIGPIPE になり、見つけたのに「無い」になる）
+  zips="$(git -c core.quotepath=false log --name-only --format= "${range[@]}" | grep -iE '\.zip$' | sort -u || true)"
+  if [ -n "${zips}" ]; then
+    reject "push する範囲に .zip があります（$(echo "${zips}" | tr '\n' ' ')）"
+  fi
+done
+exit 0

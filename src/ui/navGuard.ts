@@ -26,6 +26,30 @@ let popping = false;
 /** 戻し終えたら行う移動 */
 let pending: (() => void) | null = null;
 let installed = false;
+const guardListeners = new Set<(guarded: boolean) => void>();
+
+/** ガードの有無を変える（変わったら購読者に知らせる。SW の更新の再読み込みを保留する updateDefer.ts が使う） */
+function setActive(next: Active | null): void {
+  const was = active !== null;
+  active = next;
+  if (was !== (next !== null)) {
+    for (const cb of guardListeners) {
+      try {
+        cb(next !== null);
+      } catch {
+        // 購読側の例外でガードを止めない
+      }
+    }
+  }
+}
+
+/** ガードの有無の変化を購読する（保存していない線ができた / 無くなった）。戻り値で解除 */
+export function onLeaveGuardChange(cb: (guarded: boolean) => void): () => void {
+  guardListeners.add(cb);
+  return () => {
+    guardListeners.delete(cb);
+  };
+}
 
 function hasHistory(): boolean {
   return typeof history !== 'undefined' && typeof location !== 'undefined' && typeof window !== 'undefined';
@@ -79,11 +103,11 @@ export function armLeaveGuard(ask: Ask, fallback: () => void): () => void {
   if (!hasHistory()) return () => undefined;
   install();
   const me: Active = { ask, fallback };
-  active = me;
+  setActive(me);
   if (!onTop() && !popping) push();
   return () => {
     if (active !== me) return;
-    active = null;
+    setActive(null);
     dropGuardEntry();
   };
 }
@@ -125,7 +149,7 @@ export function navigateAfterGuard(go: () => void): void {
     go();
     return;
   }
-  active = null;
+  setActive(null);
   if (onTop() || popping) dropGuardEntry(go);
   else go();
 }
@@ -136,7 +160,7 @@ export function resetLeaveGuardForTest(): void {
     window.removeEventListener('popstate', onPopState);
     window.removeEventListener('beforeunload', onBeforeUnload);
   }
-  active = null;
+  setActive(null);
   popping = false;
   pending = null;
   installed = false;

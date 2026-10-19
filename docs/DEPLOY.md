@@ -54,3 +54,30 @@ Render の Static Site は既定で「GitHub の対象ブランチに push す�
 2. タブレットでアプリを開く（または開いたまま少し操作する）と、バックグラウンドで新しい Service Worker がダウンロード・インストールされます。
 3. 次にアプリを開き直したタイミングで、新しいバージョンに切り替わります。ユーザー側で「更新」ボタンを押すような操作は不要です。
 4. すぐに最新版を確認したい場合は、アプリをホーム画面のアイコンから一度完全に閉じて開き直す（または Chrome でページを再読み込みする）と確実です。
+5. 自由お絵描き（`#/free`）で保存していない線があるあいだは、新しい版が入っても自動では再読み込みしません。「更新があります（保存後に再読み込み）」と出て、保存（または破棄）した後に再読み込みします。ほかの画面では今までどおりすぐ切り替わります（`src/ui/updateDefer.ts`）。
+6. 埋め込みのペイント（`/paint/`、OG-nanika の成果物）は Service Worker の precache に入れず、開いたときに版ごとのキャッシュ（`og-paint-<版>`）へ入ります。字形のファイル（`.bin`）だけは precache します。
+
+## ⑦ Render の Headers（CSP）
+
+ビルドの `index.html` には CSP（`script-src 'self'; object-src 'none'; worker-src 'self' blob:; base-uri 'self'`）が meta で入っています。
+`frame-ancestors`（ほかのサイトに iframe で埋め込まれない）は meta では効かないので、Render の Static Site の「Headers」に次の 1 行を足してください（任意。サービスの作り直しは要りません）。
+
+| Path | Name | Value |
+|---|---|---|
+| `/*` | `Content-Security-Policy` | `frame-ancestors 'self'` |
+
+## ⑧ main への push（tools/safe-push.sh）
+
+main への push は `tools/safe-push.sh` だけで行います（2026-10-19 の決定: main に直接 push して Render の本番へすぐ反映）。手で `git push` しません。
+
+1. コミットは「パスを名指しした `git add <path>…`」で作る（`git add -A` / `git add .` / `git add -u` は使わない。手元の zip を巻き込まないため）。
+2. `tools/safe-push.sh` を実行する。次を全部確かめてから `git push origin HEAD:main`（fast-forward だけ。force は使わない）:
+   - ブランチが main、origin/main が HEAD の祖先、作業木が clean、未追跡は手元の zip 1 つだけ、push する範囲に `.zip` が無い
+   - port 4173 が空き、`npm ci`、`npm run build`、`node scripts/check-bundle.mjs`、`node scripts/check-paint-artifact.mjs`、`npm test`、
+     `CI=1 npx playwright test --retries=0`（Service Worker を有効にした project を含む）がすべて緑
+3. push の後、配信中の `/BUILD_ID`（ビルドしたコミット）が HEAD と一致するまで最大 10 分待って記録する。配信の URL は
+   `git config seichotsu.deployUrl https://<サービス名>.onrender.com` で一度だけ設定しておく（無ければ照合は飛ばす）。
+4. `.git/hooks/pre-push`（`tools/hooks/pre-push`、safe-push が入れる）が、fast-forward でない更新・ブランチの削除・`.zip` を含む push を拒みます。
+5. 戻すときは `git revert` で新しいコミットを積み、同じく safe-push で push します（履歴を書き換えない）。
+
+埋め込みのペイント（`public/paint/`）の更新は `tools/import-paint.sh <OG-nanika のコミット>` で行います（OG 側の `npm run ci`・`build:embed`・`check:embed` が緑のときだけ置き換え、`public/paint/BUILD.json` にハッシュを書く）。

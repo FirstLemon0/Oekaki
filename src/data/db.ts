@@ -7,12 +7,30 @@ import type {
   Profile,
   ReferenceImage,
   Settings,
+  OgDocRecord,
   Streak,
   Progress,
 } from './types';
 
 export const DB_NAME = 'seichotsu';
-export const DB_VERSION = 1;
+/**
+ * v1: 9 ストア（profile〜references）。
+ * v2（2026-10、UR-002 / ADR-0007 D6）: 新しいストア `ogDocs` を足すだけ。既存のストア・インデックス・キー・値の形には触れない。
+ */
+export const DB_VERSION = 2;
+
+/** v1 から持っているストア（並びは backup.ts の ALL_STORES と同じ）。 */
+export const V1_STORES = [
+  'profile',
+  'progress',
+  'drillStats',
+  'drawings',
+  'critiques',
+  'streak',
+  'counters',
+  'settings',
+  'references',
+] as const;
 
 /** 単一レコードのみを持つストア（profile/streak/counters/settings）で使う固定キー。 */
 export const SINGLETON_KEY = 'singleton';
@@ -31,6 +49,8 @@ export interface SeichotsuDB extends DBSchema {
   counters: { key: typeof SINGLETON_KEY; value: Counters };
   settings: { key: typeof SINGLETON_KEY; value: Settings };
   references: { key: string; value: ReferenceImage };
+  /** v2: 新しいお絵描きの文書本体（.ognk）。key = id（= 対応する絵の id）。 */
+  ogDocs: { key: string; value: OgDocRecord };
 }
 
 export type SeichotsuDBHandle = IDBPDatabase<SeichotsuDB>;
@@ -59,7 +79,11 @@ function upgrade(db: IDBPDatabase<SeichotsuDB>, oldVersion: number): void {
       db.createObjectStore('counters');
       db.createObjectStore('settings');
       db.createObjectStore('references', { keyPath: 'id' });
-    // 将来: case 1: ...（v1 -> v2 の差分だけを書く）
+    // falls through
+    case 1:
+      // v1 -> v2: 新しいストアを作るだけ（既存のストアには触れない。ADR-0007 D6-1）
+      db.createObjectStore('ogDocs', { keyPath: 'id' });
+    // 将来: case 2: ...（v2 -> v3 の差分だけを書く）
   }
 }
 

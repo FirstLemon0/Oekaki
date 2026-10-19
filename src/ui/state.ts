@@ -23,7 +23,8 @@ import {
 } from '@/data/repo';
 import { downscaleToWebp } from '@/data/images';
 import { showToast } from './components/Overlays';
-import { requestPersistentStorage } from '@/data/db';
+import { onDbEvent, requestPersistentStorage } from '@/data/db';
+import { DB_BLOCKED_MESSAGE, dbEventMessage, dbLoadErrorMessage } from './dbNotice';
 import { todayLocalDate } from '@/data/date';
 import { useFreezeToday as applyFreeze } from '@/data/streak';
 import { dueReviews, type DueReview } from '@/data/review';
@@ -224,10 +225,18 @@ export async function initState(): Promise<void> {
     loadError.value = e instanceof Error ? e.message : String(e);
   }
 
+  // 版上げの待ち（別タブ）・別タブの版上げ・接続切れを案内する（購読は開きっぱなし）
+  onDbEvent((e) => {
+    const message = dbEventMessage(e);
+    if (message) loadError.value = message;
+  });
+
   try {
     await reloadData();
+    // 別タブが閉じられて版上げが進んだ: 待ちの案内を消す
+    if (loadError.value === DB_BLOCKED_MESSAGE) loadError.value = null;
   } catch (e) {
-    loadError.value = `データを読み込めませんでした: ${e instanceof Error ? e.message : String(e)}`;
+    loadError.value = dbLoadErrorMessage(e);
   }
 
   ready.value = true;

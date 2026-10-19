@@ -234,3 +234,43 @@ export interface ReferenceImage {
   createdAt: string;
   updatedAt: string;
 }
+
+// ---------------------------------------------------------------------------
+// ogDocs（DB v2、key: id。UR-002 / ADR-0007 D6）
+// ---------------------------------------------------------------------------
+
+/** 新しいお絵描き（埋め込みのペイント）で描いた絵の文書の形式。今は .ognk だけ。 */
+export type OgDocFormat = 'ognk';
+
+/**
+ * 新しいお絵描きの文書本体（.ognk = zip）。ギャラリーの一覧で重い値を読まないよう、絵（drawings）とは別のストアに置く。
+ * `id` は対応する絵の id と同じ（1 枚の絵に 1 つ）。
+ */
+export interface OgDocRecord {
+  id: string;
+  /** 対応する絵（drawings）の id。`id` と同じ値。 */
+  drawingId: string;
+  /** .ognk の中身。 */
+  bytes: Blob;
+  format: OgDocFormat;
+  /** 書いたペイントの契約の版（例 '0.9.0'）。 */
+  ogContract: string;
+  /** 書いたときの埋め込み API の版（ogEmbed.version）。 */
+  embedApi: number;
+  updatedAt: string;
+}
+
+/**
+ * 新しいお絵描きの絵の `Drawing.meta.og`（JSON にできる値だけ。ADR-0007 D6-2）。
+ * `meta.doc`（v2 キャンバスの再生用）は入れない。上位のキーも足さない。
+ */
+export interface OgDrawingMeta {
+  /** ペイント側の文書の id。 */
+  docId: string;
+  /** 文書の大きさ（px）。 */
+  docSize: { w: number; h: number };
+  /** 描いた範囲（px、文書の座標）。何も描いていなければ null。 */
+  contentRect: { x: number; y: number; w: number; h: number } | null;
+  engine: 'og';
+  ogContract: string;
+}

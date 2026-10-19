@@ -14,7 +14,8 @@ const LESSON_ID = 's1-u5-l3'; // ステージ1 卒業課題（rubric: s1-graduat
 
 async function seedSubmitDrawing(page: Page, id: string): Promise<void> {
   await page.evaluate(async (drawingId) => {
-    const req = indexedDB.open('seichotsu', 1);
+    // 版は指定しない（アプリが開いた今の版のまま。DB v2 = ogDocs 追加後も同じ）
+    const req = indexedDB.open('seichotsu');
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);

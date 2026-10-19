@@ -19,6 +19,8 @@ import type {
   DrillStats,
   Drawing,
   DrawingKind,
+  OgDocRecord,
+  OgDrawingMeta,
   Profile,
   ReferenceImage,
   ScoreEntry,
@@ -249,9 +251,11 @@ export async function getDrawing(id: string): Promise<Drawing | undefined> {
   return db.get('drawings', id);
 }
 
+/** 絵を消す。新しいお絵描きの文書（ogDocs）があれば同じトランザクションで消す（持ち主のいない文書を残さない）。 */
 export async function deleteDrawing(id: string): Promise<void> {
   const db = await openDb();
-  await db.delete('drawings', id);
+  const tx = db.transaction(['drawings', 'ogDocs'], 'readwrite');
+  await Promise.all([tx.objectStore('drawings').delete(id), tx.objectStore('ogDocs').delete(id), tx.done]);
 }
 
 export interface ListDrawingsQuery {
@@ -456,4 +460,147 @@ export async function listReferences(): Promise<ReferenceImage[]> {
 export async function deleteReference(id: string): Promise<void> {
   const db = await openDb();
   await db.delete('references', id);
+}
+
+// ---------------------------------------------------------------------------
+// ogDocs（DB v2、key: id = 絵の id。UR-002 / ADR-0007 D6）
+// ---------------------------------------------------------------------------
+
+export interface SaveOgDrawingInput {
+  /** 省略時は新しい id。指定すると同じ id の絵と文書を置き換える。 */
+  id?: string;
+  kind: DrawingKind;
+  lessonId?: string | null;
+  /** ギャラリー用の画像（WebP 1024）。呼び出し側がメモリで作ってから渡す。 */
+  image: Blob;
+  /** 文書本体（.ognk）。呼び出し側がメモリで作ってから渡す。 */
+  ognk: Blob;
+  og: OgDrawingMeta;
+  embedApi: number;
+  createdAt?: string;
+  /** meta.og 以外に付ける JSON の値（例: 模写の参照 id）。`og` と `doc` のキーは使えない。 */
+  extraMeta?: Record<string, unknown>;
+}
+
+export type SaveOgDrawingResult =
+  | { ok: true; drawing: Drawing; doc: OgDocRecord }
+  | {
+      ok: false;
+      /** quota = 端末の空き容量が足りない（QuotaExceededError）。other = それ以外の失敗。 */
+      reason: 'quota' | 'other';
+      error: unknown;
+      /** 渡された入力（画像と文書はメモリに残っている）。`retry()` で同じ内容を書き直せる。 */
+      input: SaveOgDrawingInput;
+      retry: () => Promise<SaveOgDrawingResult>;
+    };
+
+function isQuotaError(e: unknown): boolean {
+  if (!e || typeof e !== 'object') return false;
+  const name = (e as { name?: unknown }).name;
+  return name === 'QuotaExceededError' || name === 'NS_ERROR_DOM_QUOTA_REACHED';
+}
+
+/** JSON にそのまま往復できる値か（素のオブジェクト・配列・有限の数・文字列・真偽・null だけ） */
+export function isJsonValue(v: unknown, depth = 0): boolean {
+  if (depth > 32) return false;
+  if (v === null || typeof v === 'string' || typeof v === 'boolean') return true;
+  if (typeof v === 'number') return Number.isFinite(v);
+  if (Array.isArray(v)) return v.every((x) => isJsonValue(x, depth + 1));
+  if (typeof v === 'object') {
+    const proto = Object.getPrototypeOf(v) as unknown;
+    if (proto !== Object.prototype && proto !== null) return false;
+    return Object.values(v as Record<string, unknown>).every((x) => x !== undefined && isJsonValue(x, depth + 1));
+  }
+  return false;
+}
+
+/** meta.og が JSON にできる値だけか（Blob や関数・NaN を入れない。ADR-0007 D6-2） */
+export function isJsonOgMeta(og: OgDrawingMeta): boolean {
+  return og.engine === 'og' && typeof og.docId === 'string' && isJsonValue(og);
+}
+
+/**
+ * 新しいお絵描きの絵を保存する。絵（WebP）と文書（.ognk）を 1 つのトランザクションで書く（片方だけ残らない）。
+ * 失敗しても例外にせず、入力をメモリに残したまま `{ ok: false, retry }` を返す（容量不足なら reason = 'quota'）。
+ */
+export async function saveOgDrawing(input: SaveOgDrawingInput): Promise<SaveOgDrawingResult> {
+  const fail = (reason: 'quota' | 'other', error: unknown): SaveOgDrawingResult => ({
+    ok: false,
+    reason,
+    error,
+    input,
+    retry: () => saveOgDrawing(input),
+  });
+  if (!isJsonOgMeta(input.og)) return fail('other', new Error('meta.og は JSON にできる値だけにしてください。'));
+  if (input.extraMeta && ('og' in input.extraMeta || 'doc' in input.extraMeta)) {
+    return fail('other', new Error('extraMeta に og / doc は使えません。'));
+  }
+  const now = nowIso();
+  const id = input.id ?? genId('drawing');
+  const drawing: Drawing = {
+    id,
+    lessonId: input.lessonId ?? null,
+    kind: input.kind,
+    image: input.image,
+    createdAt: input.createdAt ?? now,
+    strokes: null,
+    meta: { ...(input.extraMeta ?? {}), og: { ...input.og } },
+    updatedAt: now,
+  };
+  const doc: OgDocRecord = {
+    id,
+    drawingId: id,
+    bytes: input.ognk,
+    format: 'ognk',
+    ogContract: input.og.ogContract,
+    embedApi: input.embedApi,
+    updatedAt: now,
+  };
+  let db: Awaited<ReturnType<typeof openDb>>;
+  try {
+    db = await openDb();
+  } catch (e) {
+    return fail(isQuotaError(e) ? 'quota' : 'other', e);
+  }
+  const tx = db.transaction(['drawings', 'ogDocs'], 'readwrite');
+  const pending: Promise<unknown>[] = [];
+  try {
+    pending.push(tx.objectStore('drawings').put(drawing));
+    pending.push(tx.objectStore('ogDocs').put(doc));
+    pending.push(tx.done);
+    await Promise.all(pending);
+    return { ok: true, drawing, doc };
+  } catch (e) {
+    // 途中で同期に投げられたとき、先に出した要求は中断で reject される（未処理にしない）
+    for (const p of pending) p.catch(() => undefined);
+    try {
+      tx.abort();
+    } catch {
+      // すでに中断・完了している
+    }
+    await tx.done.catch(() => undefined);
+    return fail(isQuotaError(e) ? 'quota' : 'other', e);
+  }
+}
+
+export async function getOgDoc(id: string): Promise<OgDocRecord | undefined> {
+  const db = await openDb();
+  return db.get('ogDocs', id);
+}
+
+export async function listOgDocs(): Promise<OgDocRecord[]> {
+  const db = await openDb();
+  return db.getAll('ogDocs');
+}
+
+/** 端末の保存の使用量（任意。非対応なら null）。ギャラリーの表示用（OG の分も含むオリジン全体）。 */
+export async function estimateStorage(): Promise<{ usage: number; quota: number } | null> {
+  const storage = (globalThis as { navigator?: Navigator }).navigator?.storage;
+  if (!storage || typeof storage.estimate !== 'function') return null;
+  try {
+    const e = await storage.estimate();
+    return { usage: e.usage ?? 0, quota: e.quota ?? 0 };
+  } catch {
+    return null;
+  }
 }
