@@ -85,6 +85,8 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
   const busyRef = useRef(false);
   /** 下書きの持ち方（成果物の口しだい。og/ogDraft.ts） */
   const keeperRef = useRef<DraftKeeper | null>(null);
+  /** 「戻る」を選んだ（捨てる）: これから書き終わる下書きの印を置かない */
+  const leavingRef = useRef(false);
 
   // 成果物（public/paint/）を取り込んでいないビルドでは iframe を作らずに今までのお絵描きへ（/paint/embed.html が成長通そのものになるため）
   const [phase, setPhase] = useState<Phase>(() => (ogPaintInfo() ? 'connecting' : continueId ? 'unavailable' : 'fallback'));
@@ -158,7 +160,8 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
       writing = true;
       try {
         if (!api.isDirty() && !restoredRef.current) return;
-        await keeper.save();
+        // 書いている間に画面を離れた・保存した・下書きの答えを待っている: 印を置かない（古い下書きを残さない）
+        await keeper.save(() => alive && !savedRef.current && !leavingRef.current && !draftOfferRef.current);
       } finally {
         writing = false;
         if (again && alive) {
@@ -469,6 +472,7 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
               onClick={() => {
                 const go = leaveAsk;
                 setLeaveAsk(null);
+                leavingRef.current = true;
                 void (keeperRef.current ?? ogDraftStore).clear();
                 go?.();
               }}

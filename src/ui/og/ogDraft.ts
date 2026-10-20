@@ -53,8 +53,11 @@ export interface OgDraftStore {
   readMark(): OgDraftMark | null;
   /** 印に対応する本体（docId が違う・無ければ null） */
   load(mark: OgDraftMark): Promise<Blob | null>;
-  /** 本体を書いてから印を置く。書けなければ両方消して false */
-  write(d: { docId: string; bytes: Blob; continueId: string | null }): Promise<boolean>;
+  /**
+   * 本体を書いてから印を置く。書けなければ両方消して false。
+   * `isCurrent` が false を返したら（書いている間に画面を離れた・保存した）印を置かずに本体も消す（古い下書きを残さない）
+   */
+  write(d: { docId: string; bytes: Blob; continueId: string | null }, isCurrent?: () => boolean): Promise<boolean>;
   /** 印と本体を消す */
   clear(): Promise<void>;
   /** 印が無いのに残っている本体を消す（画面を開いたとき） */
@@ -112,11 +115,16 @@ export function createOgDraftStore(deps: OgDraftStoreDeps): OgDraftStore {
         return null;
       }
     },
-    async write({ docId, bytes, continueId }) {
+    async write({ docId, bytes, continueId }, isCurrent = () => true) {
       const savedAt = now().toISOString();
       try {
+        if (!isCurrent()) return false;
         const db = await deps.openDb();
         await db.put(STORE, { key: SLOT, docId, bytes, savedAt, continueId });
+        if (!isCurrent()) {
+          await deleteBody();
+          return false;
+        }
         const s = deps.storage();
         if (!s) return true;
         const mark: OgDraftMark = { engine: 'og', docId, savedAt, continueId };
@@ -193,8 +201,11 @@ export interface DraftApi {
 export interface DraftKeeper {
   /** 'journal' = OG の自動保存の記録（ジャーナル）、'snapshot' = 親の写し（seichotsu-drafts） */
   readonly kind: 'journal' | 'snapshot';
-  /** 今の絵を下書きに書き、印を置く（描いていなければ消す）。失敗は静かに諦める */
-  save(): Promise<void>;
+  /**
+   * 今の絵を下書きに書き、印を置く（描いていなければ消す）。失敗は静かに諦める。
+   * `isCurrent` が false を返したら（書いている間に画面を離れた・保存した）印を置かない
+   */
+  save(isCurrent?: () => boolean): Promise<void>;
   /** 印の下書きを開く。開けたら新しい docId（写しのときは印の docId）、開けなければ null */
   restore(mark: OgDraftMark): Promise<string | null>;
   /** 印と下書きを消す（捨てる・保存した・画面を離れた） */
@@ -235,14 +246,16 @@ export function createDraftKeeper(o: DraftKeeperOptions): DraftKeeper {
     };
     return {
       kind: 'journal',
-      async save() {
+      async save(isCurrent = () => true) {
         try {
+          if (!isCurrent()) return;
           if (!api.hasContent()) {
             setMark(null);
             return;
           }
           const m = await saveDraft();
-          if (m) setMark({ engine: 'og', docId: m.docId, savedAt: m.savedAt, continueId: o.continueId });
+          // 書いている間に離れた・保存した: 印を置かない（ジャーナルは次に開いたときの掃除か discardRecovery が消す）
+          if (m && isCurrent()) setMark({ engine: 'og', docId: m.docId, savedAt: m.savedAt, continueId: o.continueId });
         } catch {
           // 書けなくても描くのは続けられる
         }
@@ -270,14 +283,15 @@ export function createDraftKeeper(o: DraftKeeperOptions): DraftKeeper {
   }
   return {
     kind: 'snapshot',
-    async save() {
+    async save(isCurrent = () => true) {
       try {
+        if (!isCurrent()) return;
         if (!api.hasContent()) {
           await o.store.clear();
           return;
         }
         const bytes = await api.serializeProject();
-        await o.store.write({ docId: o.docId(), bytes, continueId: o.continueId });
+        await o.store.write({ docId: o.docId(), bytes, continueId: o.continueId }, isCurrent);
       } catch {
         // 写しが取れなくても描くのは続けられる
       }

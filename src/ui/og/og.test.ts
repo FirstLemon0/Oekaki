@@ -324,6 +324,43 @@ describe('下書き（印 + 写し、ilust-free-contracts の『続きから / �
     expect(store.readMark()).toBeNull();
   });
 
+  it('書いている間に画面を離れた・保存した（isCurrent が false）なら印も写しも残さない', async () => {
+    const storage = memoryStorage();
+    const store = createOgDraftStore({ storage: () => storage, openDb: open });
+    let current = true;
+    // 本体を書いている途中で離れる
+    const p = store.write({ docId: 'og-late', bytes: ognk('late'), continueId: null }, () => {
+      const c = current;
+      current = false;
+      return c;
+    });
+    expect(await p).toBe(false);
+    expect(store.readMark()).toBeNull();
+    expect(await store.load({ engine: 'og', docId: 'og-late', savedAt: '', continueId: null })).toBeNull();
+    // 始める前から離れていれば何も書かない
+    expect(await store.write({ docId: 'og-x', bytes: ognk('x'), continueId: null }, () => false)).toBe(false);
+    expect(store.readMark()).toBeNull();
+
+    // 持ち方（写し・ジャーナル）も同じ: 書き終わった時点で離れていれば印を置かない
+    const api: DraftApi = {
+      hasContent: () => true,
+      isDirty: () => true,
+      serializeProject: async () => ognk('k'),
+      openProject: async () => undefined,
+      discardRecovery: async () => undefined,
+      saveDraft: async () => ({ docId: 'og-j', savedAt: '2026-10-20T00:00:00.000Z' }),
+      latestDraft: async () => null,
+      openDraft: async () => undefined,
+    };
+    let alive = true;
+    const keeper = createDraftKeeper({ api: { ...api, saveDraft: async () => { alive = false; return { docId: 'og-j', savedAt: 's' }; } }, store, storage: () => storage, docId: () => 'og-p', continueId: null, toFrameBlob: async (b) => b });
+    await keeper.save(() => alive);
+    expect(store.readMark()).toBeNull();
+    const snap = createDraftKeeper({ api: { ...api, saveDraft: undefined, latestDraft: undefined, openDraft: undefined }, store, storage: () => storage, docId: () => 'og-p', continueId: null, toFrameBlob: async (b) => b });
+    await snap.save(() => false);
+    expect(store.readMark()).toBeNull();
+  });
+
   it('写しを書けない（容量不足など）ときは印も残さない', async () => {
     const storage = memoryStorage();
     storage.setItem(OG_DRAFT_MARK_KEY, JSON.stringify({ engine: 'og', docId: 'old', savedAt: '', continueId: null }));
