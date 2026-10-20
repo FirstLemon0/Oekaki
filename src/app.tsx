@@ -2,7 +2,8 @@ import { useEffect } from 'preact/hooks';
 import { ToastHost } from './ui/components';
 import { Shell } from './ui/Shell';
 import { navigate, navTabOf, route, type Route } from './ui/router';
-import { initState, loadError, ready } from './ui/state';
+import { initState, loadError, ready, uiPrefs } from './ui/state';
+import { freeScreenEngine } from './ui/paintEngine';
 import { Home } from './ui/screens/Home';
 import { Settings } from './ui/screens/Settings';
 import { Gallery } from './ui/screens/Gallery';
@@ -18,6 +19,8 @@ import './ui/paint/paint.css';
 
 /** 自由お絵描きは遅延の route（入口の静的な依存に入れない。UR-002 で埋め込みのペイントに替わる画面） */
 const FreeDraw = lazyScreen(() => import('./ui/screens/FreeDraw').then((m) => m.FreeDraw));
+/** 新しいお絵描き（埋め込みのペイントの iframe と橋渡し。設定 paintEngine = 'og' か、ギャラリーの「続きから描く」） */
+const OgFreeDraw = lazyScreen(() => import('./ui/screens/OgFreeDraw').then((m) => m.OgFreeDraw));
 
 /** レール・下ナビを出さない全画面のルート（レッスン・キャンバス・批評） */
 function isFullscreen(r: Route): boolean {
@@ -38,8 +41,12 @@ function FullscreenScreen({ r }: { r: Route }) {
       if (review) return <Redirect to={`#/review/${encodeURIComponent(review)}`} />;
       return <LessonPlayer key={r.id} id={r.id} step={r.name === 'lessonStep' ? r.step : undefined} />;
     }
-    case 'free':
+    case 'free': {
+      // 設定のエンジン（S2 の既定は v2）。続きから描く（?og=）は新しいお絵描きの文書なので、いつも新しいお絵描き
+      const engine = freeScreenEngine(uiPrefs.value.paintEngine, r.og);
+      if (engine === 'og') return <OgFreeDraw key={`og:${r.og ?? r.save ?? 'free'}`} save={r.save} continueId={r.og} />;
       return <FreeDraw key={r.save ?? 'free'} save={r.save} />;
+    }
     case 'calibrate':
       return <Calibrate />;
     case 'review':

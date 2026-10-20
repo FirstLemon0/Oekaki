@@ -6,7 +6,7 @@
  * 比較: Before / After の 2 カード ＋「月ごとの描き直し」カード（高さ 120）。
  */
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import { listDrawings } from '@/data/repo';
+import { estimateStorage, listDrawings } from '@/data/repo';
 import type { Drawing, DrawingKind } from '@/data/types';
 import { Button, Chip, EmptyState, ImageTile, Segment } from '../components';
 import { formatBytes, KIND_LABEL, nf } from '../format';
@@ -190,6 +190,16 @@ export function Gallery() {
     };
   }, [version]);
 
+  // 端末全体の保存の使用量（任意。新しいお絵描きの文書・ペイントのデータを含むオリジン全体、UR-002 / ilust-sup-integration-18）
+  const [usage, setUsage] = useState<{ usage: number; quota: number } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void estimateStorage().then((u) => alive && setUsage(u));
+    return () => {
+      alive = false;
+    };
+  }, [version]);
+
   const all = drawings ?? EMPTY;
   const shown = useMemo(
     () => (filter === 'all' ? all : all.filter((d) => FILTER_KINDS[filter].includes(d.kind))),
@@ -224,6 +234,12 @@ export function Gallery() {
         </div>
         <span class="gallery__total">
           <span class="num">{nf.format(all.length)}</span> 枚 · <span class="num">{formatBytes(totalBytes)}</span>
+          {usage && usage.quota > 0 && (
+            <span class="gallery__usage" title="新しいお絵描きの文書も含む、この端末に保存している量（全体）">
+              {' '}
+              · 端末 <span class="num">{formatBytes(usage.usage)}</span> / <span class="num">{formatBytes(usage.quota)}</span>
+            </span>
+          )}
         </span>
       </header>
 

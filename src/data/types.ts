@@ -193,6 +193,11 @@ export type CritiqueEffort = 'low' | 'medium' | 'high';
 export type Theme = 'light' | 'dark' | 'system';
 export type Strictness = 'easy' | 'normal';
 export type FontScale = 'normal' | 'large';
+/**
+ * 自由お絵描き（#/free）の描画エンジン（UR-002 / ADR-0007 D4-4・D7）。
+ * 'og' = 新しいお絵描き（埋め込みのペイント）、'v2' = 今までのお絵描き v2。レッスンの採点のキャンバスは常に v2。
+ */
+export type PaintEngine = 'og' | 'v2';
 
 export interface Settings {
   /** Anthropic API キー。未設定なら null。 */
@@ -219,6 +224,11 @@ export interface Settings {
   backupSnoozedOn: string | null;
   /** レッスン開始時に復習（ウォームアップ）を差し込むか。既定 true（古いデータも true）。 */
   reviewWarmup: boolean;
+  /**
+   * 自由お絵描きのエンジン（2026-10、UR-002 S2 で追加。足すだけの任意の項目）。
+   * 未設定（古いデータ・一度も切り替えていない）なら既定（src/ui/paintEngine.ts の DEFAULT_PAINT_ENGINE）に従う。
+   */
+  paintEngine?: PaintEngine;
   updatedAt: string;
 }
 

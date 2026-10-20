@@ -13,6 +13,10 @@ import { existsSync, readFileSync } from 'node:fs';
 interface PaintBuildInfo {
   buildId: string;
   files: Record<string, string>;
+  /** OG の契約の版（例 '0.9.0'）。保存する絵の meta.og.ogContract に入れる */
+  ogContract: string;
+  /** 埋め込み API の版（ogEmbed.version） */
+  embedApi: number;
 }
 function readPaintBuild(): PaintBuildInfo | null {
   const p = fileURLToPath(new URL('./public/paint/BUILD.json', import.meta.url));
@@ -21,7 +25,12 @@ function readPaintBuild(): PaintBuildInfo | null {
   if (typeof info.buildId !== 'string' || !info.files || typeof info.files !== 'object') {
     throw new Error('public/paint/BUILD.json が不正です（tools/import-paint.sh で取り込み直してください）');
   }
-  return { buildId: info.buildId, files: info.files };
+  return {
+    buildId: info.buildId,
+    files: info.files,
+    ogContract: typeof info.ogContract === 'string' ? info.ogContract : 'unknown',
+    embedApi: typeof info.embedApi === 'number' ? info.embedApi : 0,
+  };
 }
 const paintBuild = readPaintBuild();
 const paintFontEntries = paintBuild
@@ -75,6 +84,10 @@ function cspPlugin(): Plugin {
 export default defineConfig({
   define: {
     __OG_PAINT_BUILD_ID__: JSON.stringify(paintBuild?.buildId ?? 'none'),
+    // 自由お絵描き（OgFreeDraw）が保存の記録に使う成果物の版（無ければ null = ペイント無し。src/ui/og/paintInfo.ts）
+    __OG_PAINT_INFO__: JSON.stringify(
+      paintBuild ? { buildId: paintBuild.buildId, ogContract: paintBuild.ogContract, embedApi: paintBuild.embedApi } : null,
+    ),
   },
   build: {
     // scripts/check-bundle.mjs が入口と静的 import の木を数える（dist/.vite/manifest.json）

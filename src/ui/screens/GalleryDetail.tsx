@@ -15,6 +15,7 @@
  * 箱に attach して loadDocument → replay（塗りつぶし・変形・レイヤー操作も順に再現）。
  * 見せる範囲は保存時に残した切り詰め範囲（meta.contentRect）。保存画像と同じ範囲なので縦横比もずれない。
  * contentRect の無い旧データは従来の推定（線の切り詰め範囲が画像と同じ縦横比ならそこ、違えば紙全体を画像の縦横比で）。
+ * 新しいお絵描き（meta.og。UR-002）の絵は再生を出さず（meta.doc も strokes も無い）、「続きから描く」で同じ文書を開く（#/free?og=<id>）。
  * 「PNG で書き出す」: 紙色つきの PNG（長辺 2048）をダウンロードする。文書・履歴・線があればエンジンで描き直し、
  * 取込画像はそのまま PNG に変換する。
  */
@@ -31,6 +32,7 @@ import { readStrokeHistory, readStrokeStyles } from '../lesson/stateBridge';
 import { docSourceRect, downloadBlob, exportFileName, readContentRect, readDrawingDoc } from '../paint/canvasDoc';
 import type { CanvasDocument } from '../paint/types';
 import { PaintIcon } from '../paint/PaintIcon';
+import { continueTargetOf } from '../og/ogDrawing';
 
 /** 線の無い絵（塗りだけの文書）の再生で渡す空の線（毎回同じ参照にして再生面を作り直さない） */
 const NO_STROKES: StrokeDrawing = [];
@@ -292,6 +294,8 @@ export function GalleryDetail({ id }: { id: string }) {
   const strokes = drawing.strokes && drawing.strokes.some((st) => st.length > 0) ? drawing.strokes : null;
   /** 再生できるか（線か、レイヤー等の文書がある） */
   const replayable = strokes !== null || strokeDoc !== undefined;
+  /** 新しいお絵描きの絵（meta.og）なら「続きから描く」（#/free?og=<id> で同じ文書を開く。UR-002 S2） */
+  const continuable = continueTargetOf(drawing) !== null;
 
   const exportPng = async () => {
     setExporting(true);
@@ -338,6 +342,11 @@ export function GalleryDetail({ id }: { id: string }) {
               PNG で書き出す
             </span>
           </Button>
+          {continuable && (
+            <Button variant="secondary" icon="brush" href={href.freeContinue(drawing.id)}>
+              続きから描く
+            </Button>
+          )}
           {replayable &&
             (mode === 'playing' ? (
               <Button variant="secondary" icon="close" onClick={stopReplay}>

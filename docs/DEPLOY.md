@@ -64,7 +64,10 @@ Render の Static Site は既定で「GitHub の対象ブランチに push す�
 
 | Path | Name | Value |
 |---|---|---|
-| `/*` | `Content-Security-Policy` | `frame-ancestors 'self'` |
+| `/*` | `Content-Security-Policy` | `script-src 'self'; object-src 'none'; worker-src 'self' blob:; base-uri 'self'; frame-ancestors 'self'` |
+
+値の正はリポジトリの `public/_headers`（Render はこのファイルを読まないので、画面の「Headers」に同じ値を入れる）。`scripts/__tests__/headers.test.mjs` が
+meta の CSP と食い違わないことを、`e2e/16-csp.spec.ts` がこのヘッダーの下でも新しいお絵描き（`/paint/embed.html` の iframe と Worker）が動くことを確かめる。
 
 ## ⑧ main への push（tools/safe-push.sh）
 
@@ -79,5 +82,10 @@ main への push は `tools/safe-push.sh` だけで行います（2026-10-19 の
    `git config seichotsu.deployUrl https://<サービス名>.onrender.com` で一度だけ設定しておく（無ければ照合は飛ばす）。
 4. `.git/hooks/pre-push`（`tools/hooks/pre-push`、safe-push が入れる）が、fast-forward でない更新・ブランチの削除・`.zip` を含む push を拒みます。
 5. 戻すときは `git revert` で新しいコミットを積み、同じく safe-push で push します（履歴を書き換えない）。
+
+## ⑨ 新しいお絵描き（UR-002）
+
+設定の「新しいお絵描き（試験中）」（`paintEngine`）を on にすると、自由お絵描き（`#/free`）が埋め込みのペイント（`/paint/embed.html`）で開きます。
+off（既定）なら今までのお絵描き。ギャラリーの新しいお絵描きの絵は「続きから描く」で同じ文書を開けます。レッスンの採点のキャンバスはいつも今までのものです。
 
 埋め込みのペイント（`public/paint/`）の更新は `tools/import-paint.sh <OG-nanika のコミット>` で行います（OG 側の `npm run ci`・`build:embed`・`check:embed` が緑のときだけ置き換え、`public/paint/BUILD.json` にハッシュを書く）。

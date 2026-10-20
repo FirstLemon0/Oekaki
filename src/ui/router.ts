@@ -4,7 +4,7 @@
  *   #/                        home
  *   #/lesson/:id              lesson
  *   #/lesson/:id/step/:n      lessonStep
- *   #/free                    free（?save=after で月次の描き直し＝After として保存）
+ *   #/free                    free（?save=after で月次の描き直し＝After として保存。?og=<絵の id> で新しいお絵描きの続きから）
  *   #/gallery                 gallery
  *   #/gallery/:id             galleryDetail
  *   #/settings                settings
@@ -20,7 +20,7 @@ export type Route =
   | { name: 'home' }
   | { name: 'lesson'; id: string }
   | { name: 'lessonStep'; id: string; step: number }
-  | { name: 'free'; save?: 'before' | 'after' }
+  | { name: 'free'; save?: 'before' | 'after'; og?: string }
   | { name: 'gallery' }
   | { name: 'galleryDetail'; id: string }
   | { name: 'settings'; section?: string }
@@ -59,6 +59,9 @@ export function parseHash(hash: string): Route {
       break;
     case 'free':
       if (segs.length === 1) {
+        // ?og=<絵の id>: ギャラリーの「続きから描く」（新しいお絵描きの文書を開く。UR-002 S2）
+        const og = query.get('og');
+        if (og) return { name: 'free', og };
         const save = query.get('save');
         return save === 'after' || save === 'before' ? { name: 'free', save } : { name: 'free' };
       }
@@ -92,6 +95,8 @@ export const href = {
   lesson: (id: string) => `#/lesson/${encodeURIComponent(id)}`,
   lessonStep: (id: string, n: number) => `#/lesson/${encodeURIComponent(id)}/step/${n}`,
   free: (save?: 'before' | 'after') => (save ? `#/free?save=${save}` : '#/free'),
+  /** 新しいお絵描きの絵の続きから描く（#/free?og=<id>） */
+  freeContinue: (drawingId: string) => `#/free?og=${encodeURIComponent(drawingId)}`,
   gallery: () => '#/gallery',
   galleryDetail: (id: string) => `#/gallery/${encodeURIComponent(id)}`,
   settings: (section?: string) => (section ? `#/settings?section=${encodeURIComponent(section)}` : '#/settings'),

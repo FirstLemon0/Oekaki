@@ -1,0 +1,68 @@
+/* 新しいお絵描き（#/free の OgFreeDraw、UR-002）。遅延の画面の CSS は離れても残るので、名前は og-free で閉じる */
+.og-free {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  overflow: hidden;
+  /* 紙の上の 2 本指は iframe の中（OG）が受ける。親の帯の上ではページの拡大をしない */
+  touch-action: none;
+}
+.og-free__bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 60px;
+  padding: 8px var(--sp-4);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-line);
+}
+.og-free.is-left .og-free__bar { flex-direction: row-reverse; }
+.og-free__task {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.og-free__done {
+  flex: none;
+  min-width: 112px;
+  min-height: 44px;
+  padding: 0 var(--sp-5);
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-sumi);
+  color: var(--color-on-sumi);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.og-free__done:disabled { opacity: 0.45; cursor: default; }
+.og-free__stage { position: relative; flex: 1; min-height: 0; }
+.og-free__host { position: absolute; inset: 0; }
+.og-free__frame { display: block; width: 100%; height: 100%; border: 0; background: var(--color-paper); }
+.og-free__veil {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-4);
+  padding: var(--sp-5);
+  background: var(--color-paper);
+  color: var(--color-ink-2);
+  font-size: 15px;
+  text-align: center;
+}
+.og-free__sheet { z-index: 6; }

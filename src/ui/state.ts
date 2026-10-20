@@ -29,7 +29,8 @@ import { todayLocalDate } from '@/data/date';
 import { useFreezeToday as applyFreeze } from '@/data/streak';
 import { dueReviews, type DueReview } from '@/data/review';
 import { levelForXp, xpForDrillScore, xpForEvent } from '@/data/xp';
-import type { Counters, Critique, DrillStats, Profile, Progress, Settings, Streak } from '@/data/types';
+import type { Counters, Critique, DrillStats, PaintEngine, Profile, Progress, Settings, Streak } from '@/data/types';
+import { DEFAULT_PAINT_ENGINE, resolvePaintEngine } from './paintEngine';
 
 // ---------------------------------------------------------------------------
 // UI 向け設定（Settings の該当項目の読み取りビュー）
@@ -39,7 +40,10 @@ import type { Counters, Critique, DrillStats, Profile, Progress, Settings, Strea
 export type UiPrefs = Pick<
   Settings,
   'leftHanded' | 'penOnly' | 'strictness' | 'notifyTime' | 'fontScale' | 'lastBackupAt' | 'backupSnoozedOn'
->;
+> & {
+  /** 自由お絵描きのエンジン（未設定なら paintEngine.ts の既定。UR-002） */
+  paintEngine: PaintEngine;
+};
 
 export const DEFAULT_UI_PREFS: UiPrefs = {
   leftHanded: false,
@@ -49,6 +53,7 @@ export const DEFAULT_UI_PREFS: UiPrefs = {
   fontScale: 'normal',
   lastBackupAt: null,
   backupSnoozedOn: null,
+  paintEngine: DEFAULT_PAINT_ENGINE,
 };
 
 /** @deprecated Settings と同じ。互換のため残す */
@@ -92,6 +97,7 @@ export const uiPrefs = computed<UiPrefs>(() => {
     fontScale: s.fontScale ?? DEFAULT_UI_PREFS.fontScale,
     lastBackupAt: s.lastBackupAt ?? null,
     backupSnoozedOn: s.backupSnoozedOn ?? null,
+    paintEngine: resolvePaintEngine(s),
   };
 });
 

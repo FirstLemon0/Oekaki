@@ -1,0 +1,1 @@
+const e={"embed.docTitle":"Drawing","embed.boot.failedTitle":"The drawing screen could not be opened","embed.boot.failedBody":"An error occurred while loading. Close this screen and open it again."};export{e as default};

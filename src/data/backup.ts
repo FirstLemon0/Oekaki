@@ -179,6 +179,8 @@ const settingsSchema = z.object({
   lastBackupAt: z.string().nullable().default(null),
   backupSnoozedOn: z.string().nullable().default(null),
   reviewWarmup: z.boolean().default(true),
+  // UR-002 S2: 自由お絵描きのエンジン（任意。無ければ未設定のまま = 既定に従う。旧版の取り込みは知らないキーを捨てる）
+  paintEngine: z.enum(['og', 'v2']).optional(),
   updatedAt: isoString,
 });
 

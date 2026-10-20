@@ -1,0 +1,8 @@
+# 配信の HTTP ヘッダー（Render の Static Site の「Headers」に同じ値を入れる。docs/DEPLOY.md ⑦）
+# Render はこのファイルを読まない（Netlify / Cloudflare Pages の書式の控え）。正はこのファイルで、scripts/__tests__/headers.test.mjs と
+# e2e/16-csp.spec.ts が中身を確かめる（UR-002 / robustness-security-05、受け入れ ilust-csp）。
+# - script-src 'self': インラインのスクリプトを動かさない（成長通と埋め込みのペイント /paint/ の両方）
+# - frame-ancestors 'self': ほかのサイトに iframe で埋め込まれない（成長通の #/free が同じオリジンの /paint/embed.html を開くのは許す）
+# - worker-src 'self' blob:: ペイントの Worker（/paint/assets/*.worker-*.js）
+/*
+  Content-Security-Policy: script-src 'self'; object-src 'none'; worker-src 'self' blob:; base-uri 'self'; frame-ancestors 'self'
