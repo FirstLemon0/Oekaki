@@ -2,6 +2,7 @@
  * 自由お絵描き: #/free で描いて終わる → ギャラリーに1枚増える。
  * UR-002 S3 から #/free の既定は新しいお絵描き（埋め込みのペイントの iframe）。文言（「終わる」「保存して終わる」「自由」のタイル）は今までと同じ。
  * 今までのお絵描き（v2）は設定で選べる（その流れは 10-paint の透過 PNG・11-integration で確かめる）。
+ * 受け入れ ilust-e2e-retarget の 04-free-draw の分: 判定（ギャラリーに 1 枚増える）を OG の流れで確かめる。
  */
 import { expect, test } from '@playwright/test';
 import { gotoApp } from './helpers';
