@@ -85,7 +85,9 @@ main への push は `tools/safe-push.sh` だけで行います（2026-10-19 の
 
 ## ⑨ 新しいお絵描き（UR-002）
 
-設定の「新しいお絵描き（試験中）」（`paintEngine`）を on にすると、自由お絵描き（`#/free`）が埋め込みのペイント（`/paint/embed.html`）で開きます。
-off（既定）なら今までのお絵描き。ギャラリーの新しいお絵描きの絵は「続きから描く」で同じ文書を開けます。レッスンの採点のキャンバスはいつも今までのものです。
+自由お絵描き（`#/free`）は埋め込みのペイント（`/paint/embed.html`）で開きます（2026-10-20 の S3 から既定）。設定の「新しいお絵描き（試験中）」
+（`paintEngine`）を off にすると今までのお絵描き（v2）に戻ります。ギャラリーの新しいお絵描きの絵は「続きから描く」で同じ文書を開けます。
+レッスンの採点のキャンバスはいつも今までのものです。不具合があれば `src/ui/paintEngine.ts` の `DEFAULT_PAINT_ENGINE` を `'v2'` に戻すコミットを
+先に safe-push で出します（設定で on / off を選んだ人の値はそのまま）。
 
 埋め込みのペイント（`public/paint/`）の更新は `tools/import-paint.sh <OG-nanika のコミット>` で行います（OG 側の `npm run ci`・`build:embed`・`check:embed` が緑のときだけ置き換え、`public/paint/BUILD.json` にハッシュを書く）。

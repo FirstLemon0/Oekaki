@@ -337,6 +337,11 @@ describe('下書き（印 + 写し、ilust-free-contracts の『続きから / �
 });
 
 describe('設定とルート', () => {
+  it('既定は新しいお絵描き（UR-002 S3）、設定で今までのお絵描き（v2）を選べる', () => {
+    expect(DEFAULT_PAINT_ENGINE).toBe('og');
+    expect(resolvePaintEngine({ paintEngine: 'v2' })).toBe('v2');
+  });
+
   it('paintEngine: 未設定・不正な値は既定、続きから描く（?og=）はいつも新しいお絵描き', () => {
     expect(resolvePaintEngine(null)).toBe(DEFAULT_PAINT_ENGINE);
     expect(resolvePaintEngine({})).toBe(DEFAULT_PAINT_ENGINE);

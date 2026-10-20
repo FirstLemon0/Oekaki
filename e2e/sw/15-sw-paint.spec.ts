@@ -15,6 +15,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { drawFewStrokes, gotoApp } from '../helpers';
+import { setOgEngine } from '../og-helpers';
 
 const BUILD_JSON = fileURLToPath(new URL('../../public/paint/BUILD.json', import.meta.url));
 const REAL_PAINT = existsSync(BUILD_JSON);
@@ -134,6 +135,8 @@ test.describe('Service Worker と埋め込みのペイント', () => {
     context,
   }) => {
     await routeFixture(context);
+    // 今までのお絵描き（v2）の #/free を確かめる（UR-002 S3 で既定が新しいお絵描きになったので設定で v2 に。新しいお絵描きは 18-og-sw）
+    await setOgEngine(page, false);
     await gotoApp(page);
     await waitForController(page);
     await page.reload();
@@ -184,6 +187,8 @@ test.describe('Service Worker と埋め込みのペイント', () => {
   });
 
   test('ilust-update-defer: #/free に保存していない線があるあいだは更新で再読み込みせず、保存の後に再読み込みする', async ({ page }) => {
+    // 今までのお絵描き（v2）で確かめる（新しいお絵描きの分は 18-og-sw の og-sw-update-defer）
+    await setOgEngine(page, false);
     let loads = 0;
     page.on('load', () => {
       loads += 1;

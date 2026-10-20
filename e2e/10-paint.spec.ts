@@ -1,6 +1,8 @@
 /**
  * お絵描き v2（フルツール）: レイヤー・塗りつぶし・選択と変形・ズーム表示・透過 PNG 書き出し。
- * 自由お絵描き #/free で確かめる。
+ * レッスンの自由の描くステップ（s0-u1-l7 の 2 ステップ目 = 全画面の CanvasScreen、v2 のまま）で確かめる。
+ * UR-002 S3 で自由お絵描き（#/free）の既定が新しいお絵描き（埋め込みのペイント）になったので、#/free から付け替えた（ADR-0007 D7）。
+ * 「終わる」シート（透過 PNG）の試験だけは今までの自由お絵描き（設定で v2 を選んだ #/free、FreeDraw）で確かめる。
  * PAINT_SHOTS_DIR を渡すと、各場面のスクリーンショットをそこへ保存する（見た目の確認用）。
  */
 import { readFileSync, readdirSync } from 'node:fs';
@@ -8,6 +10,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { gotoApp } from './helpers';
+import { setOgEngine } from './og-helpers';
 
 const SHOTS = process.env.PAINT_SHOTS_DIR;
 
@@ -15,9 +18,23 @@ async function shot(page: Page, name: string): Promise<void> {
   if (SHOTS) await page.screenshot({ path: join(SHOTS, `${name}.png`) });
 }
 
+/** レッスンの自由の描くステップ（全画面の CanvasScreen = お絵描き v2 のフルツール） */
+const FREE_STEP = { lessonId: 's0-u1-l7', index: 1 } as const;
+
+/** お絵描き v2 のフルツールの紙を開く（レッスンの自由の描くステップ。UR-002 S3 で #/free から付け替え） */
 async function openFree(page: Page): Promise<Locator> {
-  await gotoApp(page);
-  await page.getByRole('link', { name: /自由お絵描き/ }).click();
+  await gotoApp(page, `#/lesson/${FREE_STEP.lessonId}/step/${FREE_STEP.index}`);
+  const paper = page.locator('.ls-canvas__paper');
+  await expect(paper.locator('canvas').first()).toBeVisible();
+  // 全画面のフルツール（レイヤー・塗り・選択がある）
+  await expect(toolbar(page).getByRole('button', { name: 'レイヤー', exact: true })).toBeVisible();
+  return paper;
+}
+
+/** 今までの自由お絵描き（#/free、FreeDraw）を開く: 設定で新しいお絵描きを off（v2）にしてから */
+async function openFreeV2(page: Page): Promise<Locator> {
+  await setOgEngine(page, false);
+  await gotoApp(page, '#/free');
   const paper = page.locator('.ls-canvas__paper');
   await expect(paper.locator('canvas').first()).toBeVisible();
   return paper;
@@ -106,16 +123,26 @@ test.describe('お絵描き v2', () => {
     await shot(page, '03-filled');
 
     // 塗りだけの絵でも、戻るときに確かめる（線の本数ではなく ops の描画 op で判定）
-    await page.getByRole('button', { name: 'ホームへ戻る' }).click();
+    await page.locator('.ls-canvas__exit .back-pill').click();
     await expect(page.getByRole('dialog', { name: /描いた線が消えます/ })).toBeVisible();
     await page.getByRole('button', { name: '描き続ける' }).click();
 
-    // 塗りだけの絵も保存できる（meta.doc 付き）
+    // 塗りだけの絵も保存できる（meta.doc 付き）。レッスンの自由のステップは「終わる」で保存して次へ
     await page.getByRole('button', { name: '終わる' }).click();
-    await page.getByRole('button', { name: '保存して終わる' }).click();
-    await expect(page.getByRole('link', { name: /自由お絵描き/ })).toBeVisible();
-    await page.getByRole('link', { name: 'ギャラリー' }).click();
+    await expect(page.locator('.ls-canvas__paper')).toHaveCount(0);
+    await gotoApp(page, '#/gallery');
     await expect(page.getByRole('link', { name: /^自由 / })).toHaveCount(1);
+    const meta = await page.evaluate(
+      () =>
+        new Promise<Record<string, unknown> | null>((resolve) => {
+          const req = indexedDB.open('seichotsu');
+          req.onsuccess = () => {
+            const g = req.result.transaction('drawings').objectStore('drawings').getAll();
+            g.onsuccess = () => resolve(((g.result as { meta?: Record<string, unknown> }[])[0]?.meta as Record<string, unknown>) ?? null);
+          };
+        }),
+    );
+    expect(meta && 'doc' in meta).toBe(true);
   });
 
   test('選択 → 移動 → 確定', async ({ page }) => {
@@ -196,8 +223,8 @@ test.describe('お絵描き v2', () => {
     await expect(toolbar(page).getByRole('button', { name: '元に戻す' })).toBeEnabled();
   });
 
-  test('透過 PNG を書き出す・ギャラリーから PNG で書き出す', async ({ page }) => {
-    const paper = await openFree(page);
+  test('透過 PNG を書き出す・ギャラリーから PNG で書き出す（今までの自由お絵描き = 設定で v2）', async ({ page }) => {
+    const paper = await openFreeV2(page);
     await drag(page, paper, [0.35, 0.45], [0.6, 0.6]);
     await page.getByRole('button', { name: '終わる' }).click();
     const sheet = page.getByRole('dialog', { name: '終わる' });

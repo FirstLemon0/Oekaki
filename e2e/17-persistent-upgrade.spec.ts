@@ -51,7 +51,8 @@ test('永続コンテキスト: v1 のデータの端末で新しい版を開き
     }
     expect(v2.stores['ogDocs']!.keys).toEqual([]);
 
-    // 新しいお絵描きで描いて保存
+    // 新しいお絵描きで描いて保存（設定の値も永続に残ることを見るため、いったん off にしてから on で書く）
+    await setOgEngine(page, false);
     await setOgEngine(page, true);
     const frame = await openOgFree(page);
     await drawOg(page, 2);

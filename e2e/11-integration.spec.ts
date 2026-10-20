@@ -16,6 +16,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { drawLine, gotoApp } from './helpers';
+import { setOgEngine } from './og-helpers';
 
 type AnyStep = { type: string; [k: string]: unknown };
 type AnyLesson = { id: string; steps: AnyStep[] };
@@ -40,7 +41,12 @@ function findStep(pred: (s: AnyStep) => boolean): { lessonId: string; index: num
 
 const toolbar = (page: Page) => page.getByRole('toolbar', { name: '描画ツール' });
 
+/**
+ * 今までの自由お絵描き（#/free の FreeDraw = お絵描き v2）を開く。UR-002 S3 で #/free の既定が新しいお絵描きになったので、
+ * 設定で v2 を選んでから開く（v2 は設定から選べるまま。ADR-0007 D7）
+ */
 async function openFree(page: Page): Promise<Locator> {
+  await setOgEngine(page, false);
   await gotoApp(page);
   await page.getByRole('link', { name: /自由お絵描き/ }).click();
   const paper = page.locator('.ls-canvas__paper');

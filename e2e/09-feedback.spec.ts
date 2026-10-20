@@ -1,8 +1,8 @@
 /**
  * 実機フィードバック（3 回目）の新しい挙動を実操作で確かめる。
  *
- * - 戻る警告: 保存していない線があると「← 戻る」・端末の戻るで確認が出る（描き続ける／戻る）
- * - 下書き: 描きかけで再読込（閉じる確認も出る）→「描きかけがあります」→ 続きから で線が戻る
+ * - 戻る警告: 保存していない線があると「← 戻る」・端末の戻るで確認が出る（描き続ける／戻る）。UR-002 S3 から新しいお絵描きの流れで
+ * - 下書き: 描きかけで再読込（閉じる確認も出る）→「描きかけがあります」→ 続きから で絵が戻る。同じく新しいお絵描きの流れで
  * - 復習スキップ: レッスン開始時の復習を「スキップ」で本編へ。ホームの復習も今日は出ない
  * - 10 回タップ開放: ロックのノードを 3 秒以内に 10 回で「開放」になり、開ける
  * - ドリルの薄表示: 採点済みの線は最新 1 本＋薄い 3 本だけ。「紙を替える」で表示を消しても本数はそのまま
@@ -12,7 +12,13 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { drawFewStrokes, drawLine, gotoApp } from './helpers';
+import { drawLine, gotoApp } from './helpers';
+import { drawOg, OG_ROOT, ogFrame, ogHasContent, ogPixels, setOgEngine, settledPixels, waitOgContent } from './og-helpers';
+
+async function openOgFreeReady(page: Page) {
+  await expect(page.locator(`${OG_ROOT}[data-phase="ready"]`)).toBeVisible({ timeout: 30_000 });
+  return ogFrame(page);
+}
 
 type AnyStep = { type: string; [k: string]: unknown };
 type AnyLesson = { id: string; steps: AnyStep[] };
@@ -38,7 +44,9 @@ async function inkPixels(canvas: Locator): Promise<number> {
   });
 }
 
+/** 今までの自由お絵描き（#/free の FreeDraw = お絵描き v2）。UR-002 S3 の後は設定で v2 を選んでから開く */
 async function openFree(page: Page): Promise<Locator> {
+  await setOgEngine(page, false);
   await gotoApp(page);
   await page.getByRole('link', { name: /自由お絵描き/ }).click();
   const canvas = page.locator('.ls-canvas__paper canvas');
@@ -47,20 +55,24 @@ async function openFree(page: Page): Promise<Locator> {
 }
 
 test.describe('実機フィードバック 3', () => {
+  // UR-002 S3: 自由お絵描きの既定は新しいお絵描き（埋め込みのペイント）。離脱の確認は親（成長通）の 1 回だけ、文言は今までと同じ
   test('戻る警告: 保存していない線があると「戻る」・端末の戻るで確かめる', async ({ page }) => {
-    const canvas = await openFree(page);
-    const pill = page.locator('.ls-canvas__exit .back-pill');
+    await gotoApp(page);
+    await page.getByRole('link', { name: /自由お絵描き/ }).click();
+    const frame = await openOgFreeReady(page);
+    const pill = page.locator(`${OG_ROOT} .back-pill`);
     await expect(pill).toHaveText(/戻る/);
 
-    await drawFewStrokes(page, canvas, 2);
+    await drawOg(page, 2);
+    await waitOgContent(frame);
     const dialog = page.getByRole('dialog', { name: '描いた線が消えます。戻りますか？' });
 
-    // 画面の「戻る」→ 描き続ける（線は残る）
+    // 画面の「戻る」→ 描き続ける（絵は残る）
     await pill.click();
     await expect(dialog).toBeVisible();
     await dialog.getByRole('button', { name: '描き続ける' }).click();
     await expect(dialog).toHaveCount(0);
-    expect(await inkPixels(canvas)).toBeGreaterThan(50);
+    expect(await ogHasContent(frame)).toBe(true);
 
     // 端末の戻る → 確認が出て、画面はそのまま
     await page.goBack();
@@ -76,15 +88,21 @@ test.describe('実機フィードバック 3', () => {
     await expect(page).not.toHaveURL(/#\/free/);
   });
 
-  test('下書き: 描きかけで再読込しても「続きから」で線が戻る', async ({ page }) => {
-    const canvas = await openFree(page);
-    await drawFewStrokes(page, canvas, 3);
-    const before = await inkPixels(canvas);
-    expect(before).toBeGreaterThan(50);
-    // 下書きは 1 秒まとめて保存
-    await expect.poll(() => page.evaluate(() => sessionStorage.getItem('seichotsu.draft.free') !== null)).toBe(true);
+  test('下書き: 描きかけで再読込しても「続きから」で絵が戻る', async ({ page }) => {
+    await gotoApp(page);
+    await page.getByRole('link', { name: /自由お絵描き/ }).click();
+    let frame = await openOgFreeReady(page);
+    await drawOg(page, 3);
+    await waitOgContent(frame);
+    const before = await settledPixels(frame);
+    expect(before.opaque).toBeGreaterThan(50);
+    // 下書きの印（engine og）は最後の確定から 1 秒まとめて置く
+    await expect
+      .poll(() => page.evaluate(() => JSON.parse(sessionStorage.getItem('seichotsu.draft.free') ?? 'null')?.engine ?? null))
+      .toBe('og');
+    await page.waitForTimeout(2500);
 
-    // 閉じる（再読込）ときはブラウザの確認が出る
+    // 閉じる（再読込）ときはブラウザの確認が出る（親の 1 回だけ）
     const kinds: string[] = [];
     page.on('dialog', (d) => {
       kinds.push(d.type());
@@ -92,13 +110,13 @@ test.describe('実機フィードバック 3', () => {
     });
     await page.reload();
     await page.locator('.loading').waitFor({ state: 'detached' }).catch(() => undefined);
-    expect(kinds).toContain('beforeunload');
+    expect(kinds.filter((k) => k === 'beforeunload')).toHaveLength(1);
 
     const offer = page.getByRole('dialog', { name: '描きかけがあります' });
     await expect(offer).toBeVisible();
     await offer.getByRole('button', { name: '続きから' }).click();
-    const canvas2 = page.locator('.ls-canvas__paper canvas');
-    await expect.poll(() => inkPixels(canvas2)).toBeGreaterThan(before * 0.5);
+    frame = await openOgFreeReady(page);
+    await expect.poll(async () => (await ogPixels(frame)).opaque, { timeout: 15_000 }).toBeGreaterThan(before.opaque * 0.5);
 
     // 保存（終わる）したら下書きは消える
     await page.getByRole('button', { name: '終わる' }).click();

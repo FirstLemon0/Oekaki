@@ -1,8 +1,11 @@
 /**
  * 自由お絵描き: #/free で描いて終わる → ギャラリーに1枚増える。
+ * UR-002 S3 から #/free の既定は新しいお絵描き（埋め込みのペイントの iframe）。文言（「終わる」「保存して終わる」「自由」のタイル）は今までと同じ。
+ * 今までのお絵描き（v2）は設定で選べる（その流れは 10-paint の透過 PNG・11-integration で確かめる）。
  */
 import { expect, test } from '@playwright/test';
-import { drawFewStrokes, gotoApp } from './helpers';
+import { gotoApp } from './helpers';
+import { drawOg, OG_FRAME, OG_ROOT, ogFrame, waitOgContent } from './og-helpers';
 
 test.describe('自由お絵描き', () => {
   test('描いて終わるとギャラリーに増える', async ({ page }) => {
@@ -10,12 +13,14 @@ test.describe('自由お絵描き', () => {
 
     await page.getByRole('link', { name: /自由お絵描き/ }).click();
 
-    const canvas = page.locator('.ls-canvas__paper canvas');
-    await expect(canvas).toBeVisible();
-    await drawFewStrokes(page, canvas, 3);
+    // 既定は新しいお絵描き（設定を触らずに）
+    await expect(page.locator(`${OG_ROOT}[data-phase="ready"]`)).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator(OG_FRAME)).toHaveAttribute('src', '/paint/embed.html');
+    await drawOg(page, 3);
+    await waitOgContent(await ogFrame(page));
 
     await page.getByRole('button', { name: '終わる' }).click();
-    // 「終わる」シート（お絵描き v2）: 保存して終わる
+    // 「終わる」シート: 保存して終わる
     await page.getByRole('button', { name: '保存して終わる' }).click();
 
     // ホームへ戻ったらギャラリーへ

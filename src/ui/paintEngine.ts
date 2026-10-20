@@ -10,8 +10,11 @@
  */
 import type { PaintEngine, Settings } from '@/data/types';
 
-/** 設定で選んでいないときのエンジン */
-export const DEFAULT_PAINT_ENGINE: PaintEngine = 'v2';
+/**
+ * 設定で選んでいないときのエンジン（S3 = 'og'。2026-10-20）。
+ * 利用者から不具合の報告があれば、ここを 'v2' に戻すコミットを先に出す（ADR-0007 D7。設定で 'og' を選んだ人はそのまま）。
+ */
+export const DEFAULT_PAINT_ENGINE: PaintEngine = 'og';
 
 /** 設定の「新しいお絵描き（試験中）」の文言 */
 export const PAINT_ENGINE_LABEL = '新しいお絵描き（試験中）';

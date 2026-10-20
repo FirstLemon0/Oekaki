@@ -2,7 +2,7 @@
  * 新しいお絵描き（#/free を埋め込みのペイントで開く、UR-002 S2 / ADR-0007 D3・D6・D7）。
  *
  * 受け入れ:
- * - ilust-free-opens-og: 設定 paintEngine = 'og' で #/free が /paint/embed.html の iframe を開き、ogEmbed.version === 1 で描ける。
+ * - ilust-free-opens-og: 設定 paintEngine = 'og'（S3 の後は既定）で #/free が /paint/embed.html の iframe を開き、ogEmbed.version === 1 で描ける。
  *   版が違えば今までのお絵描き（FreeDraw）に戻る
  * - ilust-free-contracts: 『終わる』→『保存して終わる』で free / after / before（profile の afterDrawingId / beforeCreatedAt も）、
  *   何も描いていなければ保存しない、5 分以上の実描画でストリーク +1（5 分未満は数えない）、透過 PNG の長辺 2048・四隅 α = 0・名前、
@@ -30,12 +30,22 @@ import {
   waitOgContent,
 } from './og-helpers';
 
-test.describe('新しいお絵描き（設定で試験的に）', () => {
+test('既定（設定を触らない新しい端末）で #/free は新しいお絵描き、設定の「新しいお絵描き（試験中）」は on（UR-002 S3）', async ({ page }) => {
+  await gotoApp(page, '#/free');
+  await expect(page.locator(`${OG_ROOT}[data-phase="ready"]`)).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator(OG_FRAME)).toHaveAttribute('src', '/paint/embed.html');
+  await gotoApp(page, '#/settings?section=practice');
+  await expect(page.getByRole('switch', { name: '新しいお絵描き（試験中）' })).toHaveAttribute('aria-checked', 'true');
+  // 設定の値は書いていない（未設定 = 既定に従う）
+  expect((await readSingleton(page, 'settings'))?.['paintEngine'] ?? null).toBeNull();
+});
+
+test.describe('新しいお絵描き', () => {
   test.beforeEach(async ({ page }) => {
     await setOgEngine(page, true);
   });
 
-  test('ilust-free-opens-og: #/free が /paint/embed.html を開き、ogEmbed v1 で描ける。既定（off）では今までのお絵描き', async ({ page }) => {
+  test('ilust-free-opens-og: #/free が /paint/embed.html を開き、ogEmbed v1 で描ける。設定を off にすると今までのお絵描き', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     const frame = await openOgFree(page);
