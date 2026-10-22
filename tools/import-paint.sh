@@ -7,6 +7,7 @@
 # - 取り込みの基点は受け入れ済みのタグ（m<n>-accepted）が指すコミットだけ。タグの無いコミットは拒む
 #   （IMPORT_PAINT_ALLOW_UNTAGGED=1 は試験用。BUILD.json の ogAccepted が null になり、check-paint-artifact が拒む）
 # - OG の作業木がそのコミットに一致し、未追跡を含めて clean（`git status --porcelain` が空）。ci とビルドの後にもう一度確かめる
+#   （OG の e2e が書き直す追跡済みの docs/progress/ の画像だけは og_commit の版に戻してから確かめる）
 # - OG の `npm run ci`・`npm run build:embed`・`npm run check:embed` が緑のときだけ置き換える
 #   （IMPORT_PAINT_SKIP_OG_CI=1 は試験用。BUILD.json の ogCi が skipped になり、check-paint-artifact が拒む = push できない）
 # - 取り込むのは OG の dist-embed/ の成果物だけ（OG のソース・.map・sw.js・manifest・sandbox・bench は入れない）
@@ -55,9 +56,21 @@ echo "== OG: npm run build:embed"
 echo "== OG: npm run check:embed"
 (cd "${OG_DIR}" && npm run check:embed)
 
-# ci とビルドで作業木が変わっていない（生成物が追跡のファイルを書き換えた・未追跡を足したなら、成果物は og_commit から再現できない）
+# ci とビルドで作業木が変わっていない（生成物が追跡のファイルを書き換えた・未追跡を足したなら、成果物は og_commit から再現できない）。
+# 例外は 1 つだけ: OG の e2e が証跡として書き直す、追跡済みの docs/progress/ の画像（「 M」= 既存の追跡のファイルの書き換え。
+# 埋め込みのビルドの入力ではない）。これは og_commit の版に戻して（git checkout --）から、もう一度 clean を厳密に確かめる。
+# 新しく足された画像・docs/progress/ の外・画像以外は従来どおり拒む。
 dirty="$(og_status)"
-[ -z "${dirty}" ] || die "OG の ci / build:embed の後に作業木が clean でなくなりました: $(echo "${dirty}" | head -5 | tr '\n' ' ')"
+if [ -n "${dirty}" ]; then
+  evidence="$(printf '%s\n' "${dirty}" | grep -E '^ M docs/progress/[A-Za-z0-9._/-]+\.(png|jpe?g|webp)$' || true)"
+  others="$(printf '%s\n' "${dirty}" | grep -vE '^ M docs/progress/[A-Za-z0-9._/-]+\.(png|jpe?g|webp)$' || true)"
+  [ -z "${others}" ] || die "OG の ci / build:embed の後に作業木が clean でなくなりました: $(echo "${others}" | head -5 | tr '\n' ' ')"
+  mapfile -t evidence_paths < <(printf '%s\n' "${evidence}" | sed -E 's/^ M //')
+  echo "import-paint: OG の e2e が書き直した証跡の画像 ${#evidence_paths[@]} 件を ${og_commit:0:12} の版に戻します: ${evidence_paths[*]}"
+  git -C "${OG_DIR}" checkout -- "${evidence_paths[@]}"
+  dirty="$(og_status)"
+  [ -z "${dirty}" ] || die "OG の証跡の画像を戻した後も作業木が clean ではありません: $(echo "${dirty}" | head -5 | tr '\n' ' ')"
+fi
 [ "$(git -C "${OG_DIR}" rev-parse HEAD)" = "${og_commit}" ] || die "OG の HEAD が取り込みの間に変わりました"
 
 src="${OG_DIR}/dist-embed"

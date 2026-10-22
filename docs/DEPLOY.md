@@ -97,7 +97,8 @@ main への push は `tools/safe-push.sh` だけで行います（2026-10-19 の
 埋め込みのペイント（`public/paint/`）の更新は `tools/import-paint.sh <OG-nanika の受け入れのタグ>`（例 `tools/import-paint.sh m7-accepted`）で行います。
 取り込みの元は **受け入れ済みのタグ（`m<n>-accepted`）が指すコミットだけ**（ADR-0008 D10-1）。OG の作業木はそのコミットで、未追跡を含めて clean
 （`git status --porcelain` が空。別の作業中の OG を汚さないよう `git -C ../OG-nanika worktree add --detach ../OG-nanika-ilust m7-accepted` で作った作業木を
-`OG_DIR` に渡してよい）。OG 側の `npm run ci`（省かない）・`build:embed`・`check:embed` が緑のときだけ置き換え、`public/paint/BUILD.json`（schema 2）に
+`OG_DIR` に渡してよい）。ci の後にもう一度 clean を確かめます（例外は OG の e2e が証跡として書き直す追跡済みの `docs/progress/` の画像だけで、
+取り込みが og のコミットの版に戻してから厳密に確かめます）。OG 側の `npm run ci`（省かない）・`build:embed`・`check:embed` が緑のときだけ置き換え、`public/paint/BUILD.json`（schema 2）に
 ハッシュと関門の記録（`ogRef`・`ogAccepted`・`ogCi`・`ogClean`・`entryJsGzipBytes`・`ogInitialJsGzipBytes`）を書きます。`check-paint-artifact` は
 `ogCi = skipped`・`ogClean ≠ true`・タグ無しの取り込みを拒み、`embed.html` の CSP の meta（`script-src 'self'`・`object-src 'none'`）を確かめます
 （meta の無い成果物は契約 0.10.0 より前 = M7 までの成果物だけ警告で通す移行の印）。

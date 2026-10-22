@@ -8,6 +8,7 @@
 //   - IMPORT_PAINT_SKIP_OG_CI=1 の取り込みは ogCi = skipped と記録され、check-paint-artifact が拒む（push できない）
 //   - 受け入れのタグの無いコミットは拒む（IMPORT_PAINT_ALLOW_UNTAGGED=1 でも check-paint-artifact が拒む）
 //   - OG の HEAD が指定のコミットでなければ拒む。OG が git worktree でも取り込める
+//   - OG の e2e が書き直す追跡済みの docs/progress/ の画像だけは og_commit の版に戻して取り込む（例外は狭い）
 import { execFileSync, spawnSync } from 'node:child_process';
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -46,13 +47,20 @@ function write(dir, rel, body) {
 }
 
 /** 偽の OG: ci は無視されるディレクトリに印を置く（ciDirty なら追跡外のファイルを作る）、build:embed は dist-embed/ を作る */
-function makeOg(base, { ciDirty = false } = {}) {
+function makeOg(base, { ciDirty = false, ciScript = null } = {}) {
   const og = join(base, 'OG-nanika');
   mkdirSync(og, { recursive: true });
   git(og, 'init', '-b', 'main');
-  const ciCmd = ciDirty
-    ? "node -e \"require('fs').writeFileSync('stray-from-ci.txt','x')\""
-    : "node -e \"require('fs').mkdirSync('out',{recursive:true});require('fs').writeFileSync('out/ci-ran','1')\"";
+  const ciCmd = ciScript
+    ? 'node tooling/ci.mjs'
+    : ciDirty
+      ? "node -e \"require('fs').writeFileSync('stray-from-ci.txt','x')\""
+      : "node -e \"require('fs').mkdirSync('out',{recursive:true});require('fs').writeFileSync('out/ci-ran','1')\"";
+  if (ciScript) write(og, 'tooling/ci.mjs', ciScript);
+  // OG の e2e が書き直す証跡（追跡済み）
+  write(og, 'docs/progress/m3/shot.png', 'png-v1');
+  write(og, 'docs/progress/m7/shot.jpg', 'jpg-v1');
+  write(og, 'docs/progress/m7/README.md', 'notes\n');
   write(
     og,
     'package.json',
@@ -88,7 +96,7 @@ function makeOg(base, { ciDirty = false } = {}) {
   write(og, 'src/embed/api.ts', 'export const EMBED_API_VERSION = 1;\n');
   write(og, '.gitignore', 'dist-embed/\nnode_modules/\nout/\n');
   write(og, 'node_modules/vite/package.json', JSON.stringify({ name: 'vite', version: '6.4.4' }));
-  git(og, 'add', 'package.json', 'tooling', 'src', '.gitignore');
+  git(og, 'add', 'package.json', 'tooling', 'src', '.gitignore', 'docs');
   git(og, 'commit', '-m', 'og v1');
   git(og, 'tag', '-a', 'm7-accepted', '-m', 'M7 accepted');
   return og;
@@ -209,5 +217,38 @@ describe('tools/import-paint.sh', () => {
     r = importPaint(il, wt, 'm7-accepted');
     expect(r.code, r.out).toBe(0);
     expect(readBuild(il)).toMatchObject({ ogAccepted: 'm7-accepted', ogCi: 'ran', ogClean: true });
+  });
+
+  it('OG の e2e が書き直した追跡済みの docs/progress/ の画像だけは og_commit の版に戻して取り込む', () => {
+    const ci = [
+      "import { writeFileSync } from 'node:fs';",
+      "writeFileSync('docs/progress/m3/shot.png', 'png-v2');",
+      "writeFileSync('docs/progress/m7/shot.jpg', 'jpg-v2');",
+    ].join('\n');
+    const { og, il } = setup({ ciScript: ci });
+    const r = importPaint(il, og, 'm7-accepted');
+    expect(r.code, r.out).toBe(0);
+    expect(r.out).toMatch(/証跡の画像 2 件を/);
+    expect(readFileSync(join(og, 'docs/progress/m3/shot.png'), 'utf8')).toBe('png-v1');
+    expect(readFileSync(join(og, 'docs/progress/m7/shot.jpg'), 'utf8')).toBe('jpg-v1');
+    expect(git(og, 'status', '--porcelain')).toBe('');
+    expect(readBuild(il)).toMatchObject({ ogCi: 'ran', ogClean: true });
+  });
+
+  it('証跡の例外は狭い: 新しい画像・画像以外・docs/progress/ の外の書き換えは拒む', () => {
+    const cases = [
+      ["writeFileSync('docs/progress/m7/new.png', 'x');", /new\.png/],
+      ["writeFileSync('docs/progress/m7/README.md', 'changed');", /README\.md/],
+      ["writeFileSync('src/core/VERSION', '0.9.9');", /VERSION/],
+    ];
+    for (const [line, re] of cases) {
+      const ci = ["import { writeFileSync } from 'node:fs';", "writeFileSync('docs/progress/m3/shot.png', 'png-v2');", line].join('\n');
+      const { og, il } = setup({ ciScript: ci });
+      const r = importPaint(il, og, 'm7-accepted');
+      expect(r.code, r.out).not.toBe(0);
+      expect(r.out).toMatch(/clean でなくなりました/);
+      expect(r.out).toMatch(re);
+      expect(existsSync(join(il, 'public', 'paint'))).toBe(false);
+    }
   });
 });
