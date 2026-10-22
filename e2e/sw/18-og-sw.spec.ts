@@ -114,7 +114,7 @@ test.describe('Service Worker と新しいお絵描き', () => {
   });
 });
 
-test('ilust-sup-followup-12: SW の install で埋め込みの assets/ を全部先に入れ、開く前に通信を切っても全部読める', async ({ page, context }) => {
+test('ilust-warm-lazy-chunks: SW の install で埋め込みの assets/ を全部先に入れ、開く前に通信を切っても全部読める（ilust-sup-followup-12）', async ({ page, context }) => {
   test.skip(!existsSync(BUILD_JSON), '成果物（public/paint/）を取り込んでいないビルド');
   const build = JSON.parse(readFileSync(BUILD_JSON, 'utf8')) as { buildId: string; files: Record<string, string> };
   const want = Object.keys(build.files)

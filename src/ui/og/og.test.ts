@@ -108,7 +108,7 @@ describe('API の版と形（ilust-free-opens-og: 版が違えば旧 FreeDraw）
     expect(isOgEmbedApi(null)).toBe(false);
   });
 
-  it('S4（ilust-sup-followup-10）: 下書きの口（saveDraft / latestDraft / openDraft）の無い成果物（OG 8af7b0f より前）は形が違う = 未対応', async () => {
+  it('ilust-s4-cleanup: 下書きの口（saveDraft / latestDraft / openDraft）の無い成果物（OG 8af7b0f より前）は形が違う = 未対応（ilust-sup-followup-10）', async () => {
     const api = fakeApi();
     for (const m of ['saveDraft', 'latestDraft', 'openDraft'] as const) {
       expect(isOgEmbedApi({ ...api, [m]: undefined }), m).toBe(false);
@@ -499,6 +499,25 @@ describe('バックアップの互換（設定 paintEngine を足しても版 1 
   });
 });
 
+
+describe('ilust-s4-cleanup: 局所アダプタ（親の写し・別の realm の Blob）が残っていない', () => {
+  const raw = import.meta.glob<string>(['../screens/OgFreeDraw.tsx', './ogDraft.ts'], { query: '?raw', import: 'default', eager: true });
+  const src = (name: string) => Object.entries(raw).find(([k]) => k.endsWith(name))?.[1] ?? '';
+
+  it('OgFreeDraw に frameBlob が無く、続きから描くときは親の Blob（rec.bytes）をそのまま openProject に渡す', () => {
+    const s = src('OgFreeDraw.tsx');
+    expect(s.length).toBeGreaterThan(1000);
+    expect(s).not.toMatch(/frameBlob|toFrameBlob|arrayBuffer\(\)/);
+    expect(s).toContain('await api.openProject(rec.bytes);');
+  });
+
+  it("ogDraft に snapshot の持ち方と seichotsu-drafts の写しの読み書きが無い（DB の名前だけ予約）", () => {
+    const s = src('ogDraft.ts');
+    expect(s.length).toBeGreaterThan(1000);
+    expect(s).not.toMatch(/kind: 'snapshot'|api\.serializeProject\(|\.put\(|sweepOrphan|createObjectStore/);
+    expect(s).toContain("export const OG_DRAFT_DB = 'seichotsu-drafts';");
+  });
+});
 
 describe('下書きの持ち方（OG のジャーナル。S4 で親の写しは外した）', () => {
   function journalApi() {

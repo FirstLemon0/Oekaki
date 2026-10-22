@@ -73,7 +73,7 @@ function fakeServer(bodies: Record<string, string>, opts: { delayMs?: number; th
   } };
 }
 
-describe('先に入れる一覧（paintPrefetchList）', () => {
+describe('ilust-warm-lazy-chunks: 先に入れる一覧（paintPrefetchList）と件数の上限', () => {
   it('assets/ の下だけ・.bin と embed.html を除く・sha256 の形が正しいものだけ・名前順', () => {
     const files = {
       'embed.html': hex('html'),
@@ -120,7 +120,7 @@ describe('先に入れる一覧（paintPrefetchList）', () => {
   });
 });
 
-describe('埋め方（fillPaintCache）', () => {
+describe('ilust-warm-lazy-chunks: 埋め方（fillPaintCache）', () => {
   let list: PaintFileEntry[] = [];
   let bodies: Record<string, string> = {};
   beforeAll(() => {

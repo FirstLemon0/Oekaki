@@ -110,7 +110,7 @@ test.describe('新しいお絵描き', () => {
     await expect(page.getByTestId('og-fallback-last')).toHaveText(new RegExp(`^最後に今までのお絵描きに戻った理由: version（.+）・\\d{4}/\\d{2}/\\d{2} \\d{2}:\\d{2}・版 ${rec.buildId}$`));
   });
 
-  test('S4: 下書きの口の無い成果物（OG 8af7b0f より前の v1）は未対応 = 今までのお絵描きに戻る（理由: version）', async ({ page }) => {
+  test('ilust-s4-cleanup: 下書きの口の無い成果物（OG 8af7b0f より前の v1）は未対応 = 今までのお絵描きに戻る（理由: version）', async ({ page }) => {
     await page.route('**/paint/embed.html', (route) =>
       route.fulfill({
         status: 200,
