@@ -108,4 +108,8 @@ OGNK の形式か `ogContract` が上がる取り込みの前には、配信中�
 （今あるのは `e2e/fixtures/og-8af7b0f.ognk`）。
 
 新しいお絵描きの下書きの印は localStorage（`seichotsu.ogDraft.free`、24 時間）にあり、タブやアプリを閉じた後に開き直しても「続きから / 捨てる」が出ます。
+下書きの本体は OG の自動保存の記録（ジャーナル）だけで、埋め込みの下書きの口（`saveDraft` / `latestDraft` / `openDraft`、OG 8af7b0f 以降）が無い成果物には繋がず、
+今までのお絵描きに戻ります（理由 version）。M7 の局所アダプタ（親が IndexedDB `seichotsu-drafts` に持つ文書の写し・別の realm の Blob への写し直し）は
+UR-002 S4（2026-10-22、ilust-sup-followup-10）で外しました。`seichotsu-drafts` の名前は予約として残し、古い版の写しは印を消すときに DB があれば 1 件消します
+（DB を作らない・形を変えない）。「今までのお絵描き」（v2）は RQ-7（Yoga Tab の実機確認）に合格するまで設定で選べるまま残します。
 今までのお絵描きに戻った理由（missing / version / boot / timeout / open）は通知の末尾と設定の「練習」の 1 行（localStorage の `seichotsu.ogFallback.last`）に出ます。

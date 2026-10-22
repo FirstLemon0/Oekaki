@@ -3,6 +3,8 @@
  *
  * - 型は OG の `src/embed/api.ts`（EMBED_API_VERSION = 1）の写し。OG のソースは Ilust に入れない（ADR-0007 D4-3）ので、
  *   形は値の検査（isOgEmbedApi）で確かめてから使う。版が違う・形が違う・起動に失敗した → 呼び出し側は旧 FreeDraw に戻す。
+ * - [S4、ilust-sup-followup-10] 下書きの口（saveDraft / latestDraft / openDraft、OG 8af7b0f 以降）は**必須**。口の無い成果物は
+ *   形が違う = 'version' で繋がず、今までのお絵描きに戻る（M7 の局所アダプタ「親の写し」と「別の realm の Blob」は外した）。
  * - 同じオリジンの iframe の contentWindow を直接さわる（postMessage は使わない）。
  */
 
@@ -69,9 +71,15 @@ export interface OgEmbedApi {
   onStroke(cb: (s: OgStrokeSpan) => void): () => void;
   onDirtyChange(cb: (dirty: boolean) => void): () => void;
   dispose(): void;
+  /** 下書き（OG の自動保存の記録 = ジャーナル）に今の文書を書く。描いていなければ null */
+  saveDraft(): Promise<OgEmbedDraftMark | null>;
+  /** いちばん新しい下書き（無ければ null） */
+  latestDraft(): Promise<OgEmbedDraft | null>;
+  /** 下書きを開く */
+  openDraft(id: string): Promise<void>;
 }
 
-/** 下書き（OG の自動保存の記録 = ジャーナル）。v1 に後から足された口（無い成果物もある） */
+/** 下書き（OG の自動保存の記録 = ジャーナル）。v1 に後から足された口（OG 8af7b0f 以降。無い成果物には繋がない） */
 export interface OgEmbedDraft {
   readonly id: string;
   readonly docId: string;
@@ -82,22 +90,6 @@ export interface OgEmbedDraft {
 export interface OgEmbedDraftMark {
   readonly docId: string;
   readonly savedAt: string;
-}
-
-/**
- * v1 に**足された**下書きの口（OG の w2-embed。版は 1 のまま）。`typeof api.latestDraft === 'function'` で確かめてから使う。
- * 無い成果物（wave 1 の 2906365 など）では、親が serializeProject の写しを持つ局所アダプタ（og/ogDraft.ts）を使う。
- */
-export interface OgEmbedDraftApi {
-  saveDraft(): Promise<OgEmbedDraftMark | null>;
-  latestDraft(): Promise<OgEmbedDraft | null>;
-  openDraft(id: string): Promise<void>;
-}
-
-/** 下書きの口（ジャーナル）を持つ成果物か */
-export function hasJournalDrafts(api: OgEmbedApi): api is OgEmbedApi & OgEmbedDraftApi {
-  const o = api as unknown as Record<string, unknown>;
-  return typeof o['saveDraft'] === 'function' && typeof o['latestDraft'] === 'function' && typeof o['openDraft'] === 'function';
 }
 
 const METHODS = [
@@ -113,9 +105,13 @@ const METHODS = [
   'onStroke',
   'onDirtyChange',
   'dispose',
+  // 下書きの口（v1 に足された。無い成果物 = OG 8af7b0f より前は形が違う扱い）
+  'saveDraft',
+  'latestDraft',
+  'openDraft',
 ] as const;
 
-/** v1 の形をしているか（版は見ない。版は isCompatibleOgEmbed） */
+/** v1 の形（下書きの口を含む）をしているか（版は見ない。版は isCompatibleOgEmbed） */
 export function isOgEmbedApi(v: unknown): v is OgEmbedApi {
   if (!v || typeof v !== 'object') return false;
   const o = v as Record<string, unknown>;
@@ -134,7 +130,7 @@ export function isCompatibleOgEmbed(v: unknown): v is OgEmbedApi {
 export type OgConnectFailure =
   /** iframe の読み込みが終わらない・window に ogEmbed が出てこない */
   | 'missing'
-  /** ogEmbed はあるが版か形が違う */
+  /** ogEmbed はあるが版か形が違う（下書きの口の無い古い成果物を含む） */
   | 'version'
   /** ready が reject した（起動に失敗） */
   | 'boot'

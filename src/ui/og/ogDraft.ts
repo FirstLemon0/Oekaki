@@ -1,5 +1,5 @@
 /**
- * 新しいお絵描き（#/free の OgFreeDraw）の下書き（UR-002 / ADR-0007 D6-4、ilust-sup-integration-14、ilust-sup-followup-04）。
+ * 新しいお絵描き（#/free の OgFreeDraw）の下書き（UR-002 / ADR-0007 D6-4、ilust-sup-integration-14、ilust-sup-followup-04 / -10）。
  *
  * - 印（`{ engine: 'og', docId, savedAt, continueId }`）は **localStorage**（`seichotsu.ogDraft.free`）に置く。タブを閉じた・ホーム画面のアプリ（PWA）を
  *   終了した・OS が背景で落とした後に開き直しても残り、「続きから / 捨てる」を出せる（M7 までは sessionStorage = 開き直すと印が無く、
@@ -10,13 +10,15 @@
  * - #/free を開いている間は Web Locks の `og-free-draft` を取る（acquireDraftLock）。取れたタブだけが掃除・印の読み書きをする。
  *   取れない（別のタブで #/free を開いている）タブは共有の持ち方（sharedKeeper）: 印に触れず、掃除せず、下書きを出さない
  *   （OG のジャーナルは別のタブで動いている文書を復旧・掃除の対象にしない = 消えない）。
- * - 文書の本体（.ognk）の置き場: 成果物に下書きの口（saveDraft / latestDraft / openDraft）があれば OG の自動保存の記録（ジャーナル、ADR-0007 D6-4）。
- *   口の無い成果物では局所アダプタとして、親が `ogEmbed.serializeProject()` の写しを専用の小さい IndexedDB（`seichotsu-drafts`、成長通の `seichotsu`
- *   とは別）に 1 件だけ持つ。成長通の DB・バックアップには入らない。
+ * - 文書の本体（.ognk）の置き場は **OG の自動保存の記録（ジャーナル、ADR-0007 D6-4）だけ**。成果物の下書きの口（saveDraft / latestDraft / openDraft）を使う。
+ *   口の無い成果物（OG 8af7b0f より前）は未対応: connectOgEmbed が 'version' で失敗し、今までのお絵描きに戻る（embedApi.ts）。
+ * - [S4、ilust-sup-followup-10] M7 の局所アダプタ「親の写し」（`ogEmbed.serializeProject()` の写しを専用の IndexedDB `seichotsu-drafts` の
+ *   ストア `og` に 1 件）は外した。DB の名前 `seichotsu-drafts`（OG_DRAFT_DB）は印の移し先として予約したまま残す（成長通の DB・バックアップには入らない）。
+ *   古い版が残した写し（期限 24 時間の一時的なもの）は、印を消すときに DB が既にあるときだけ 1 件消す（DB を作らない・形を変えない = dropLegacySnapshot）。
  * - 「続きから」は印と本体の docId が一致したときだけ。保存して終わった・戻るで捨てた・画面を離れたら印も本体も消す。
  * - 失敗（容量不足など）は静かに諦める（印も消す。古い下書きを残さない。v2 の draft.ts と同じ考え方）。
  */
-import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import { openDB } from 'idb';
 
 /** 印のキー（localStorage）。v2 の下書き（sessionStorage の seichotsu.draft.free）とは別のキー */
 export const OG_DRAFT_MARK_KEY = 'seichotsu.ogDraft.free';
@@ -28,9 +30,13 @@ export const OG_DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
 export const OG_DRAFT_LOCK = 'og-free-draft';
 /** 別のタブが手放すのを待つ時間（再読み込みの直後は前の文書のロックが少し残ることがある） */
 export const OG_DRAFT_LOCK_WAIT_MS = 2000;
+/**
+ * 下書きの DB の名前（予約。M7 の親の写しの置き場だった。今は印の移し先として名前だけ残す = ほかの用途に使わない）。
+ * 古い版の写しはストア `og` のキー `free` の 1 件（LEGACY_SNAPSHOT_STORE / LEGACY_SNAPSHOT_KEY）
+ */
 export const OG_DRAFT_DB = 'seichotsu-drafts';
-const STORE = 'og';
-const SLOT = 'free';
+export const LEGACY_SNAPSHOT_STORE = 'og';
+export const LEGACY_SNAPSHOT_KEY = 'free';
 
 export interface OgDraftMark {
   engine: 'og';
@@ -41,26 +47,13 @@ export interface OgDraftMark {
   continueId: string | null;
 }
 
-interface OgDraftRecord {
-  key: string;
-  docId: string;
-  bytes: Blob;
-  savedAt: string;
-  continueId: string | null;
-}
-
-interface DraftDB extends DBSchema {
-  og: { key: string; value: OgDraftRecord };
-}
-
 export interface OgDraftStoreDeps {
   /** 印の置き場（localStorage。無い環境では null） */
   storage(): Storage | null;
   /** M7 までの印の置き場（sessionStorage）。読んだら storage に移して消す */
   legacyStorage?(): Storage | null;
-  /** 下書きの DB を開く */
-  openDb(): Promise<IDBPDatabase<DraftDB>>;
-  now?(): Date;
+  /** 古い版が残した親の写しを消す（印を消すときに呼ぶ。既定は dropLegacySnapshot。失敗は無視） */
+  dropLegacy?(): Promise<void>;
 }
 
 export interface OgDraftStore {
@@ -68,19 +61,8 @@ export interface OgDraftStore {
   readMark(): OgDraftMark | null;
   /** 印を置く / 消す（null） */
   setMark(m: OgDraftMark | null): void;
-  /** 印に対応する本体（docId が違う・無ければ null） */
-  load(mark: OgDraftMark): Promise<Blob | null>;
-  /** 残っている写しの印の形（印が無くても。無ければ null） */
-  peek(): Promise<OgDraftMark | null>;
-  /**
-   * 本体を書いてから印を置く。書けなければ両方消して false。
-   * `isCurrent` が false を返したら（書いている間に画面を離れた・保存した）印を置かずに本体も消す（古い下書きを残さない）
-   */
-  write(d: { docId: string; bytes: Blob; continueId: string | null }, isCurrent?: () => boolean): Promise<boolean>;
-  /** 印と本体を消す */
+  /** 印と、古い版が残した写しを消す */
   clear(): Promise<void>;
-  /** 印が無いのに残っている本体を消す */
-  sweepOrphan(): Promise<void>;
 }
 
 export function parseMark(raw: string | null): OgDraftMark | null {
@@ -136,7 +118,7 @@ export function decideDraft(o: {
 }
 
 export function createOgDraftStore(deps: OgDraftStoreDeps): OgDraftStore {
-  const now = deps.now ?? (() => new Date());
+  const dropLegacy = deps.dropLegacy ?? (() => dropLegacySnapshot());
   const setMark = (m: OgDraftMark | null) => {
     try {
       const s = deps.storage();
@@ -145,14 +127,6 @@ export function createOgDraftStore(deps: OgDraftStoreDeps): OgDraftStore {
       else s.removeItem(OG_DRAFT_MARK_KEY);
     } catch {
       // 何もしない（容量不足・使えない）
-    }
-  };
-  const deleteBody = async () => {
-    try {
-      const db = await deps.openDb();
-      await db.delete(STORE, SLOT);
-    } catch {
-      // 何もしない（開けない = 残っていない）
     }
   };
   const readMark = (): OgDraftMark | null => {
@@ -177,80 +151,43 @@ export function createOgDraftStore(deps: OgDraftStoreDeps): OgDraftStore {
   return {
     readMark,
     setMark,
-    async load(mark) {
-      try {
-        const db = await deps.openDb();
-        const rec = await db.get(STORE, SLOT);
-        if (!rec || rec.docId !== mark.docId || !(rec.bytes instanceof Blob) || rec.bytes.size === 0) return null;
-        return rec.bytes;
-      } catch {
-        return null;
-      }
-    },
-    async peek() {
-      try {
-        const db = await deps.openDb();
-        const rec = await db.get(STORE, SLOT);
-        if (!rec || !(rec.bytes instanceof Blob) || rec.bytes.size === 0) return null;
-        return { engine: 'og', docId: rec.docId, savedAt: rec.savedAt, continueId: rec.continueId ?? null };
-      } catch {
-        return null;
-      }
-    },
-    async write({ docId, bytes, continueId }, isCurrent = () => true) {
-      const savedAt = now().toISOString();
-      try {
-        if (!isCurrent()) return false;
-        const db = await deps.openDb();
-        await db.put(STORE, { key: SLOT, docId, bytes, savedAt, continueId });
-        if (!isCurrent()) {
-          await deleteBody();
-          return false;
-        }
-        const s = deps.storage();
-        if (!s) return true;
-        const mark: OgDraftMark = { engine: 'og', docId, savedAt, continueId };
-        s.setItem(OG_DRAFT_MARK_KEY, JSON.stringify(mark));
-        return true;
-      } catch {
-        setMark(null);
-        await deleteBody();
-        return false;
-      }
-    },
     async clear() {
       setMark(null);
-      await deleteBody();
-    },
-    async sweepOrphan() {
-      if (readMark()) return;
-      await deleteBody();
+      await dropLegacy().catch(() => undefined);
     },
   };
 }
 
-let dbPromise: Promise<IDBPDatabase<DraftDB>> | null = null;
+interface IdbFactoryLike {
+  databases?(): Promise<Array<{ name?: string | null }>>;
+}
 
-function openDraftDb(): Promise<IDBPDatabase<DraftDB>> {
-  if (!dbPromise) {
-    const p = openDB<DraftDB>(OG_DRAFT_DB, 1, {
-      upgrade(db) {
-        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'key' });
-      },
-      blocking() {
-        void p.then((db) => db.close()).catch(() => undefined);
-        if (dbPromise === p) dbPromise = null;
-      },
-      terminated() {
-        if (dbPromise === p) dbPromise = null;
-      },
-    });
-    p.catch(() => {
-      if (dbPromise === p) dbPromise = null;
-    });
-    dbPromise = p;
+/**
+ * 古い版（M7 の局所アダプタ）が `seichotsu-drafts` に残した親の写しを 1 件消す。
+ * - DB が無ければ何もしない（`indexedDB.databases()` で確かめる。無い環境では何もしない = DB を新しく作らない）
+ * - 版を指定せずに開く = upgrade を起こさない（DB とストアの形は変えない。名前は印の移し先として予約）
+ * - 失敗は静かに諦める（一時的な写しで、24 時間で期限切れ）
+ */
+export async function dropLegacySnapshot(
+  idb: IdbFactoryLike | undefined = (globalThis as { indexedDB?: IdbFactoryLike }).indexedDB,
+): Promise<boolean> {
+  try {
+    if (!idb || typeof idb.databases !== 'function') return false;
+    const list = await idb.databases();
+    if (!list.some((d) => d.name === OG_DRAFT_DB)) return false;
+    const db = await openDB(OG_DRAFT_DB);
+    try {
+      if (!db.objectStoreNames.contains(LEGACY_SNAPSHOT_STORE)) return false;
+      const tx = db.transaction(LEGACY_SNAPSHOT_STORE, 'readwrite');
+      await tx.store.delete(LEGACY_SNAPSHOT_KEY);
+      await tx.done;
+      return true;
+    } finally {
+      db.close();
+    }
+  } catch {
+    return false;
   }
-  return dbPromise;
 }
 
 /** 印の置き場（localStorage） */
@@ -270,8 +207,8 @@ function sessionStore(): Storage | null {
   }
 }
 
-/** アプリが使う下書きの置き場（localStorage の印 + seichotsu-drafts。M7 の sessionStorage の印は移す） */
-export const ogDraftStore: OgDraftStore = createOgDraftStore({ storage: localStore, legacyStorage: sessionStore, openDb: openDraftDb });
+/** アプリが使う印の置き場（localStorage。M7 の sessionStorage の印は移す） */
+export const ogDraftStore: OgDraftStore = createOgDraftStore({ storage: localStore, legacyStorage: sessionStore });
 
 // ---------------------------------------------------------------------------
 // #/free の Web Lock（取れたタブだけが掃除・印の読み書きをする）
@@ -331,146 +268,93 @@ export function acquireDraftLock(
 }
 
 // ---------------------------------------------------------------------------
-// 下書きの持ち方（2 通り）: OG のジャーナル（口があれば、ADR-0007 D6-4 のとおり）か、親の写し（局所アダプタ）
+// 下書きの持ち方: OG のジャーナル（ADR-0007 D6-4）。別のタブが持ち主のときは shared
 // ---------------------------------------------------------------------------
 
-/** 下書きの持ち方が使う ogEmbed の口（型だけ。og/embedApi.ts の OgEmbedApi の一部） */
+/** 下書きの持ち方が使う ogEmbed の口（型だけ。og/embedApi.ts の OgEmbedApi の一部。下書きの口は必須 = 無い成果物には繋がない） */
 export interface DraftApi {
   hasContent(): boolean;
-  isDirty(): boolean;
-  serializeProject(): Promise<Blob>;
-  openProject(bytes: Blob): Promise<void>;
   discardRecovery(): Promise<void>;
-  saveDraft?(): Promise<{ docId: string; savedAt: string } | null>;
-  latestDraft?(): Promise<{ id: string; docId: string; savedAt: string } | null>;
-  openDraft?(id: string): Promise<void>;
+  saveDraft(): Promise<{ docId: string; savedAt: string } | null>;
+  latestDraft(): Promise<{ id: string; docId: string; savedAt: string } | null>;
+  openDraft(id: string): Promise<void>;
 }
 
 export interface DraftKeeper {
-  /** 'journal' = OG の自動保存の記録（ジャーナル）、'snapshot' = 親の写し（seichotsu-drafts）、'shared' = 別のタブが持ち主 */
-  readonly kind: 'journal' | 'snapshot' | 'shared';
+  /** 'journal' = OG の自動保存の記録（ジャーナル）、'shared' = 別のタブが持ち主 */
+  readonly kind: 'journal' | 'shared';
   /**
    * 今の絵を下書きに書き、印を置く（描いていなければ消す）。失敗は静かに諦める。
    * `isCurrent` が false を返したら（書いている間に画面を離れた・保存した）印を置かない
    */
   save(isCurrent?: () => boolean): Promise<void>;
-  /** 印の下書きを開く。開けたら新しい docId（写しのときは印の docId）、開けなければ null */
+  /** 印の下書きを開く。開けたら下書きの docId、開けなければ null */
   restore(mark: OgDraftMark): Promise<string | null>;
   /** 残っている下書き（印が無くても）を印の形で。無ければ null */
   peek(): Promise<OgDraftMark | null>;
   /** 印と下書きを消す（捨てる・保存した・画面を離れた） */
   clear(): Promise<void>;
-  /** 残った下書き（期限切れ・印の無い写し）を消す */
+  /** 残った下書き（期限切れ・印の無いもの）を消す */
   sweep(): Promise<void>;
 }
 
 export interface DraftKeeperOptions {
   api: DraftApi;
-  /** 親の写しの置き場（印の置き場も兼ねる。ジャーナルのときも、残った写しの掃除に使う） */
+  /** 印の置き場 */
   store: OgDraftStore;
-  /** @deprecated 印は store.setMark で置く（互換のために残す。使わない） */
-  storage?(): Storage | null;
-  /** 今の文書の id（親が付けたもの。写しのときの印に使う） */
-  docId(): string;
   continueId: string | null;
-  /** 親の Blob を iframe の realm の Blob に作り直す（openProject の検査に通すため） */
-  toFrameBlob(b: Blob): Promise<Blob>;
-  now?(): Date;
 }
 
-/** 成果物の口に合わせて下書きの持ち方を選ぶ */
+/** OG のジャーナルで下書きを持つ（ロックが取れたタブ = 持ち主） */
 export function createDraftKeeper(o: DraftKeeperOptions): DraftKeeper {
   const api = o.api;
-  if (typeof api.saveDraft === 'function' && typeof api.latestDraft === 'function' && typeof api.openDraft === 'function') {
-    const saveDraft = api.saveDraft.bind(api);
-    const latestDraft = api.latestDraft.bind(api);
-    const openDraft = api.openDraft.bind(api);
-    return {
-      kind: 'journal',
-      async save(isCurrent = () => true) {
-        try {
-          if (!isCurrent()) return;
-          if (!api.hasContent()) {
-            o.store.setMark(null);
-            return;
-          }
-          const m = await saveDraft();
-          // 書いている間に離れた・保存した: 印を置かない（ジャーナルは次に開いたときの判断か discardRecovery が消す）
-          if (m && isCurrent()) o.store.setMark({ engine: 'og', docId: m.docId, savedAt: m.savedAt, continueId: o.continueId });
-        } catch {
-          // 書けなくても描くのは続けられる
-        }
-      },
-      async restore(mark) {
-        try {
-          const d = await latestDraft();
-          if (!d || d.docId !== mark.docId) return null;
-          await openDraft(d.id);
-          return d.docId;
-        } catch {
-          return null;
-        }
-      },
-      async peek() {
-        try {
-          const d = await latestDraft();
-          // ジャーナルはどの画面の下書きかを知らない = 新しい絵（continueId なし）の画面でだけ出す
-          return d ? { engine: 'og', docId: d.docId, savedAt: d.savedAt, continueId: null } : null;
-        } catch {
-          return null;
-        }
-      },
-      async clear() {
-        o.store.setMark(null);
-        await api.discardRecovery().catch(() => undefined);
-        await o.store.clear();
-      },
-      async sweep() {
-        o.store.setMark(null);
-        await api.discardRecovery().catch(() => undefined);
-        await o.store.clear();
-      },
-    };
-  }
+  const discardAll = async () => {
+    o.store.setMark(null);
+    await api.discardRecovery().catch(() => undefined);
+    await o.store.clear();
+  };
   return {
-    kind: 'snapshot',
+    kind: 'journal',
     async save(isCurrent = () => true) {
       try {
         if (!isCurrent()) return;
         if (!api.hasContent()) {
-          await o.store.clear();
+          o.store.setMark(null);
           return;
         }
-        const bytes = await api.serializeProject();
-        await o.store.write({ docId: o.docId(), bytes, continueId: o.continueId }, isCurrent);
+        const m = await api.saveDraft();
+        // 書いている間に離れた・保存した: 印を置かない（ジャーナルは次に開いたときの判断か discardRecovery が消す）
+        if (m && isCurrent()) o.store.setMark({ engine: 'og', docId: m.docId, savedAt: m.savedAt, continueId: o.continueId });
       } catch {
-        // 写しが取れなくても描くのは続けられる
+        // 書けなくても描くのは続けられる
       }
     },
     async restore(mark) {
-      const blob = await o.store.load(mark);
-      if (!blob) return null;
       try {
-        await api.openProject(await o.toFrameBlob(blob));
-        return mark.docId;
+        const d = await api.latestDraft();
+        if (!d || d.docId !== mark.docId) return null;
+        await api.openDraft(d.id);
+        return d.docId;
       } catch {
         return null;
       }
     },
-    peek: () => o.store.peek(),
-    async clear() {
-      await o.store.clear();
+    async peek() {
+      try {
+        const d = await api.latestDraft();
+        // ジャーナルはどの画面の下書きかを知らない = 新しい絵（continueId なし）の画面でだけ出す
+        return d ? { engine: 'og', docId: d.docId, savedAt: d.savedAt, continueId: null } : null;
+      } catch {
+        return null;
+      }
     },
-    async sweep() {
-      // 使わない OG のジャーナルと、期限切れ・印の無い写し
-      await api.discardRecovery().catch(() => undefined);
-      await o.store.clear();
-    },
+    clear: discardAll,
+    sweep: discardAll,
   };
 }
 
 /**
- * 別のタブが #/free を開いている（ロックが取れない）ときの持ち方。印・写しには触れず、掃除もしない。
+ * 別のタブが #/free を開いている（ロックが取れない）ときの持ち方。印と下書きには触れず、掃除もしない。
  * 画面を離れる・保存するときの discardRecovery は今の文書のため（OG は別のタブで動いている文書の記録を消さない）。
  */
 export function sharedKeeper(api: Pick<DraftApi, 'discardRecovery'>): DraftKeeper {

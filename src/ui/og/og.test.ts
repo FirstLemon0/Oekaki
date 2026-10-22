@@ -5,7 +5,7 @@
  * - onStroke の区間 → activeDrawingMs: 同じ時系列の v2（strokeend の区間）と同じ値、pen / eraser だけ、5 分でストリーク
  * - 保存: 何も描いていなければ保存しない、WebP と .ognk を 1 トランザクション、容量不足で何も書かれず retry で保存できる、
  *   meta.og は JSON の値だけ（meta.doc なし）、続きから描いた絵は同じ id・種別・作成日時で置き換える
- * - 下書き: 印と写しの docId の一致、捨てる・保存の後に何も残らない、書けなければ印も残さない
+ * - 下書き: 印（localStorage）とジャーナルの docId の一致、捨てる・保存の後に何も残らない、古い版の写しは DB があるときだけ消す（S4）
  * - 設定: paintEngine の既定と解決、#/free?og= のルート、テーマの解決・紙の大きさ
  */
 import 'fake-indexeddb/auto';
@@ -32,7 +32,16 @@ import {
   saveOgFree,
 } from './freeSession';
 import { continueTargetOf } from './ogDrawing';
-import { createDraftKeeper, createOgDraftStore, OG_DRAFT_MARK_KEY, type DraftApi } from './ogDraft';
+import {
+  createDraftKeeper,
+  createOgDraftStore,
+  dropLegacySnapshot,
+  LEGACY_SNAPSHOT_KEY,
+  LEGACY_SNAPSHOT_STORE,
+  OG_DRAFT_DB,
+  OG_DRAFT_MARK_KEY,
+  type DraftApi,
+} from './ogDraft';
 
 function freshFactory(): void {
   (globalThis as { indexedDB: IDBFactory }).indexedDB = new IDBFactory();
@@ -80,6 +89,9 @@ function fakeApi(over: Partial<OgEmbedApi> & { content?: boolean } = {}): OgEmbe
     onStroke: () => () => undefined,
     onDirtyChange: () => () => undefined,
     dispose: () => undefined,
+    saveDraft: async () => ({ docId: 'og-doc', savedAt: '2026-10-22T00:00:00.000Z' }),
+    latestDraft: async () => null,
+    openDraft: async () => undefined,
     calls,
   };
   return Object.assign(api, over);
@@ -94,6 +106,20 @@ describe('API の版と形（ilust-free-opens-og: 版が違えば旧 FreeDraw）
     expect(isOgEmbedApi({ ...api, serializeProject: undefined })).toBe(false);
     expect(isOgEmbedApi({ version: 1 })).toBe(false);
     expect(isOgEmbedApi(null)).toBe(false);
+  });
+
+  it('S4（ilust-sup-followup-10）: 下書きの口（saveDraft / latestDraft / openDraft）の無い成果物（OG 8af7b0f より前）は形が違う = 未対応', async () => {
+    const api = fakeApi();
+    for (const m of ['saveDraft', 'latestDraft', 'openDraft'] as const) {
+      expect(isOgEmbedApi({ ...api, [m]: undefined }), m).toBe(false);
+      expect(isCompatibleOgEmbed({ ...api, [m]: undefined }), m).toBe(false);
+    }
+    // wave 1 の成果物（2906365）の形 = 口が 3 つとも無い → connect は 'version' で失敗し、呼び出し側は今までのお絵描きに戻す
+    const { saveDraft: _s, latestDraft: _l, openDraft: _o, ...old } = api;
+    let t = 0;
+    const clock = { now: () => t, sleep: async (ms: number) => void (t += ms) };
+    const r = await connectOgEmbed(() => ({ ogEmbed: old }) as unknown as Window, clock);
+    expect(r).toEqual({ ok: false, reason: 'version' });
   });
 
   it('connectOgEmbed: 出てこない → missing、版違い → version、ready の reject → boot、ready → ok', async () => {
@@ -280,95 +306,120 @@ function memoryStorage(): Storage & { map: Map<string, string> } {
   };
 }
 
-describe('下書き（印 + 写し、ilust-free-contracts の『続きから / 捨てる』）', () => {
-  const open = () =>
-    openDB('seichotsu-drafts-test', 1, {
-      upgrade(d) {
-        d.createObjectStore('og', { keyPath: 'key' });
+describe('下書きの印（localStorage）と古い版の写しの掃除（ilust-free-contracts の『続きから / 捨てる』、S4）', () => {
+  /** 古い版（M7 の局所アダプタ）が使っていた DB の形（ストア og・キー free の 1 件）を作る */
+  async function seedLegacySnapshot(): Promise<void> {
+    const d = await openDB(OG_DRAFT_DB, 1, {
+      upgrade(x) {
+        x.createObjectStore(LEGACY_SNAPSHOT_STORE, { keyPath: 'key' });
       },
-    }) as never;
+    });
+    await d.put(LEGACY_SNAPSHOT_STORE, { key: LEGACY_SNAPSHOT_KEY, docId: 'og-old', bytes: ognk('old'), savedAt: '2026-10-20T00:00:00.000Z', continueId: null });
+    d.close();
+  }
+  async function legacyCount(): Promise<number> {
+    const d = await openDB(OG_DRAFT_DB);
+    try {
+      return d.objectStoreNames.contains(LEGACY_SNAPSHOT_STORE) ? await d.count(LEGACY_SNAPSHOT_STORE) : -1;
+    } finally {
+      d.close();
+    }
+  }
+  const dbNames = async () => (await indexedDB.databases()).map((d) => d.name);
 
-  it('書く → 印（engine og）と写しが残り、docId が一致すれば同じバイトを返す', async () => {
+  it('印を置く → 読める（engine og）。clear で印が消える', async () => {
     const storage = memoryStorage();
-    const store = createOgDraftStore({ storage: () => storage, openDb: open, now: () => new Date('2026-10-20T00:00:00Z') });
-    expect(await store.write({ docId: 'og-1', bytes: ognk('d1'), continueId: null })).toBe(true);
-    const mark = store.readMark();
-    expect(mark).toEqual({ engine: 'og', docId: 'og-1', savedAt: '2026-10-20T00:00:00.000Z', continueId: null });
+    const store = createOgDraftStore({ storage: () => storage, dropLegacy: async () => undefined });
+    store.setMark({ engine: 'og', docId: 'og-1', savedAt: '2026-10-20T00:00:00.000Z', continueId: 'drawing-9' });
+    expect(store.readMark()).toEqual({ engine: 'og', docId: 'og-1', savedAt: '2026-10-20T00:00:00.000Z', continueId: 'drawing-9' });
     expect(JSON.parse(storage.map.get(OG_DRAFT_MARK_KEY)!)).toMatchObject({ engine: 'og', docId: 'og-1' });
-    expect(await bytes((await store.load(mark!))!)).toEqual(await bytes(ognk('d1')));
-    // 別の文書の印では開かない
-    expect(await store.load({ ...mark!, docId: 'og-2' })).toBeNull();
-  });
-
-  it('捨てる・保存の後（clear）は印も写しも無い。印の無い写しは sweepOrphan で消える', async () => {
-    const storage = memoryStorage();
-    const store = createOgDraftStore({ storage: () => storage, openDb: open });
-    await store.write({ docId: 'og-1', bytes: ognk('d1'), continueId: 'drawing-9' });
-    expect(store.readMark()?.continueId).toBe('drawing-9');
     await store.clear();
     expect(store.readMark()).toBeNull();
     expect(storage.map.size).toBe(0);
-    // 別のタブ（印が無い）で残った写し
-    await store.write({ docId: 'og-3', bytes: ognk('d3'), continueId: null });
-    storage.map.clear();
-    await store.sweepOrphan();
-    expect(await store.load({ engine: 'og', docId: 'og-3', savedAt: '', continueId: null })).toBeNull();
   });
 
   it('v2 の下書き（engine の無い JSON）や壊れた印は無視する', () => {
     const storage = memoryStorage();
-    const store = createOgDraftStore({ storage: () => storage, openDb: open });
+    const store = createOgDraftStore({ storage: () => storage });
     storage.setItem(OG_DRAFT_MARK_KEY, JSON.stringify({ history: { strokes: [] }, size: { width: 1, height: 1 } }));
     expect(store.readMark()).toBeNull();
     storage.setItem(OG_DRAFT_MARK_KEY, '{not json');
     expect(store.readMark()).toBeNull();
   });
 
-  it('書いている間に画面を離れた・保存した（isCurrent が false）なら印も写しも残さない', async () => {
+  it('印を書けない storage（容量不足・使えない）でも落ちない', async () => {
     const storage = memoryStorage();
-    const store = createOgDraftStore({ storage: () => storage, openDb: open });
-    let current = true;
-    // 本体を書いている途中で離れる
-    const p = store.write({ docId: 'og-late', bytes: ognk('late'), continueId: null }, () => {
-      const c = current;
-      current = false;
-      return c;
-    });
-    expect(await p).toBe(false);
+    storage.setItem = () => {
+      throw new DOMException('full', 'QuotaExceededError');
+    };
+    const store = createOgDraftStore({ storage: () => storage, dropLegacy: async () => undefined });
+    expect(() => store.setMark({ engine: 'og', docId: 'x', savedAt: '', continueId: null })).not.toThrow();
     expect(store.readMark()).toBeNull();
-    expect(await store.load({ engine: 'og', docId: 'og-late', savedAt: '', continueId: null })).toBeNull();
-    // 始める前から離れていれば何も書かない
-    expect(await store.write({ docId: 'og-x', bytes: ognk('x'), continueId: null }, () => false)).toBe(false);
-    expect(store.readMark()).toBeNull();
+    const none = createOgDraftStore({ storage: () => null, dropLegacy: async () => undefined });
+    none.setMark({ engine: 'og', docId: 'x', savedAt: '', continueId: null });
+    expect(none.readMark()).toBeNull();
+    await expect(none.clear()).resolves.toBeUndefined();
+  });
 
-    // 持ち方（写し・ジャーナル）も同じ: 書き終わった時点で離れていれば印を置かない
+  it('古い版の写しは clear のときに消す。DB とストアは残す（名前は予約）。DB が無ければ作らない', async () => {
+    // DB が無い: 何もしない（seichotsu-drafts を新しく作らない）
+    expect(await dropLegacySnapshot()).toBe(false);
+    expect(await dbNames()).not.toContain(OG_DRAFT_DB);
+    const storage = memoryStorage();
+    const store = createOgDraftStore({ storage: () => storage });
+    await store.clear();
+    expect(await dbNames()).not.toContain(OG_DRAFT_DB);
+
+    // 古い版の写しがある: clear で 1 件消える。DB の版と形はそのまま（upgrade しない）
+    await seedLegacySnapshot();
+    expect(await legacyCount()).toBe(1);
+    store.setMark({ engine: 'og', docId: 'og-old', savedAt: '2026-10-20T00:00:00.000Z', continueId: null });
+    await store.clear();
+    expect(store.readMark()).toBeNull();
+    expect(await legacyCount()).toBe(0);
+    expect(await dbNames()).toContain(OG_DRAFT_DB);
+    const d = await openDB(OG_DRAFT_DB);
+    expect(d.version).toBe(1);
+    expect([...d.objectStoreNames]).toEqual([LEGACY_SNAPSHOT_STORE]);
+    d.close();
+    // databases() の無い環境・開けない環境は静かに諦める
+    expect(await dropLegacySnapshot({})).toBe(false);
+    expect(await dropLegacySnapshot({ databases: () => Promise.reject(new Error('x')) })).toBe(false);
+  });
+
+  it('書いている間に画面を離れた・保存した（isCurrent が false）なら印を置かない', async () => {
+    const storage = memoryStorage();
+    const store = createOgDraftStore({ storage: () => storage, dropLegacy: async () => undefined });
     const api: DraftApi = {
       hasContent: () => true,
-      isDirty: () => true,
-      serializeProject: async () => ognk('k'),
-      openProject: async () => undefined,
       discardRecovery: async () => undefined,
       saveDraft: async () => ({ docId: 'og-j', savedAt: '2026-10-20T00:00:00.000Z' }),
       latestDraft: async () => null,
       openDraft: async () => undefined,
     };
     let alive = true;
-    const keeper = createDraftKeeper({ api: { ...api, saveDraft: async () => { alive = false; return { docId: 'og-j', savedAt: 's' }; } }, store, storage: () => storage, docId: () => 'og-p', continueId: null, toFrameBlob: async (b) => b });
+    const keeper = createDraftKeeper({
+      api: {
+        ...api,
+        saveDraft: async () => {
+          alive = false;
+          return { docId: 'og-j', savedAt: 's' };
+        },
+      },
+      store,
+      continueId: null,
+    });
     await keeper.save(() => alive);
     expect(store.readMark()).toBeNull();
-    const snap = createDraftKeeper({ api: { ...api, saveDraft: undefined, latestDraft: undefined, openDraft: undefined }, store, storage: () => storage, docId: () => 'og-p', continueId: null, toFrameBlob: async (b) => b });
-    await snap.save(() => false);
+    // 始める前から離れていれば saveDraft も呼ばない
+    let called = 0;
+    const k2 = createDraftKeeper({ api: { ...api, saveDraft: async () => (called++, null) }, store, continueId: null });
+    await k2.save(() => false);
+    expect(called).toBe(0);
     expect(store.readMark()).toBeNull();
-  });
-
-  it('写しを書けない（容量不足など）ときは印も残さない', async () => {
-    const storage = memoryStorage();
-    storage.setItem(OG_DRAFT_MARK_KEY, JSON.stringify({ engine: 'og', docId: 'old', savedAt: '', continueId: null }));
-    const store = createOgDraftStore({
-      storage: () => storage,
-      openDb: () => Promise.reject(new DOMException('full', 'QuotaExceededError')),
-    });
-    expect(await store.write({ docId: 'og-1', bytes: ognk('x'), continueId: null })).toBe(false);
+    // saveDraft が失敗しても落ちない（描くのは続けられる）・印は置かない
+    const k3 = createDraftKeeper({ api: { ...api, saveDraft: () => Promise.reject(new DOMException('full', 'QuotaExceededError')) }, store, continueId: null });
+    await expect(k3.save()).resolves.toBeUndefined();
     expect(store.readMark()).toBeNull();
   });
 });
@@ -449,14 +500,7 @@ describe('バックアップの互換（設定 paintEngine を足しても版 1 
 });
 
 
-describe('下書きの持ち方（ジャーナルの口があれば OG のジャーナル、無ければ親の写し）', () => {
-  const open = () =>
-    openDB('seichotsu-drafts-keeper', 1, {
-      upgrade(d) {
-        if (!d.objectStoreNames.contains('og')) d.createObjectStore('og', { keyPath: 'key' });
-      },
-    }) as never;
-
+describe('下書きの持ち方（OG のジャーナル。S4 で親の写しは外した）', () => {
   function journalApi() {
     const journal = new Map<string, { id: string; docId: string; savedAt: string; bytes: number }>();
     const calls: string[] = [];
@@ -464,9 +508,6 @@ describe('下書きの持ち方（ジャーナルの口があれば OG のジャ
     const api: DraftApi & { setContent(v: boolean): void } = {
       setContent: (v) => void (content = v),
       hasContent: () => content,
-      isDirty: () => true,
-      serializeProject: async () => ognk('x'),
-      openProject: async () => void calls.push('openProject'),
       discardRecovery: async () => {
         calls.push('discardRecovery');
         journal.clear();
@@ -488,9 +529,9 @@ describe('下書きの持ち方（ジャーナルの口があれば OG のジャ
 
   it('ジャーナル: save は OG の saveDraft の docId で印を置き、restore は latestDraft と照合して openDraft、clear は discardRecovery', async () => {
     const storage = memoryStorage();
-    const store = createOgDraftStore({ storage: () => storage, openDb: open });
+    const store = createOgDraftStore({ storage: () => storage, dropLegacy: async () => undefined });
     const { api, calls, journal } = journalApi();
-    const k = createDraftKeeper({ api, store, storage: () => storage, docId: () => 'og-parent', continueId: null, toFrameBlob: async (b) => b });
+    const k = createDraftKeeper({ api, store, continueId: null });
     expect(k.kind).toBe('journal');
     await k.save();
     const mark = store.readMark();
@@ -502,46 +543,25 @@ describe('下書きの持ち方（ジャーナルの口があれば OG のジャ
     await k.clear();
     expect(store.readMark()).toBeNull();
     expect(journal.size).toBe(0);
+    // 消えた下書きは開けない
+    expect(await k.restore(mark!)).toBeNull();
     // 描いていなければ印を置かない
     api.setContent(false);
     await k.save();
     expect(store.readMark()).toBeNull();
   });
 
-  it('写し（口の無い成果物）: save は serializeProject を親の DB に、restore は iframe の realm に作り直して openProject', async () => {
+  it('続きから描く画面（continueId あり）の印には continueId が入り、sweep は印とジャーナルを消す', async () => {
     const storage = memoryStorage();
-    const store = createOgDraftStore({ storage: () => storage, openDb: open });
-    const opened: Blob[] = [];
-    const converted: Blob[] = [];
-    const api: DraftApi = {
-      hasContent: () => true,
-      isDirty: () => true,
-      serializeProject: async () => ognk('snap'),
-      openProject: async (b) => void opened.push(b),
-      discardRecovery: async () => undefined,
-    };
-    const k = createDraftKeeper({
-      api,
-      store,
-      storage: () => storage,
-      docId: () => 'og-parent',
-      continueId: 'drawing-1',
-      toFrameBlob: async (b) => {
-        const c = new Blob([await b.arrayBuffer()], { type: b.type });
-        converted.push(c);
-        return c;
-      },
-    });
-    expect(k.kind).toBe('snapshot');
+    let dropped = 0;
+    const store = createOgDraftStore({ storage: () => storage, dropLegacy: async () => void dropped++ });
+    const { api, journal } = journalApi();
+    const k = createDraftKeeper({ api, store, continueId: 'drawing-1' });
     await k.save();
-    const mark = store.readMark();
-    expect(mark).toMatchObject({ engine: 'og', docId: 'og-parent', continueId: 'drawing-1' });
-    expect(await k.restore(mark!)).toBe('og-parent');
-    expect(opened).toHaveLength(1);
-    expect(opened[0]).toBe(converted[0]);
-    expect(await bytes(opened[0]!)).toEqual(await bytes(ognk('snap')));
-    await k.clear();
+    expect(store.readMark()).toMatchObject({ docId: 'og-doc-A', continueId: 'drawing-1' });
+    await k.sweep();
     expect(store.readMark()).toBeNull();
-    expect(await k.restore(mark!)).toBeNull();
+    expect(journal.size).toBe(0);
+    expect(dropped).toBe(1);
   });
 });

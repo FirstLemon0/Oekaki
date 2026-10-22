@@ -14,6 +14,8 @@
  *   印を失ってもジャーナルから出す、期限切れは掃除、別のタブで開いている間は下書きに触れない（Web Locks og-free-draft）。
  *   配信していた埋め込み（8af7b0f）で保存した .ognk（e2e/fixtures/og-8af7b0f.ognk）を今の埋め込みが同じ画素で開く。
  *   旧お絵描きに戻した理由を通知の末尾と設定の画面に出す
+ * - M8 wave 2（UR-002 S4、ilust-sup-followup-10）: 下書きの口（saveDraft / latestDraft / openDraft）の無い成果物（OG 8af7b0f より前）には繋がず、
+ *   今までのお絵描きに戻る（理由 version）。続きから描くときは親の Blob をそのまま openProject に渡す（下の og-8af7b0f.ognk の試験が通る）
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -106,6 +108,35 @@ test.describe('新しいお絵描き', () => {
     expect(rec).toMatchObject({ reason: 'version', at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/), buildId: expect.stringMatching(/^[0-9a-f]{12}-[0-9a-f]{12}$/) });
     await gotoApp(page, '#/settings?section=practice');
     await expect(page.getByTestId('og-fallback-last')).toHaveText(new RegExp(`^最後に今までのお絵描きに戻った理由: version（.+）・\\d{4}/\\d{2}/\\d{2} \\d{2}:\\d{2}・版 ${rec.buildId}$`));
+  });
+
+  test('S4: 下書きの口の無い成果物（OG 8af7b0f より前の v1）は未対応 = 今までのお絵描きに戻る（理由: version）', async ({ page }) => {
+    await page.route('**/paint/embed.html', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'text/html; charset=utf-8',
+        body: '<!doctype html><html><head><title>embed v1 old</title><script src="/paint/__v1-old.js"></script></head><body></body></html>',
+      }),
+    );
+    // wave 1 の成果物（2906365）の形: v1 の口は全部あるが、下書きの口（saveDraft / latestDraft / openDraft）が無い
+    const v1Old = [
+      'configure', 'newDocument', 'openProject', 'hasContent', 'isDirty', 'exportGalleryImage', 'exportTransparentPng',
+      'serializeProject', 'discardRecovery', 'onStroke', 'onDirtyChange', 'dispose',
+    ];
+    const ret = (m: string) =>
+      m === 'onStroke' || m === 'onDirtyChange' ? '() => {}' : m === 'hasContent' || m === 'isDirty' ? 'false' : 'Promise.resolve()';
+    const script = [
+      'const api = { version: 1, ready: Promise.resolve() };',
+      ...v1Old.map((m) => `api.${m} = () => ${ret(m)};`),
+      'window.ogEmbed = api;',
+    ].join(' ');
+    await page.route('**/paint/__v1-old.js', (route) => route.fulfill({ status: 200, contentType: 'text/javascript', body: script }));
+    await gotoApp(page, '#/free');
+    await expect(page.getByText('新しいお絵描きを開けなかったので、今までのお絵描きで開きました。（理由: version）')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('.ls-canvas__paper canvas')).toBeVisible();
+    await expect(page.locator(OG_FRAME)).toHaveCount(0);
+    const rec = await page.evaluate(() => JSON.parse(localStorage.getItem('seichotsu.ogFallback.last') ?? 'null'));
+    expect(rec).toMatchObject({ reason: 'version' });
   });
 
   test('保存の種別: 自由は free、?save=after は After と afterDrawingId、?save=before は Before と beforeCreatedAt', async ({ page }) => {

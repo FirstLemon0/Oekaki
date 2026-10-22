@@ -1,5 +1,5 @@
 {
-  "$comment": "初期 JS（入口 + 静的 import の閉包、gzip level 9）の基準線と許す増分（scripts/check-bundle.mjs、ADR-0007 D5-3 / ilust-sup-integration-09）。基準線は UR-002 の S1 の最初のビルドの実測（2026-10-20、自由お絵描きを遅延の route にした後、390.0 KB gz。f4f1ed2 の入口は level 6 で 394 KB gz）。上限 = 基準線 + 20 KB。超えるときは理由を書いて基準線を見直す（S4 で旧 FreeDraw の静的 import を外したら下げる）。",
+  "$comment": "初期 JS（入口 + 静的 import の閉包、gzip level 9）の基準線と許す増分（scripts/check-bundle.mjs、ADR-0007 D5-3 / ilust-sup-integration-09）。基準線は UR-002 の S1 の最初のビルドの実測（2026-10-20、自由お絵描きを遅延の route にした後、390.0 KB gz。f4f1ed2 の入口は level 6 で 394 KB gz）。上限 = 基準線 + 20 KB。超えるときは理由を書いて基準線を見直す。旧 FreeDraw は既に遅延の画面（src/app.tsx の lazyScreen、OgFreeDraw の戻り先も lazyScreen）で静的 import は無く、v2 のお絵描きの部品（src/ui/paint/）はレッスンも使うので、UR-002 S4（局所アダプタの片付け）で初期 JS は下がらない（ilust-sup-followup-11）。基準線を下げるのは、計測で下がったときだけ。",
   "baselineGzipKB": 390.0,
   "ratchetKB": 20
 }

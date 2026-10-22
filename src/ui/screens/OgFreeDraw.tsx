@@ -11,8 +11,8 @@
  * - 透過 PNG は長辺 2048、名前は exportFileName('free')（seichotsu-free-YYYYMMDD-HHMM.png）
  * - ギャラリーの画像は WebP（長辺 1024）+ meta.og、文書（.ognk）は ogDocs。2 つをメモリで作ってから 1 トランザクションで書く（容量不足でも結果を保って再試行）
  * - 離脱のガードは親の navGuard だけ（onDirtyChange で armLeaveGuard。iframe の中は beforeunload を張らない）
- * - 下書き: localStorage の印（期限 24 時間）+ OG の自動保存の記録（ジャーナル。成果物に saveDraft / latestDraft / openDraft の口があれば）か、
- *   口の無い成果物では親が持つ文書の写し（局所アダプタ、og/ogDraft.ts）。開き直したら（タブ・アプリを閉じた後も）「続きから / 捨てる」。
+ * - 下書き: localStorage の印（期限 24 時間）+ OG の自動保存の記録（ジャーナル。成果物の saveDraft / latestDraft / openDraft の口、og/ogDraft.ts）。
+ *   口の無い成果物には繋がない（今までのお絵描きに戻す、S4 / ilust-sup-followup-10）。開き直したら（タブ・アプリを閉じた後も）「続きから / 捨てる」。
  *   掃除は期限切れか「捨てる」のときだけ。#/free を開いている間は Web Locks の og-free-draft を取り、取れないタブ（別のタブで開いている）は
  *   下書きに触れない（ilust-sup-followup-04）。保存の後は印も記録も無い
  * - 今までのお絵描きに戻した理由（missing / version / boot / timeout / open）を通知の末尾と localStorage に残し、設定の画面に出す（ilust-sup-followup-13）
@@ -53,7 +53,7 @@ const FallbackFreeDraw = lazyScreen(() => import('./FreeDraw').then((m) => m.Fre
 
 /** 透過 PNG の長辺（FreeDraw と同じ） */
 const EXPORT_EDGE = 2048;
-/** 下書きの写しを取るまでの待ち（最後の確定から。v2 の下書きと同じ 1 秒） */
+/** 下書き（ジャーナル）に書くまでの待ち（最後の確定から。v2 の下書きと同じ 1 秒） */
 export const OG_DRAFT_DEBOUNCE_MS = 1000;
 /** 「戻る」（捨てる）で下書きを消し終わるのを待つ上限 */
 const LEAVE_CLEAR_WAIT_MS = 3000;
@@ -166,16 +166,6 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
     frame.src = OG_EMBED_URL;
     host.appendChild(frame);
 
-    /**
-     * 親の Blob を iframe の realm の Blob に作り直す（局所アダプタ。埋め込みの openProject は `instanceof Blob` で検査するので、
-     * 別の realm の Blob を拒む。CCR-ilust-sup-m7-wave2-embed-requests §2 で embed に依頼）
-     */
-    const frameBlob = async (b: Blob): Promise<Blob> => {
-      const W = frame.contentWindow as (Window & { Blob: typeof Blob }) | null;
-      if (!W || Object.getPrototypeOf(b) === W.Blob.prototype) return b;
-      return new W.Blob([await b.arrayBuffer()], { type: b.type || 'application/x-ognk' });
-    };
-
     let keeper: DraftKeeper | null = null;
     const writeDraft = async (): Promise<void> => {
       const api = apiRef.current;
@@ -219,13 +209,7 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
       }
       const api = r.api;
       apiRef.current = api;
-      keeper = createDraftKeeper({
-        api,
-        store: ogDraftStore,
-        docId: () => docId.current,
-        continueId: continueId ?? null,
-        toFrameBlob: frameBlob,
-      });
+      keeper = createDraftKeeper({ api, store: ogDraftStore, continueId: continueId ?? null });
       keeperRef.current = keeper;
       const held = (await lockP).held;
       if (!alive) {
@@ -233,7 +217,7 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
         return;
       }
       if (!held) {
-        // 別のタブが #/free を開いている: 印・写し・ジャーナルの掃除はそのタブの仕事。ここは下書きを出さない・残さない
+        // 別のタブが #/free を開いている: 印・ジャーナルの掃除はそのタブの仕事。ここは下書きを出さない・残さない
         keeper = sharedKeeper(api);
         keeperRef.current = keeper;
         if (initialOffer.current) {
@@ -274,7 +258,8 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
           const [d, rec] = await Promise.all([getDrawing(continueId), getOgDoc(continueId)]);
           const t = continueTargetOf(d);
           if (t && rec && rec.bytes instanceof Blob) {
-            await api.openProject(await frameBlob(rec.bytes));
+            // 親の Blob をそのまま渡す（OG 8af7b0f 以降の埋め込みは別の realm の Blob を受ける。写し直さない = メモリを 2 倍にしない）
+            await api.openProject(rec.bytes);
             target.current = t;
             docId.current = t.docId;
             opened = true;

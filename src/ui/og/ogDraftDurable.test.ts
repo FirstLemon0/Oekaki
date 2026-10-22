@@ -7,7 +7,6 @@
  * - 理由の記録: 通知の末尾「（理由: timeout）」、localStorage の { reason, at, buildId }、設定の 1 行
  */
 import 'fake-indexeddb/auto';
-import { openDB } from 'idb';
 import { describe, expect, it } from 'vitest';
 import {
   acquireDraftLock,
@@ -47,16 +46,8 @@ function memoryStorage(): Storage & { map: Map<string, string> } {
   };
 }
 
-let dbSeq = 0;
-const openFresh = () => {
-  const name = `seichotsu-drafts-durable-${dbSeq++}`;
-  return () =>
-    openDB(name, 1, {
-      upgrade(d) {
-        if (!d.objectStoreNames.contains('og')) d.createObjectStore('og', { keyPath: 'key' });
-      },
-    }) as never;
-};
+/** 古い版の写しの掃除は og.test.ts で確かめる（ここでは呼ばれたことだけ数える） */
+const noLegacy = async () => undefined;
 
 const NOW = new Date('2026-10-22T12:00:00.000Z');
 const mark = (over: Partial<OgDraftMark> = {}): OgDraftMark => ({
@@ -73,9 +64,6 @@ function journalApi(entries: { id: string; docId: string; savedAt: string }[] = 
   const calls: string[] = [];
   const api: DraftApi = {
     hasContent: () => true,
-    isDirty: () => true,
-    serializeProject: async () => new Blob(['x']),
-    openProject: async () => void calls.push('openProject'),
     discardRecovery: async () => {
       calls.push('discardRecovery');
       journal.clear();
@@ -97,23 +85,23 @@ function journalApi(entries: { id: string; docId: string; savedAt: string }[] = 
 describe('印は localStorage（ilust-sup-followup-04）', () => {
   it('印は storage（localStorage）に置かれ、閉じて開き直した = 新しい store でも読める', async () => {
     const local = memoryStorage();
-    const open = openFresh();
-    const s1 = createOgDraftStore({ storage: () => local, openDb: open, now: () => NOW });
-    await s1.write({ docId: 'og-1', bytes: new Blob(['abc']), continueId: null });
-    expect(JSON.parse(local.map.get(OG_DRAFT_MARK_KEY)!)).toMatchObject({ engine: 'og', docId: 'og-1' });
-    // 「アプリを終了して開き直す」= 同じ端末の storage と DB で新しい store を作る
-    const s2 = createOgDraftStore({ storage: () => local, openDb: open });
+    const s1 = createOgDraftStore({ storage: () => local, dropLegacy: noLegacy });
+    const { api } = journalApi();
+    await createDraftKeeper({ api, store: s1, continueId: null }).save();
+    expect(JSON.parse(local.map.get(OG_DRAFT_MARK_KEY)!)).toMatchObject({ engine: 'og', docId: 'og-doc-N' });
+    // 「アプリを終了して開き直す」= 同じ端末の storage で新しい store を作る（本体は OG のジャーナル = 同じ api）
+    const s2 = createOgDraftStore({ storage: () => local, dropLegacy: noLegacy });
     const m = s2.readMark();
-    expect(m).toEqual({ engine: 'og', docId: 'og-1', savedAt: NOW.toISOString(), continueId: null });
-    expect(await s2.load(m!)).not.toBeNull();
-    expect(await s2.peek()).toEqual(m);
+    expect(m).toEqual({ engine: 'og', docId: 'og-doc-N', savedAt: NOW.toISOString(), continueId: null });
+    const k2 = createDraftKeeper({ api, store: s2, continueId: null });
+    expect(await k2.peek()).toEqual(m);
+    expect(await k2.restore(m!)).toBe('og-doc-N');
   });
 
   it('M7 の印（sessionStorage・engine og）は読んだら localStorage に移す。v2 の下書き（同じキー）には触れない', () => {
     const local = memoryStorage();
     const session = memoryStorage();
-    const open = openFresh();
-    const store = createOgDraftStore({ storage: () => local, legacyStorage: () => session, openDb: open });
+    const store = createOgDraftStore({ storage: () => local, legacyStorage: () => session, dropLegacy: noLegacy });
     session.setItem(LEGACY_DRAFT_MARK_KEY, JSON.stringify({ history: { strokes: [] }, size: { width: 1, height: 1 }, savedAt: 'x' }));
     expect(store.readMark()).toBeNull();
     expect(session.map.has(LEGACY_DRAFT_MARK_KEY)).toBe(true);
@@ -125,9 +113,9 @@ describe('印は localStorage（ilust-sup-followup-04）', () => {
 
   it('ジャーナルの持ち方: save は印を storage に置き、peek は印が無くても latestDraft を印の形で返す（continueId なし）', async () => {
     const local = memoryStorage();
-    const store = createOgDraftStore({ storage: () => local, openDb: openFresh() });
+    const store = createOgDraftStore({ storage: () => local, dropLegacy: noLegacy });
     const { api } = journalApi([{ id: 'j-1', docId: 'og-doc-A', savedAt: hoursAgo(1) }]);
-    const k = createDraftKeeper({ api, store, docId: () => 'og-parent', continueId: 'drawing-1', toFrameBlob: async (b) => b });
+    const k = createDraftKeeper({ api, store, continueId: 'drawing-1' });
     expect(await k.peek()).toEqual({ engine: 'og', docId: 'og-doc-A', savedAt: hoursAgo(1), continueId: null });
     await k.save();
     expect(store.readMark()).toMatchObject({ docId: 'og-doc-N', continueId: 'drawing-1' });
@@ -220,9 +208,9 @@ describe('Web Locks og-free-draft（取れたタブだけが持ち主）', () =>
     expect((await acquireDraftLock(null)).held).toBe(true);
   });
 
-  it('shared の持ち方: 印・写しに触れず、掃除しない。離れるときの discardRecovery は今の文書のためだけ', async () => {
+  it('shared の持ち方: 印と下書きに触れず、掃除しない。離れるときの discardRecovery は今の文書のためだけ', async () => {
     const local = memoryStorage();
-    const store = createOgDraftStore({ storage: () => local, openDb: openFresh() });
+    const store = createOgDraftStore({ storage: () => local, dropLegacy: noLegacy });
     store.setMark(mark());
     const { api, calls, journal } = journalApi([{ id: 'j-1', docId: 'og-doc-A', savedAt: hoursAgo(1) }]);
     const k = sharedKeeper(api);
