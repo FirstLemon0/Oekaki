@@ -9,8 +9,15 @@
  *   ギャラリーの『自由』のタイル（WebP・長辺 ≤ 1024）、詳細の『続きから描く』で同じ画素、下書きの『続きから / 捨てる』、
  *   離脱の確認が 1 回だけ（描かずに戻ると確認なし）
  * - 親の設定（テーマ・ペン専用・左利き）が埋め込みに渡る。#/free の出入り 10 回で iframe とヒープが戻る（robustness-security-05）
+ * - M8（ADR-0008 D10、ilust-sup-followup-04 / -06 / -13）:
+ *   下書きの印は localStorage（期限 24 時間）。タブ・アプリを閉じて開き直してもジャーナルが残り「続きから」で同じ画素、
+ *   印を失ってもジャーナルから出す、期限切れは掃除、別のタブで開いている間は下書きに触れない（Web Locks og-free-draft）。
+ *   配信していた埋め込み（8af7b0f）で保存した .ognk（e2e/fixtures/og-8af7b0f.ognk）を今の埋め込みが同じ画素で開く。
+ *   旧お絵描きに戻した理由を通知の末尾と設定の画面に出す
  */
 import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 import { gotoApp } from './helpers';
 import {
@@ -29,6 +36,8 @@ import {
   setOgEngine,
   waitOgContent,
 } from './og-helpers';
+
+const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 
 test('既定（設定を触らない新しい端末）で #/free は新しいお絵描き、設定の「新しいお絵描き（試験中）」は on（UR-002 S3）', async ({ page }) => {
   await gotoApp(page, '#/free');
@@ -88,9 +97,15 @@ test.describe('新しいお絵描き', () => {
       }),
     );
     await gotoApp(page, '#/free');
-    await expect(page.getByText('新しいお絵描きを開けなかったので、今までのお絵描きで開きました。')).toBeVisible({ timeout: 30_000 });
+    // 戻した理由を通知の末尾に出す（ilust-sup-followup-13）
+    await expect(page.getByText('新しいお絵描きを開けなかったので、今までのお絵描きで開きました。（理由: version）')).toBeVisible({ timeout: 30_000 });
     await expect(page.locator('.ls-canvas__paper canvas')).toBeVisible();
     await expect(page.locator(OG_FRAME)).toHaveCount(0);
+    // 理由・時刻・版を localStorage に残し、設定の画面に 1 行出す
+    const rec = await page.evaluate(() => JSON.parse(localStorage.getItem('seichotsu.ogFallback.last') ?? 'null'));
+    expect(rec).toMatchObject({ reason: 'version', at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/), buildId: expect.stringMatching(/^[0-9a-f]{12}-[0-9a-f]{12}$/) });
+    await gotoApp(page, '#/settings?section=practice');
+    await expect(page.getByTestId('og-fallback-last')).toHaveText(new RegExp(`^最後に今までのお絵描きに戻った理由: version（.+）・\\d{4}/\\d{2}/\\d{2} \\d{2}:\\d{2}・版 ${rec.buildId}$`));
   });
 
   test('保存の種別: 自由は free、?save=after は After と afterDrawingId、?save=before は Before と beforeCreatedAt', async ({ page }) => {
@@ -238,7 +253,7 @@ test.describe('新しいお絵描き', () => {
     await waitOgContent(frame);
     const before = await settledPixels(frame);
     await expect
-      .poll(() => page.evaluate(() => JSON.parse(sessionStorage.getItem('seichotsu.draft.free') ?? 'null')?.engine ?? null))
+      .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('seichotsu.ogDraft.free') ?? 'null')?.engine ?? null))
       .toBe('og');
     await waitDraftSettled(page, drawnAt);
 
@@ -260,7 +275,7 @@ test.describe('新しいお絵描き', () => {
     await expect.poll(async () => (await ogPixels(frame)).sha, { timeout: 15_000 }).toBe(before.sha);
 
     await finishOg(page);
-    expect(await page.evaluate(() => sessionStorage.getItem('seichotsu.draft.free'))).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem('seichotsu.ogDraft.free'))).toBeNull();
     expect(await readStore(page, 'drawings')).toHaveLength(1);
     // もう一度開いても下書きの案内は出ず、OG のジャーナルも残っていない
     frame = await openOgFree(page);
@@ -272,13 +287,13 @@ test.describe('新しいお絵描き', () => {
     const frame = await openOgFree(page);
     await drawOg(page, 1);
     await waitOgContent(frame);
-    await expect.poll(() => page.evaluate(() => sessionStorage.getItem('seichotsu.draft.free') !== null)).toBe(true);
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('seichotsu.ogDraft.free') !== null)).toBe(true);
     page.on('dialog', (d) => void d.accept());
     await page.reload();
     await page.getByRole('dialog', { name: '描きかけがあります' }).getByRole('button', { name: '捨てる' }).click();
     const fresh = await openOgFreeReady(page);
     expect(await fresh.evaluate(() => (window as unknown as { ogEmbed: { hasContent(): boolean } }).ogEmbed.hasContent())).toBe(false);
-    expect(await page.evaluate(() => sessionStorage.getItem('seichotsu.draft.free'))).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem('seichotsu.ogDraft.free'))).toBeNull();
   });
 
   test('離脱の確認: 描いたら 1 回だけ（画面の戻る・端末の戻る）、描かずに戻ると確認なし', async ({ page }) => {
@@ -306,7 +321,171 @@ test.describe('新しいお絵描き', () => {
     await dialog.getByRole('button', { name: '戻る', exact: true }).click();
     await expect(page.getByRole('link', { name: /自由お絵描き/ })).toBeVisible();
     expect(await readStore(page, 'drawings')).toEqual([]);
-    expect(await page.evaluate(() => sessionStorage.getItem('seichotsu.draft.free'))).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem('seichotsu.ogDraft.free'))).toBeNull();
+  });
+
+  test('下書き（PWA を閉じて開き直す）: 印は localStorage に残り、新しいタブで『続きから』→ 同じ画素（ilust-sup-followup-04）', async ({ page, context }) => {
+    const frame = await openOgFree(page);
+    await drawOg(page, 2);
+    const drawnAt = Date.now();
+    await waitOgContent(frame);
+    const before = await settledPixels(frame);
+    await waitDraftSettled(page, drawnAt);
+    expect(await ogJournalCount(frame)).toBeGreaterThan(0);
+    // ホーム画面のアプリをスワイプで終了した = ページが閉じる（beforeunload も画面の後始末も走らない）
+    await page.close();
+
+    const page2 = await context.newPage();
+    await gotoApp(page2, '#/free');
+    const offer = page2.getByRole('dialog', { name: '描きかけがあります' });
+    await expect(offer).toBeVisible({ timeout: 30_000 });
+    await offer.getByRole('button', { name: '続きから' }).click();
+    const frame2 = await openOgFreeReady(page2);
+    await waitOgContent(frame2);
+    await expect.poll(async () => (await ogPixels(frame2)).sha, { timeout: 15_000 }).toBe(before.sha);
+    await finishOg(page2);
+    expect(await page2.evaluate(() => localStorage.getItem('seichotsu.ogDraft.free'))).toBeNull();
+  });
+
+  test('下書き: 印が無くても期限内のジャーナルは『描きかけがあります』で出す（掃除しない）。捨てるで消える', async ({ page, context }) => {
+    const frame = await openOgFree(page);
+    await drawOg(page, 1);
+    const drawnAt = Date.now();
+    await waitOgContent(frame);
+    const before = await settledPixels(frame);
+    await waitDraftSettled(page, drawnAt);
+    // 印だけを失う（M7 までは sessionStorage = 開き直すと印が無く、ジャーナルを掃除で消していた）
+    await page.evaluate(() => localStorage.removeItem('seichotsu.ogDraft.free'));
+    await page.close();
+
+    let p = await context.newPage();
+    await gotoApp(p, '#/free');
+    const offer = p.getByRole('dialog', { name: '描きかけがあります' });
+    await expect(offer).toBeVisible({ timeout: 30_000 });
+    await offer.getByRole('button', { name: '続きから' }).click();
+    let f = await openOgFreeReady(p);
+    await expect.poll(async () => (await ogPixels(f)).sha, { timeout: 15_000 }).toBe(before.sha);
+    // もう一度閉じて開き、今度は捨てる → 白紙、ジャーナルも残らない
+    await p.close();
+    p = await context.newPage();
+    await gotoApp(p, '#/free');
+    await p.getByRole('dialog', { name: '描きかけがあります' }).getByRole('button', { name: '捨てる' }).click({ timeout: 30_000 });
+    f = await openOgFreeReady(p);
+    expect(await f.evaluate(() => (window as unknown as { ogEmbed: { hasContent(): boolean } }).ogEmbed.hasContent())).toBe(false);
+    await expect.poll(() => ogJournalCount(f)).toBe(0);
+  });
+
+  test('下書き: 期限（24 時間）を過ぎた印とジャーナルは開いたときに掃除し、案内を出さない', async ({ page, context }) => {
+    const frame = await openOgFree(page);
+    await drawOg(page, 1);
+    const drawnAt = Date.now();
+    await waitOgContent(frame);
+    await waitDraftSettled(page, drawnAt);
+    await page.evaluate(() => {
+      const m = JSON.parse(localStorage.getItem('seichotsu.ogDraft.free')!);
+      m.savedAt = new Date(Date.now() - 25 * 3600_000).toISOString();
+      localStorage.setItem('seichotsu.ogDraft.free', JSON.stringify(m));
+    });
+    await page.close();
+    const p = await context.newPage();
+    const f = await openOgFree(p);
+    await expect(p.getByRole('dialog', { name: '描きかけがあります' })).toHaveCount(0);
+    expect(await p.evaluate(() => localStorage.getItem('seichotsu.ogDraft.free'))).toBeNull();
+    await expect.poll(() => ogJournalCount(f)).toBe(0);
+  });
+
+  test('下書き: 別のタブで #/free を開いている間は、2 つ目のタブは下書きに触れない（Web Locks og-free-draft）', async ({ page, context }) => {
+    const frameA = await openOgFree(page);
+    await drawOg(page, 2);
+    const drawnAt = Date.now();
+    await waitOgContent(frameA);
+    const before = await settledPixels(frameA);
+    await waitDraftSettled(page, drawnAt);
+    const markA = await page.evaluate(() => localStorage.getItem('seichotsu.ogDraft.free'));
+    expect(markA).not.toBeNull();
+
+    // 2 つ目のタブ: 案内を出さず、印を消さず、A のジャーナルも消さない
+    const pageB = await context.newPage();
+    await gotoApp(pageB, '#/free');
+    await expect(pageB.getByText('別のタブでも新しいお絵描きを開いています。', { exact: false })).toBeVisible({ timeout: 30_000 });
+    await expect(pageB.locator(`${OG_ROOT}[data-phase="ready"]`)).toBeVisible({ timeout: 30_000 });
+    await expect(pageB.getByRole('dialog', { name: '描きかけがあります' })).toHaveCount(0);
+    expect(await pageB.evaluate(() => localStorage.getItem('seichotsu.ogDraft.free'))).toBe(markA);
+    // B は描いて戻る（捨てる）: 自分の文書だけを片付ける
+    await drawOg(pageB, 1);
+    await waitOgContent(await ogFrame(pageB));
+    pageB.on('dialog', (d) => void d.accept());
+    await pageB.locator(`${OG_ROOT} .back-pill`).click();
+    await pageB.getByRole('dialog', { name: '描いた線が消えます。戻りますか？' }).getByRole('button', { name: '戻る', exact: true }).click();
+    await expect(pageB.locator(OG_ROOT)).toHaveCount(0);
+    expect(await page.evaluate(() => localStorage.getItem('seichotsu.ogDraft.free'))).toBe(markA);
+    expect(await ogJournalCount(frameA)).toBeGreaterThan(0);
+    await pageB.close();
+
+    // A を閉じて開き直す → A の下書きが出る
+    await page.close();
+    const pageC = await context.newPage();
+    await gotoApp(pageC, '#/free');
+    await pageC.getByRole('dialog', { name: '描きかけがあります' }).getByRole('button', { name: '続きから' }).click({ timeout: 30_000 });
+    const frameC = await openOgFreeReady(pageC);
+    await expect.poll(async () => (await ogPixels(frameC)).sha, { timeout: 15_000 }).toBe(before.sha);
+  });
+
+  test('過去の埋め込み（8af7b0f）で保存した .ognk を今の埋め込みが『ギャラリーから続ける』で同じ画素で開く（ilust-sup-followup-06）', async ({ page }) => {
+    const fx = JSON.parse(readFileSync(join(FIXTURES, 'og-8af7b0f.json'), 'utf8')) as {
+      ogCommit: string;
+      ogContract: string;
+      embedApi: number;
+      og: Record<string, unknown>;
+      pixels: { sha: string; opaque: number; w: number; h: number };
+    };
+    expect(fx.ogCommit).toMatch(/^8af7b0f/);
+    const b64 = readFileSync(join(FIXTURES, 'og-8af7b0f.ognk')).toString('base64');
+    const id = 'drawing-og-fixture-8af7b0f';
+    await gotoApp(page);
+    await page.evaluate(
+      async ({ id, b64, fx }) => {
+        const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+        const c = new OffscreenCanvas(64, 40);
+        const g = c.getContext('2d')!;
+        g.fillStyle = '#f2efe8';
+        g.fillRect(0, 0, 64, 40);
+        const image = await c.convertToBlob({ type: 'image/webp' });
+        const at = '2026-10-21T22:21:52.428Z';
+        await new Promise<void>((resolve, reject) => {
+          const req = indexedDB.open('seichotsu');
+          req.onsuccess = () => {
+            const tx = req.result.transaction(['drawings', 'ogDocs'], 'readwrite');
+            tx.objectStore('drawings').put({ id, lessonId: null, kind: 'free', image, createdAt: at, strokes: null, meta: { og: fx.og }, updatedAt: at });
+            tx.objectStore('ogDocs').put({
+              id,
+              drawingId: id,
+              bytes: new Blob([bin], { type: 'application/x-ognk' }),
+              format: 'ognk',
+              ogContract: fx.ogContract,
+              embedApi: fx.embedApi,
+              updatedAt: at,
+            });
+            tx.oncomplete = () => {
+              req.result.close();
+              resolve();
+            };
+            tx.onerror = () => reject(tx.error);
+          };
+          req.onerror = () => reject(req.error);
+        });
+      },
+      { id, b64, fx },
+    );
+    await gotoApp(page, `#/gallery/${id}`);
+    await page.getByRole('link', { name: '続きから描く' }).click();
+    await expect(page).toHaveURL(/#\/free\?og=/);
+    const frame = await openOgFreeReady(page);
+    await waitOgContent(frame);
+    // 書き出し（透過 PNG・長辺 2048）の画素のハッシュが、保存した版（8af7b0f）で描いたときと同じ
+    await expect.poll(async () => (await ogPixels(frame)).sha, { timeout: 15_000 }).toBe(fx.pixels.sha);
+    const now = await ogPixels(frame);
+    expect({ opaque: now.opaque, w: now.w, h: now.h }).toEqual({ opaque: fx.pixels.opaque, w: fx.pixels.w, h: fx.pixels.h });
   });
 
   test('親の設定が渡る: テーマ（system を解決）・ペン専用・左利き、変えるとすぐ当て直す', async ({ page }) => {
@@ -363,7 +542,7 @@ async function waitAndHasContent(page: Page): Promise<boolean> {
  */
 async function waitDraftSettled(page: Page, after: number): Promise<void> {
   const savedAt = () =>
-    page.evaluate(() => Date.parse(JSON.parse(sessionStorage.getItem('seichotsu.draft.free') ?? 'null')?.savedAt ?? '') || 0);
+    page.evaluate(() => Date.parse(JSON.parse(localStorage.getItem('seichotsu.ogDraft.free') ?? 'null')?.savedAt ?? '') || 0);
   await expect.poll(savedAt, { timeout: 15_000 }).toBeGreaterThan(after);
   let last = await savedAt();
   for (;;) {

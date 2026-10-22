@@ -11,8 +11,11 @@
  * - 透過 PNG は長辺 2048、名前は exportFileName('free')（seichotsu-free-YYYYMMDD-HHMM.png）
  * - ギャラリーの画像は WebP（長辺 1024）+ meta.og、文書（.ognk）は ogDocs。2 つをメモリで作ってから 1 トランザクションで書く（容量不足でも結果を保って再試行）
  * - 離脱のガードは親の navGuard だけ（onDirtyChange で armLeaveGuard。iframe の中は beforeunload を張らない）
- * - 下書き: sessionStorage の印 + OG の自動保存の記録（ジャーナル。成果物に saveDraft / latestDraft / openDraft の口があれば）か、
- *   口の無い成果物では親が持つ文書の写し（局所アダプタ、og/ogDraft.ts）。開き直したら「続きから / 捨てる」。保存の後は印も記録も無い
+ * - 下書き: localStorage の印（期限 24 時間）+ OG の自動保存の記録（ジャーナル。成果物に saveDraft / latestDraft / openDraft の口があれば）か、
+ *   口の無い成果物では親が持つ文書の写し（局所アダプタ、og/ogDraft.ts）。開き直したら（タブ・アプリを閉じた後も）「続きから / 捨てる」。
+ *   掃除は期限切れか「捨てる」のときだけ。#/free を開いている間は Web Locks の og-free-draft を取り、取れないタブ（別のタブで開いている）は
+ *   下書きに触れない（ilust-sup-followup-04）。保存の後は印も記録も無い
+ * - 今までのお絵描きに戻した理由（missing / version / boot / timeout / open）を通知の末尾と localStorage に残し、設定の画面に出す（ilust-sup-followup-13）
  * - テーマ（system を解決）・ペン専用・左利き・文字の大きさを最初の描画の前（iframe の属性）と configure で渡す
  */
 import { useEffect, useRef, useState } from 'preact/hooks';
@@ -30,7 +33,18 @@ import { lazyScreen } from '../lazyScreen';
 import { connectOgEmbed, OG_EMBED_URL, type OgEmbedApi } from '../og/embedApi';
 import { createSpanLog, embedConfigFrom, newOgDocId, paperFor, saveOgFree, type OgSaveOutcome } from '../og/freeSession';
 import { continueTargetOf, type ContinueTarget } from '../og/ogDrawing';
-import { createDraftKeeper, ogDraftStore, type DraftKeeper, type OgDraftMark } from '../og/ogDraft';
+import {
+  acquireDraftLock,
+  createDraftKeeper,
+  decideDraft,
+  isMarkExpired,
+  ogDraftStore,
+  sharedKeeper,
+  type DraftKeeper,
+  type DraftLock,
+  type OgDraftMark,
+} from '../og/ogDraft';
+import { fallbackStorage, recordFallback, withReason, type OgFallbackReason } from '../og/fallbackReason';
 import { ogPaintInfo } from '../og/paintInfo';
 import '../og/ogFree.css';
 
@@ -41,18 +55,20 @@ const FallbackFreeDraw = lazyScreen(() => import('./FreeDraw').then((m) => m.Fre
 const EXPORT_EDGE = 2048;
 /** 下書きの写しを取るまでの待ち（最後の確定から。v2 の下書きと同じ 1 秒） */
 export const OG_DRAFT_DEBOUNCE_MS = 1000;
+/** 「戻る」（捨てる）で下書きを消し終わるのを待つ上限 */
+const LEAVE_CLEAR_WAIT_MS = 3000;
 
 export const QUOTA_FAILED = '端末の空き容量が足りず保存できませんでした。ギャラリーの使わない絵を消すなどして空きを作ってから、もう一度押してください（描いた絵はこのまま残っています）。';
 export const FALLBACK_NOTICE = '新しいお絵描きを開けなかったので、今までのお絵描きで開きました。';
+/** 別のタブで #/free を開いている（下書きのロックが取れない）ときの案内 */
+export const SHARED_NOTICE = '別のタブでも新しいお絵描きを開いています。こちらで描いている途中の絵は、閉じると下書きに残りません。';
 
 type Phase = 'connecting' | 'ready' | 'fallback' | 'unavailable';
 
-function sessionStore(): Storage | null {
-  try {
-    return typeof sessionStorage === 'undefined' ? null : sessionStorage;
-  } catch {
-    return null;
-  }
+/** 開いたときの印（期限内で同じ画面のものだけ。ロックの結果を待たずに「描きかけがあります」を出すため） */
+function initialMark(continueId: string | null): OgDraftMark | null {
+  const m = ogDraftStore.readMark();
+  return m && m.continueId === continueId && !isMarkExpired(m, new Date()) ? m : null;
 }
 
 function prefersDark(): boolean {
@@ -90,6 +106,13 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
 
   // 成果物（public/paint/）を取り込んでいないビルドでは iframe を作らずに今までのお絵描きへ（/paint/embed.html が成長通そのものになるため）
   const [phase, setPhase] = useState<Phase>(() => (ogPaintInfo() ? 'connecting' : continueId ? 'unavailable' : 'fallback'));
+  /** 今までのお絵描きに戻した（開けなかった）理由。成果物を取り込んでいないビルドは missing */
+  const [failReason, setFailReason] = useState<OgFallbackReason | null>(() => (ogPaintInfo() ? null : 'missing'));
+  const fail = (reason: OgFallbackReason) => {
+    recordFallback(fallbackStorage(), reason, ogPaintInfo()?.buildId ?? null);
+    setFailReason(reason);
+    setPhase(continueId ? 'unavailable' : 'fallback');
+  };
   const [dirty, setDirty] = useState(false);
   const [restored, setRestored] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -99,10 +122,7 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
   const [exported, setExported] = useState<'idle' | 'busy' | 'done' | 'failed'>('idle');
   const [leaveAsk, setLeaveAsk] = useState<(() => void) | null>(null);
   /** 前に開いたときの下書き（同じ画面 = 同じ continueId のものだけ） */
-  const [draftOffer, setDraftOffer] = useState<OgDraftMark | null>(() => {
-    const m = ogDraftStore.readMark();
-    return m && m.continueId === (continueId ?? null) ? m : null;
-  });
+  const [draftOffer, setDraftOffer] = useState<OgDraftMark | null>(() => initialMark(continueId ?? null));
   /** 開いたときに出した下書きの印（答えの後も起動の流れが使う） */
   const initialOffer = useRef(draftOffer);
   const draftOfferRef = useRef(draftOffer);
@@ -129,6 +149,13 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
     let draftTimer: ReturnType<typeof setTimeout> | null = null;
     let writing = false;
     let again = false;
+    // #/free の下書きの持ち主になる（別のタブが開いていれば少し待って、取れなければ下書きに触れない）
+    let lock: DraftLock | null = null;
+    const lockP = acquireDraftLock().then((l) => {
+      if (!alive) l.release();
+      else lock = l;
+      return l;
+    });
 
     const frame = document.createElement('iframe');
     frame.className = 'og-free__frame';
@@ -187,7 +214,7 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
       }
       if (!r.ok) {
         console.warn('[OgFreeDraw] 新しいお絵描きを開けません:', r.reason, r.error ?? r.version ?? '');
-        setPhase(continueId ? 'unavailable' : 'fallback');
+        fail(r.reason);
         return;
       }
       const api = r.api;
@@ -195,12 +222,27 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
       keeper = createDraftKeeper({
         api,
         store: ogDraftStore,
-        storage: sessionStore,
         docId: () => docId.current,
         continueId: continueId ?? null,
         toFrameBlob: frameBlob,
       });
       keeperRef.current = keeper;
+      const held = (await lockP).held;
+      if (!alive) {
+        offs.splice(0).forEach((f) => f());
+        return;
+      }
+      if (!held) {
+        // 別のタブが #/free を開いている: 印・写し・ジャーナルの掃除はそのタブの仕事。ここは下書きを出さない・残さない
+        keeper = sharedKeeper(api);
+        keeperRef.current = keeper;
+        if (initialOffer.current) {
+          initialOffer.current = null;
+          draftOfferRef.current = null;
+          setDraftOffer(null);
+        }
+        showToast(SHARED_NOTICE);
+      }
       offs.push(
         api.onStroke((s) => {
           spans.current.add(s);
@@ -213,8 +255,20 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
       );
       try {
         api.configure(currentConfig());
-        // 前の下書きの印が無ければ、残った記録（OG のジャーナル・親の写し）を先に消す（印があれば答えを待つ）
-        if (!initialOffer.current) await keeper.sweep();
+        // 前の下書き: 印（無ければ残っている期限内の記録）を「続きから / 捨てる」で出す。掃除は期限切れ（か残っているものが無い）ときだけ
+        if (held && !initialOffer.current) {
+          const mark = ogDraftStore.readMark();
+          const found = mark ? null : await keeper.peek();
+          const d = decideDraft({ mark, found, continueId: continueId ?? null, now: new Date() });
+          if (d.kind === 'offer') {
+            initialOffer.current = d.mark;
+            draftOfferRef.current = d.mark;
+            setDraftOffer(d.mark);
+          } else if (d.kind === 'sweep') {
+            await keeper.sweep();
+          }
+          if (!alive) return;
+        }
         let opened = false;
         if (continueId) {
           const [d, rec] = await Promise.all([getDrawing(continueId), getOgDoc(continueId)]);
@@ -263,7 +317,7 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
         } catch {
           // 何もしない
         }
-        setPhase(continueId ? 'unavailable' : 'fallback');
+        fail('open');
       }
     })();
 
@@ -271,8 +325,11 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
       alive = false;
       if (draftTimer !== null) clearTimeout(draftTimer);
       offs.splice(0).forEach((f) => f());
-      // 画面を離れた（保存して終わった・戻るを選んだ）: 下書きは要らない（再読み込みではここは走らない = 下書きが残る）
-      void (keeper ?? ogDraftStore).clear();
+      // 画面を離れた（保存して終わった・戻るを選んだ）: 下書きは要らない（再読み込み・タブやアプリを閉じたときはここは走らない = 下書きが残る）。
+      // 繋がる前に離れた（keeper が無い）・持ち主でない（shared）ときは前の下書きに触れない（開けなかっただけで、捨てたのではない）。
+      // 消し終わってからロックを手放す（次のタブが消す前の印を読まないように）
+      const clearing = keeper ? keeper.clear() : Promise.resolve();
+      void clearing.catch(() => undefined).finally(() => lock?.release());
       keeperRef.current = null;
       const api = apiRef.current;
       apiRef.current = null;
@@ -374,7 +431,7 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
   };
 
   useEffect(() => {
-    if (phase === 'fallback') showToast(FALLBACK_NOTICE);
+    if (phase === 'fallback') showToast(withReason(FALLBACK_NOTICE, failReason ?? 'missing'));
   }, [phase]);
 
   if (phase === 'fallback') return <FallbackFreeDraw save={save} />;
@@ -450,7 +507,7 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
         )}
         {phase === 'unavailable' && (
           <div class="og-free__veil" role="alert">
-            <p>新しいお絵描きを開けませんでした。通信を確かめてから、もう一度開いてください。</p>
+            <p>{withReason('新しいお絵描きを開けませんでした。通信を確かめてから、もう一度開いてください。', failReason ?? 'missing')}</p>
             <Button variant="secondary" onClick={() => navigate(leaveTo(), { replace: true })}>
               戻る
             </Button>
@@ -473,8 +530,10 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
                 const go = leaveAsk;
                 setLeaveAsk(null);
                 leavingRef.current = true;
-                void (keeperRef.current ?? ogDraftStore).clear();
-                go?.();
+                // 捨てる: OG のジャーナルを消し終わってから離れる（離れると埋め込みを畳むので、消す前に畳むと記録が残り、
+                // 次に開いたときに捨てたはずの絵を「描きかけ」として出してしまう）。消せなくても長くは待たない
+                const clearing = keeperRef.current ? keeperRef.current.clear() : Promise.resolve();
+                void Promise.race([clearing.catch(() => undefined), new Promise((r) => setTimeout(r, LEAVE_CLEAR_WAIT_MS))]).then(() => go?.());
               }}
             >
               戻る

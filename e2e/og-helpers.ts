@@ -177,11 +177,41 @@ export async function longPenStroke(cdp: CDPSession, page: Page, ms: number): Pr
   await send('mouseReleased', n, t0 + ms / 1000);
 }
 
-/** OG の自動保存の記録（ジャーナル）の件数（ロック・メタのストアは数えない）。DB が無ければ 0 */
+/**
+ * OG の自動保存の記録（ジャーナル）の件数。Chromium では OPFS の `…/autosave/<docId>/entry.json`（OG の createOpfsAutosaveStorage）、
+ * OPFS の無い環境では IndexedDB `og-files-autosave`（ロック・メタのストアは数えない）。両方を足す
+ */
 export async function ogJournalCount(frame: Frame): Promise<number> {
   return frame.evaluate(async () => {
+    let opfs = 0;
+    try {
+      const root = await navigator.storage.getDirectory();
+      type Dir = FileSystemDirectoryHandle & { entries(): AsyncIterable<[string, FileSystemHandle]> };
+      const walk = async (d: Dir, depth: number): Promise<void> => {
+        for await (const [name, h] of d.entries()) {
+          if (h.kind !== 'directory') continue;
+          const sub = h as Dir;
+          if (name === 'autosave') {
+            for await (const [, rec] of sub.entries()) {
+              if (rec.kind !== 'directory') continue;
+              try {
+                await (rec as FileSystemDirectoryHandle).getFileHandle('entry.json');
+                opfs++;
+              } catch {
+                // 書きかけ（entry.json が無い）は数えない
+              }
+            }
+          } else if (depth < 3) {
+            await walk(sub, depth + 1);
+          }
+        }
+      };
+      await walk(root as Dir, 0);
+    } catch {
+      opfs = 0;
+    }
     const dbs = await indexedDB.databases();
-    if (!dbs.some((d) => d.name === 'og-files-autosave')) return 0;
+    if (!dbs.some((d) => d.name === 'og-files-autosave')) return opfs;
     const db = await new Promise<IDBDatabase>((ok, ng) => {
       const r = indexedDB.open('og-files-autosave');
       r.onsuccess = () => ok(r.result);
@@ -197,7 +227,7 @@ export async function ogJournalCount(frame: Frame): Promise<number> {
       });
     }
     db.close();
-    return n;
+    return n + opfs;
   });
 }
 

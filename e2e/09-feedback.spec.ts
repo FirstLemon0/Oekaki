@@ -100,7 +100,7 @@ test.describe('実機フィードバック 3', () => {
     expect(before.opaque).toBeGreaterThan(50);
     // 下書きの印（engine og）は最後の確定から 1 秒まとめて置く
     await expect
-      .poll(() => page.evaluate(() => JSON.parse(sessionStorage.getItem('seichotsu.draft.free') ?? 'null')?.engine ?? null))
+      .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('seichotsu.ogDraft.free') ?? 'null')?.engine ?? null))
       .toBe('og');
     await page.waitForTimeout(2500);
 
@@ -124,7 +124,7 @@ test.describe('実機フィードバック 3', () => {
     await page.getByRole('button', { name: '終わる' }).click();
     await page.getByRole('button', { name: '保存して終わる' }).click();
     await expect(page.getByRole('link', { name: /自由お絵描き/ })).toBeVisible();
-    expect(await page.evaluate(() => sessionStorage.getItem('seichotsu.draft.free'))).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem('seichotsu.ogDraft.free'))).toBeNull();
   });
 
   test('復習スキップ: 差し込まれた復習を飛ばして本編へ。今日はホームにも出ない', async ({ page }) => {

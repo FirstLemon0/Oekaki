@@ -18,6 +18,7 @@ import { formatBytes, yyyymmdd } from '../format';
 import { href, navigate } from '../router';
 import { critiques, persisted, profile, reloadData, saveSettings, settings, uiPrefs } from '../state';
 import { PAINT_ENGINE_LABEL } from '../paintEngine';
+import { fallbackStorage, formatFallbackLine, readFallback } from '../og/fallbackReason';
 import { UnlockAllButtons } from '../UnlockAllButtons';
 
 type SectionId = 'ai' | 'scoring' | 'practice' | 'data' | 'appearance' | 'about';
@@ -322,6 +323,7 @@ function PracticeGroup() {
           onChange={(v) => void saveSettings({ paintEngine: v ? 'og' : 'v2' })}
         />
       </ListRow>
+      <OgFallbackRow />
       <ListRow title="外部お絵描きアプリ" desc="ステージ 7 から使います">
         <TextField
           label="外部お絵描きアプリ名"
@@ -333,6 +335,13 @@ function PracticeGroup() {
       </ListRow>
     </Group>
   );
+}
+
+/** 新しいお絵描きを開けずに今までのお絵描きに戻った最後の理由（端末の中の記録だけ。ilust-sup-followup-13、RQ-7 の切り分け用） */
+function OgFallbackRow() {
+  const [rec] = useState(() => readFallback(fallbackStorage()));
+  if (!rec) return null;
+  return <ListRow title="新しいお絵描きの記録" desc={<span data-testid="og-fallback-last">{formatFallbackLine(rec)}</span>} />;
 }
 
 // ---------------------------------------------------------------------------

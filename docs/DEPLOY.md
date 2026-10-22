@@ -76,10 +76,14 @@ main への push は `tools/safe-push.sh` だけで行います（2026-10-19 の
 1. コミットは「パスを名指しした `git add <path>…`」で作る（`git add -A` / `git add .` / `git add -u` は使わない。手元の zip を巻き込まないため）。
 2. `tools/safe-push.sh` を実行する。次を全部確かめてから `git push origin HEAD:main`（fast-forward だけ。force は使わない）:
    - ブランチが main、origin/main が HEAD の祖先、作業木が clean、未追跡は手元の zip 1 つだけ、push する範囲に `.zip` が無い
+   - 埋め込みのペイント（`public/paint/BUILD.json`）が origin/main から変わるなら、その取り込みが `ogCi = ran`・`ogClean = true`・受け入れのタグ（`ogAccepted`）つきで、
+     新しい `ogCommit` が origin/main の `ogCommit` の子孫（OG のリポジトリ `../OG-nanika` か `OG_DIR` で `git merge-base --is-ancestor`。版の後退を拒む）
    - port 4173 が空き、`npm ci`、`npm run build`、`node scripts/check-bundle.mjs`、`node scripts/check-paint-artifact.mjs`、`npm test`、
      `CI=1 npx playwright test --retries=0`（Service Worker を有効にした project を含む）がすべて緑
-3. push の後、配信中の `/BUILD_ID`（ビルドしたコミット）が HEAD と一致するまで最大 10 分待って記録する。配信の URL は
+3. push の後、配信中の `/BUILD_ID`（ビルドしたコミット）が HEAD と一致するまで壁時計で最大 600 秒（`SAFE_PUSH_DEPLOY_WAIT_S`）待ち、
+   配信中の `/paint/BUILD.json` の buildId と HEAD の `public/paint/BUILD.json` の一致（`paint_deploy=match|mismatch|unknown`）とあわせて記録する。配信の URL は
    `git config seichotsu.deployUrl https://<サービス名>.onrender.com` で一度だけ設定しておく（無ければ照合は飛ばす）。
+   エージェントは push しません（M8 から。エージェントは commit と `bash tools/safe-push.sh --dry-run` の緑まで。push は利用者が `bash tools/safe-push.sh` を実行する）。
 4. `.git/hooks/pre-push`（`tools/hooks/pre-push`、safe-push が入れる）が、fast-forward でない更新・ブランチの削除・`.zip` を含む push を拒みます。
 5. 戻すときは `git revert` で新しいコミットを積み、同じく safe-push で push します（履歴を書き換えない）。
 
@@ -90,4 +94,17 @@ main への push は `tools/safe-push.sh` だけで行います（2026-10-19 の
 レッスンの採点のキャンバスはいつも今までのものです。不具合があれば `src/ui/paintEngine.ts` の `DEFAULT_PAINT_ENGINE` を `'v2'` に戻すコミットを
 先に safe-push で出します（設定で on / off を選んだ人の値はそのまま）。
 
-埋め込みのペイント（`public/paint/`）の更新は `tools/import-paint.sh <OG-nanika のコミット>` で行います（OG 側の `npm run ci`・`build:embed`・`check:embed` が緑のときだけ置き換え、`public/paint/BUILD.json` にハッシュを書く）。
+埋め込みのペイント（`public/paint/`）の更新は `tools/import-paint.sh <OG-nanika の受け入れのタグ>`（例 `tools/import-paint.sh m7-accepted`）で行います。
+取り込みの元は **受け入れ済みのタグ（`m<n>-accepted`）が指すコミットだけ**（ADR-0008 D10-1）。OG の作業木はそのコミットで、未追跡を含めて clean
+（`git status --porcelain` が空。別の作業中の OG を汚さないよう `git -C ../OG-nanika worktree add --detach ../OG-nanika-ilust m7-accepted` で作った作業木を
+`OG_DIR` に渡してよい）。OG 側の `npm run ci`（省かない）・`build:embed`・`check:embed` が緑のときだけ置き換え、`public/paint/BUILD.json`（schema 2）に
+ハッシュと関門の記録（`ogRef`・`ogAccepted`・`ogCi`・`ogClean`・`entryJsGzipBytes`・`ogInitialJsGzipBytes`）を書きます。`check-paint-artifact` は
+`ogCi = skipped`・`ogClean ≠ true`・タグ無しの取り込みを拒み、`embed.html` の CSP の meta（`script-src 'self'`・`object-src 'none'`）を確かめます
+（meta の無い成果物は契約 0.10.0 より前 = M7 までの成果物だけ警告で通す移行の印）。
+
+OGNK の形式か `ogContract` が上がる取り込みの前には、配信中の埋め込みで保存した `.ognk` のフィクスチャを
+`OG_FIXTURE_NAME=og-<短い sha> npx playwright test --config=e2e/fixtures/og-fixture.config.ts` で足し、`e2e/13-og-free.spec.ts` に「ギャラリーから続けると同じ画素」の試験を足します
+（今あるのは `e2e/fixtures/og-8af7b0f.ognk`）。
+
+新しいお絵描きの下書きの印は localStorage（`seichotsu.ogDraft.free`、24 時間）にあり、タブやアプリを閉じた後に開き直しても「続きから / 捨てる」が出ます。
+今までのお絵描きに戻った理由（missing / version / boot / timeout / open）は通知の末尾と設定の「練習」の 1 行（localStorage の `seichotsu.ogFallback.last`）に出ます。
