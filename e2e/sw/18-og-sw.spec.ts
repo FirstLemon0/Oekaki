@@ -5,14 +5,17 @@
  *   新しい SW が有効になっても再読み込みせず「更新があります（保存後に再読み込み）」と知らせる。保存した後に再読み込みする
  * - ilust-precache-scope の新しいお絵描きの分: 一度開いた後は通信を切っても #/free の新しいお絵描きが開いて描ける
  *   （/paint/assets/ は SW の実行時キャッシュ、/paint/embed.html は NetworkFirst の写し）
+ * - ilust-sup-followup-12: SW の install で og-paint-<buildId> に BUILD.json の assets/ の全部（.bin 以外）が先に入る。
+ *   新しいお絵描きを一度も開かずに通信を切っても、動的 import でしか読まれないチャンクを含めて全部キャッシュから読める（中身は BUILD.json の sha256 と一致）
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 import { gotoApp } from '../helpers';
 import { drawOg, OG_ROOT, ogFrame, setOgEngine, waitOgContent } from '../og-helpers';
 
 const DIST_SW = fileURLToPath(new URL('../../dist/sw.js', import.meta.url));
+const BUILD_JSON = fileURLToPath(new URL('../../public/paint/BUILD.json', import.meta.url));
 
 async function waitForController(page: Page): Promise<void> {
   await page.evaluate(async () => {
@@ -109,6 +112,56 @@ test.describe('Service Worker と新しいお絵描き', () => {
       await context.setOffline(false);
     }
   });
+});
+
+test('ilust-sup-followup-12: SW の install で埋め込みの assets/ を全部先に入れ、開く前に通信を切っても全部読める', async ({ page, context }) => {
+  test.skip(!existsSync(BUILD_JSON), '成果物（public/paint/）を取り込んでいないビルド');
+  const build = JSON.parse(readFileSync(BUILD_JSON, 'utf8')) as { buildId: string; files: Record<string, string> };
+  const want = Object.keys(build.files)
+    .filter((f) => f.startsWith('assets/') && !f.endsWith('.bin'))
+    .map((f) => `/paint/${f}`)
+    .sort();
+  expect(want.filter((u) => u.endsWith('.js')).length).toBeGreaterThan(100);
+  // 新しいお絵描きを開かない（今までのお絵描きの設定・ホームだけ）
+  await setOgEngine(page, false);
+  await gotoApp(page);
+  await waitForController(page);
+  const cacheName = `og-paint-${build.buildId}`;
+  // install で入る（ホームしか開いていない = 実行時の CacheFirst では入らない）
+  await expect
+    .poll(
+      async () =>
+        page.evaluate(async (name) => {
+          if (!(await caches.has(name))) return [];
+          return (await (await caches.open(name)).keys()).map((r) => new URL(r.url).pathname).sort();
+        }, cacheName),
+      { timeout: 60_000 },
+    )
+    .toEqual(want);
+  // 通信を切っても、まだ一度も読んでいないチャンク（動的 import でしか読まれないものを含む）が全部 SW から読め、中身は BUILD.json と一致する
+  await context.setOffline(true);
+  try {
+    const bad = await page.evaluate(
+      async ({ urls, files }) => {
+        const out: string[] = [];
+        for (const u of urls) {
+          const res = await fetch(u).catch(() => null);
+          if (!res || res.status !== 200) {
+            out.push(`${u}: ${res ? res.status : 'network'}`);
+            continue;
+          }
+          const d = await crypto.subtle.digest('SHA-256', await res.arrayBuffer());
+          const hex = Array.from(new Uint8Array(d), (b) => b.toString(16).padStart(2, '0')).join('');
+          if (hex !== files[u.slice('/paint/'.length)]) out.push(`${u}: sha256`);
+        }
+        return out;
+      },
+      { urls: want, files: build.files },
+    );
+    expect(bad).toEqual([]);
+  } finally {
+    await context.setOffline(false);
+  }
 });
 
 /** 今のページで #/free を開いて ready まで（SW の制御を保ったまま、ハッシュの移動で） */

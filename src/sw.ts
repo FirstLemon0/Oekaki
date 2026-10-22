@@ -9,6 +9,9 @@
  * - /paint/ は precache に入れない（vite.config の globIgnores）。/paint/assets/ は実行時のキャッシュ（CacheFirst、
  *   名前は OG の BUILD_ID ごと、件数の上限、容量不足で掃除）、/paint/*.html は NetworkFirst（一度開けばオフラインでも開ける）。
  *   字形の .bin だけは precache に明示で入れる（vite.config の additionalManifestEntries）。古い版の og-paint-* は activate で消す。
+ * - install で og-paint-<buildId> に BUILD.json の assets/ の全部（.bin 以外、sha256 が一致したものだけ）を先に入れる（ilust-sup-followup-12、
+ *   src/swPaint.ts）。動的 import でしか読まれないチャンクもオフライン・配信の切り替わりで読める。install は失敗させない・待つのは最大 2 分・
+ *   回線の節約（Save-Data）では入れない。ページからの `{ type: 'og-paint-fill' }` の message でも足りない分を入れる（新しいお絵描きの ready の後）
  *   ほかのキャッシュ（workbox の precache・share-target）には触れない。
  * - 共有シートの受け口: POST /share-target（manifest の share_target）で届いた画像を
  *   Cache Storage の SHARE_CACHE に置き、`/#/gallery?shared=N` へ 303 で送る。
@@ -22,6 +25,14 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 import { clientsClaim } from 'workbox-core';
 import { CacheFirst, NetworkFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
+import {
+  fillPaintCache,
+  paintCacheMaxEntries,
+  paintPrefetchList,
+  PAINT_FILL_INSTALL_BUDGET_MS,
+  sha256Hex,
+  type FillPaintCacheResult,
+} from './swPaint';
 
 /** state.ts と同じ名前（共有で届いた画像の一時置き場） */
 const SHARE_CACHE = 'share-target';
@@ -30,15 +41,25 @@ const SHARE_PREFIX = '/share-target/pending/';
 /** 埋め込みのペイントの実行時キャッシュ（OG の BUILD_ID ごと。vite.config の define が public/paint/BUILD.json から入れる） */
 const PAINT_CACHE_PREFIX = 'og-paint-';
 const PAINT_CACHE = `${PAINT_CACHE_PREFIX}${__OG_PAINT_BUILD_ID__}`;
-/** 実行時キャッシュの件数の上限（OG の埋め込みのチャンク数より十分大きく、際限なく増えない値） */
-const PAINT_CACHE_MAX_ENTRIES = 300;
+/** 埋め込みのファイルの一覧（BUILD.json の files = パス → sha256。vite.config の define。ペイントの無いビルドは {}） */
+const PAINT_FILES: Record<string, string> = __OG_PAINT_FILES__;
+/** install で先に入れる一覧（assets/ の下・.bin 以外） */
+const PAINT_PREFETCH = paintPrefetchList(PAINT_FILES);
+/** 実行時キャッシュの件数の上限（埋め込みのファイル数より必ず大きく、際限なく増えない値。swPaint.ts） */
+const PAINT_CACHE_MAX_ENTRIES = paintCacheMaxEntries(Object.keys(PAINT_FILES).length);
+
+interface ExtendableEventLike {
+  waitUntil(p: Promise<unknown>): void;
+}
 
 interface SwScope {
   __WB_MANIFEST: Array<string | { url: string; revision: string | null }>;
   registration: { scope: string };
   location: { origin: string };
+  navigator: { connection?: { saveData?: boolean } };
   skipWaiting(): Promise<void>;
-  addEventListener(type: 'activate', listener: (event: { waitUntil(p: Promise<unknown>): void }) => void): void;
+  addEventListener(type: 'activate' | 'install', listener: (event: ExtendableEventLike) => void): void;
+  addEventListener(type: 'message', listener: (event: ExtendableEventLike & { data: unknown }) => void): void;
 }
 
 const sw = self as unknown as SwScope;
@@ -85,6 +106,37 @@ sw.addEventListener('activate', (event) => {
         Promise.all(keys.filter((k) => k.startsWith(PAINT_CACHE_PREFIX) && k !== PAINT_CACHE).map((k) => caches.delete(k))),
       ),
   );
+});
+
+// 埋め込みのペイントを先に入れる（ilust-sup-followup-12）。同時に 2 本は走らせない（install と message が重なっても 1 回）
+let paintFill: Promise<FillPaintCacheResult | null> | null = null;
+function fillPaintOnce(): Promise<FillPaintCacheResult | null> {
+  if (!paintFill) {
+    paintFill = fillPaintCache({
+      list: PAINT_PREFETCH,
+      openCache: () => caches.open(PAINT_CACHE),
+      fetch: (url) => fetch(url, { credentials: 'same-origin' }),
+      digest: sha256Hex,
+      saveData: sw.navigator.connection?.saveData === true,
+    })
+      .catch(() => null)
+      .finally(() => {
+        paintFill = null;
+      });
+  }
+  return paintFill;
+}
+
+sw.addEventListener('install', (event) => {
+  if (PAINT_PREFETCH.length === 0) return;
+  // install は失敗させない（fillPaintCache は投げない）。待つのは最大 PAINT_FILL_INSTALL_BUDGET_MS、残りは SW が生きている間だけ続ける
+  event.waitUntil(Promise.race([fillPaintOnce(), new Promise((r) => setTimeout(r, PAINT_FILL_INSTALL_BUDGET_MS))]));
+});
+
+sw.addEventListener('message', (event) => {
+  const data = event.data as { type?: unknown } | null;
+  if (!data || data.type !== 'og-paint-fill' || PAINT_PREFETCH.length === 0) return;
+  event.waitUntil(fillPaintOnce());
 });
 
 function appUrl(hash: string): string {

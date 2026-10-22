@@ -55,7 +55,11 @@ Render の Static Site は既定で「GitHub の対象ブランチに push す�
 3. 次にアプリを開き直したタイミングで、新しいバージョンに切り替わります。ユーザー側で「更新」ボタンを押すような操作は不要です。
 4. すぐに最新版を確認したい場合は、アプリをホーム画面のアイコンから一度完全に閉じて開き直す（または Chrome でページを再読み込みする）と確実です。
 5. 自由お絵描き（`#/free`）で保存していない線があるあいだは、新しい版が入っても自動では再読み込みしません。「更新があります（保存後に再読み込み）」と出て、保存（または破棄）した後に再読み込みします。ほかの画面では今までどおりすぐ切り替わります（`src/ui/updateDefer.ts`）。
-6. 埋め込みのペイント（`/paint/`、OG-nanika の成果物）は Service Worker の precache に入れず、開いたときに版ごとのキャッシュ（`og-paint-<版>`）へ入ります。字形のファイル（`.bin`）だけは precache します。
+6. 埋め込みのペイント（`/paint/`、OG-nanika の成果物）は Service Worker の precache に入れず、版ごとのキャッシュ（`og-paint-<版>`）へ入ります。字形のファイル（`.bin`）だけは precache します。
+   新しい Service Worker の install のときに `public/paint/BUILD.json` の `assets/` の全部（`.bin` 以外、約 6 MB）を `og-paint-<版>` に先に入れます
+   （sha256 が BUILD.json と一致したものだけ。install は失敗させず、待つのは最大 2 分。端末の「データセーバー」（Save-Data）が on なら入れない。
+   新しいお絵描きを開いたときにも足りない分を補う）。動的 import でしか読まれないチャンクも、オフラインや配信の切り替わりの後に読めます
+   （ilust-sup-followup-12、`src/swPaint.ts`）。キャッシュの件数の上限は埋め込みのファイル数より必ず大きい値（`paintCacheMaxEntries`）。
 
 ## ⑦ Render の Headers（CSP）
 

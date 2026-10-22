@@ -84,6 +84,8 @@ function cspPlugin(): Plugin {
 export default defineConfig({
   define: {
     __OG_PAINT_BUILD_ID__: JSON.stringify(paintBuild?.buildId ?? 'none'),
+    // 埋め込みのファイルの一覧（パス → sha256）。SW の install で og-paint-<buildId> に先に入れる（src/swPaint.ts、ilust-sup-followup-12。SW だけが使う）
+    __OG_PAINT_FILES__: JSON.stringify(paintBuild?.files ?? {}),
     // 自由お絵描き（OgFreeDraw）が保存の記録に使う成果物の版（無ければ null = ペイント無し。src/ui/og/paintInfo.ts）
     __OG_PAINT_INFO__: JSON.stringify(
       paintBuild ? { buildId: paintBuild.buildId, ogContract: paintBuild.ogContract, embedApi: paintBuild.embedApi } : null,

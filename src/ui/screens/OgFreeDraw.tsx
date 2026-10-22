@@ -71,6 +71,18 @@ function initialMark(continueId: string | null): OgDraftMark | null {
   return m && m.continueId === continueId && !isMarkExpired(m, new Date()) ? m : null;
 }
 
+/**
+ * SW に、埋め込みのペイントでまだキャッシュに無いチャンクを入れてもらう（ilust-sup-followup-12、src/sw.ts の message 'og-paint-fill'）。
+ * install で入れ切れなかった分（回線が細い・SW が途中で止まった）を、新しいお絵描きを開いたときに補う。SW が無い・握られていなければ何もしない
+ */
+function requestPaintFill(): void {
+  try {
+    navigator.serviceWorker?.controller?.postMessage({ type: 'og-paint-fill' });
+  } catch {
+    // 何もしない
+  }
+}
+
 function prefersDark(): boolean {
   try {
     return typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches;
@@ -291,7 +303,10 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
             await keeper.clear();
           }
         }
-        if (alive) setPhase('ready');
+        if (alive) {
+          setPhase('ready');
+          requestPaintFill();
+        }
       } catch (e) {
         console.warn('[OgFreeDraw] 紙を用意できません', e);
         if (!alive) return;
