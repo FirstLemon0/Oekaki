@@ -6,7 +6,7 @@
 //   (4) 緑の確認（e2e など）が落ちた push
 // あわせて、緑なら fast-forward で push されること、試験用の差し替えは origin が GitHub だと使えないことも確かめる。
 import { execFileSync, spawnSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync, chmodSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, chmodSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -174,6 +174,146 @@ describe('tools/safe-push.sh', () => {
     const r = safePush(work, 'true');
     expect(r.code).not.toBe(0);
     expect(r.out).toMatch(/ローカルのパスのときだけ/);
+  });
+});
+
+/** 偽の OG のリポジトリ: A → B（B は A の子孫）と、A から分かれた C */
+function makeOgRepo(base) {
+  const og = join(base, 'OG-nanika');
+  mkdirSync(og, { recursive: true });
+  git(og, 'init', '-b', 'main');
+  const c = (name) => {
+    writeFileSync(join(og, 'f.txt'), `${name}\n`);
+    git(og, 'add', 'f.txt');
+    git(og, 'commit', '-m', name);
+    return git(og, 'rev-parse', 'HEAD');
+  };
+  const A = c('A');
+  const B = c('B');
+  git(og, 'checkout', '-q', '-b', 'side', A);
+  const C = c('C');
+  git(og, 'checkout', '-q', 'main');
+  return { og, A, B, C };
+}
+
+/** public/paint/BUILD.json だけを書いてコミットする（照合は手順 3 の check-paint-artifact の仕事。ここは手順 2b だけを見る） */
+function commitPaint(work, info) {
+  mkdirSync(join(work, 'public', 'paint'), { recursive: true });
+  writeFileSync(
+    join(work, 'public', 'paint', 'BUILD.json'),
+    JSON.stringify({ schema: 2, ogCi: 'ran', ogClean: true, ogAccepted: 'm7-accepted', buildId: `${info.ogCommit.slice(0, 12)}-x`, ...info }),
+  );
+  git(work, 'add', 'public/paint/BUILD.json');
+  git(work, 'commit', '-m', `paint ${info.ogCommit.slice(0, 7)}`);
+}
+
+describe('tools/safe-push.sh 手順 2b: 埋め込みのペイントの版（ilust-sup-followup-02）', () => {
+  it('origin/main の ogCommit の子孫への取り込みは通り、記録に paint_gate が残る', () => {
+    const { base, origin, work } = setup();
+    const { og, A, B } = makeOgRepo(base);
+    commitPaint(work, { ogCommit: A });
+    git(work, 'push', 'origin', 'HEAD:main');
+    commitPaint(work, { ogCommit: B });
+    const r = safePush(work, 'true', { OG_DIR: og });
+    expect(r.out).toContain('2b.');
+    expect(r.code, r.out).toBe(0);
+    expect(originHead(origin)).toBe(git(work, 'rev-parse', 'HEAD'));
+    const log = readFileSync(git(work, 'rev-parse', '--path-format=absolute', '--git-path', 'safe-push.log'), 'utf8');
+    expect(log).toMatch(new RegExp(`paint_gate=changed:${A.slice(0, 12)}->${B.slice(0, 12)}`));
+  });
+
+  it('版の後退（新しい ogCommit が origin/main の ogCommit の祖先）・枝違いは止める', () => {
+    const { base, origin, work } = setup();
+    const { og, A, B, C } = makeOgRepo(base);
+    commitPaint(work, { ogCommit: B });
+    git(work, 'push', 'origin', 'HEAD:main');
+    const before = originHead(origin);
+    commitPaint(work, { ogCommit: A });
+    let r = safePush(work, 'true', { OG_DIR: og });
+    expect(r.code).not.toBe(0);
+    expect(r.out).toMatch(/埋め込みの版が後退しています/);
+    git(work, 'reset', '-q', '--hard', 'HEAD~1');
+    commitPaint(work, { ogCommit: C });
+    r = safePush(work, 'true', { OG_DIR: og });
+    expect(r.code).not.toBe(0);
+    expect(r.out).toMatch(/子孫ではありません/);
+    expect(originHead(origin)).toBe(before);
+  });
+
+  it('版が変わるのに OG のリポジトリが無い・コミットを知らないときは止める', () => {
+    const { base, origin, work } = setup();
+    const { og, A, B } = makeOgRepo(base);
+    commitPaint(work, { ogCommit: A });
+    git(work, 'push', 'origin', 'HEAD:main');
+    const before = originHead(origin);
+    commitPaint(work, { ogCommit: B });
+    let r = safePush(work, 'true', { OG_DIR: join(base, 'no-such-og') });
+    expect(r.code).not.toBe(0);
+    expect(r.out).toMatch(/OG のリポジトリがありません/);
+    git(work, 'reset', '-q', '--hard', 'HEAD~1');
+    commitPaint(work, { ogCommit: 'f'.repeat(40) });
+    r = safePush(work, 'true', { OG_DIR: og });
+    expect(r.code).not.toBe(0);
+    expect(r.out).toMatch(/HEAD の ogCommit ffffffffffff がありません/);
+    expect(originHead(origin)).toBe(before);
+  });
+
+  it('変わった取り込みの ogClean が true でなければ止める（試験でも）。ogCi = skipped・タグ無しは試験のときだけ警告', () => {
+    const { base, origin, work } = setup();
+    const { og, A, B } = makeOgRepo(base);
+    commitPaint(work, { ogCommit: A });
+    git(work, 'push', 'origin', 'HEAD:main');
+    const before = originHead(origin);
+    commitPaint(work, { ogCommit: B, ogClean: false });
+    let r = safePush(work, 'true', { OG_DIR: og });
+    expect(r.code).not.toBe(0);
+    expect(r.out).toMatch(/ogClean が true ではありません/);
+    expect(originHead(origin)).toBe(before);
+
+    git(work, 'reset', '-q', '--hard', 'HEAD~1');
+    commitPaint(work, { ogCommit: B, ogCi: 'skipped', ogAccepted: null });
+    r = safePush(work, 'true', { OG_DIR: og });
+    expect(r.code, r.out).toBe(0);
+    expect(r.out).toMatch(/試験のため警告だけ: 新しい埋め込みの取り込みの ogCi が ran ではありません/);
+    expect(r.out).toMatch(/試験のため警告だけ: 新しい埋め込みの取り込みに受け入れのタグ/);
+  });
+
+  it('埋め込みの版が同じ（BUILD.json が変わらない）なら OG のリポジトリは要らない', () => {
+    const { base, work } = setup();
+    const { A } = makeOgRepo(base);
+    commitPaint(work, { ogCommit: A });
+    git(work, 'push', 'origin', 'HEAD:main');
+    commitFile(work, 'b.txt');
+    const r = safePush(work, 'true', { OG_DIR: join(base, 'no-such-og') });
+    expect(r.code, r.out).toBe(0);
+  });
+
+  it('--dry-run は push せず、記録に DRY-RUN と paint_gate を残す', () => {
+    const { base, origin, work } = setup();
+    const { og, A, B } = makeOgRepo(base);
+    commitPaint(work, { ogCommit: A });
+    git(work, 'push', 'origin', 'HEAD:main');
+    const before = originHead(origin);
+    commitPaint(work, { ogCommit: B });
+    const r = spawnSync('bash', ['tools/safe-push.sh', '--dry-run'], {
+      cwd: work,
+      env: { ...GIT_ENV, SAFE_PUSH_TEST_CHECKS: 'true', SEICHOTSU_DEPLOY_URL: '', OG_DIR: og },
+      encoding: 'utf8',
+    });
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toMatch(/--dry-run のため push しません/);
+    expect(originHead(origin)).toBe(before);
+    const log = readFileSync(git(work, 'rev-parse', '--path-format=absolute', '--git-path', 'safe-push.log'), 'utf8');
+    expect(log).toMatch(/\tDRY-RUN\t.*paint_gate=changed:/);
+  });
+});
+
+describe('tools/safe-push.sh 手順 5 の待ち（ilust-sup-followup-09）', () => {
+  it('壁時計で区切る（コメントと実装が 600 秒で一致し、30 回の固定の繰り返しが無い）', () => {
+    const text = readFileSync(join(ROOT, 'tools', 'safe-push.sh'), 'utf8');
+    expect(text).toMatch(/SAFE_PUSH_DEPLOY_WAIT_S:-600/);
+    expect(text).not.toMatch(/seq 1 30/);
+    expect(text).toMatch(/paint_deploy=/);
   });
 });
 
