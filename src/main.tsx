@@ -21,4 +21,16 @@ const reloadController = createReloadController({
 });
 registerSW({ immediate: true, onNeedReload: () => reloadController.needReload() });
 
+// 1 つ前の版の埋め込みのペイントのキャッシュの掃除を SW に頼む（ilust-sup-followup-02、src/sw.ts）。SW は activate の時に開いていた
+// （古い版の）ページが残っていないことを確かめてから消す。このページが読み込まれた = 新しい版のページなので、読み込みの後に 1 回頼む
+function requestPaintPrune(): void {
+  try {
+    navigator.serviceWorker?.controller?.postMessage({ type: 'og-paint-prune' });
+  } catch {
+    // SW が無い・握られていなければ何もしない
+  }
+}
+if (document.readyState === 'complete') requestPaintPrune();
+else window.addEventListener('load', requestPaintPrune, { once: true });
+
 render(<App />, document.getElementById('app')!);
