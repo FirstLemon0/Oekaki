@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # 埋め込みのペイント（OG-nanika の成果物）を public/paint/ に取り込む（UR-002 / ADR-0007 D4-2、ADR-0008 D10）。
 #
-#   tools/import-paint.sh <OG の受け入れのタグかコミット>      （例: tools/import-paint.sh m7-accepted）
+#   tools/import-paint.sh <OG の受け入れのタグかコミット>      （例: tools/import-paint.sh m8.1-accepted）
 #
 # 守ること（ADR-0008 D10-1）:
-# - 取り込みの基点は受け入れ済みのタグ（m<n>-accepted）が指すコミットだけ。タグの無いコミットは拒む
+# - 取り込みの基点は受け入れ済みのタグ（m<n>-accepted、点の版 m<n>.<k>-accepted も可）が指すコミットだけ。タグの無いコミットは拒む
 #   （IMPORT_PAINT_ALLOW_UNTAGGED=1 は試験用。BUILD.json の ogAccepted が null になり、check-paint-artifact が拒む）
 # - OG の作業木がそのコミットに一致し、未追跡を含めて clean（`git status --porcelain` が空）。ci とビルドの後にもう一度確かめる
 #   （OG の e2e が書き直す追跡済みの docs/progress/ の画像だけは og_commit の版に戻してから確かめる）
@@ -17,6 +17,13 @@
 # - このスクリプトはコミットも push もしない（差分の大きさを出すだけ。コミットはパスを名指しした git add で）
 #
 # 環境変数: OG_DIR（既定 ../OG-nanika。git worktree でもよい）。OG の e2e の port を変えるときは OG_E2E_PORT / OG_EMBED_PORT（OG の playwright.config）
+#
+# 実行の目安（ilust-sup-followup-03）: OG の npm run ci は e2e の全部を retries 0 で回す（1 時間半ほど）。
+# - 他の OG の e2e（別の作業木を含む）が走っていない時間に、空いている 52xx を付けて実行する:
+#     OG_DIR=../OG-nanika-ilust OG_E2E_PORT=5292 OG_EMBED_PORT=5293 tools/import-paint.sh m8.1-accepted
+# - 最初に E2E_PORT / EMBED_PORT（既定 5190 / E2E_PORT+1、OG_E2E_PORT / OG_EMBED_PORT で変える）が空いているかを確かめ、塞がっていればすぐ止める
+#   （OG の playwright は --strictPort・reuseExistingServer: false なので、ci の途中で落ちて時間を失うのを防ぐ）
+# - CI=1 は付けない（OG の playwright の retries が 1 になり、関門が緩む）。揺れで落ちたら同じコマンドでやり直す（関門は緩めない）
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 ILUST_ROOT="$(pwd)"
@@ -27,6 +34,19 @@ die() { echo "import-paint: $*" >&2; exit 1; }
 
 og_status() { git -C "${OG_DIR}" status --porcelain --untracked-files=normal; }
 
+# OG の e2e が使う port（OG の playwright.config と同じ決め方）。既定 5190、EMBED は E2E + 1
+E2E_PORT="${OG_E2E_PORT:-5190}"
+case "${E2E_PORT}" in ''|*[!0-9]*) die "OG_E2E_PORT が数ではありません: ${E2E_PORT}" ;; esac
+EMBED_PORT="${OG_EMBED_PORT:-$((E2E_PORT + 1))}"
+case "${EMBED_PORT}" in ''|*[!0-9]*) die "OG_EMBED_PORT が数ではありません: ${EMBED_PORT}" ;; esac
+[ -z "${CI:-}" ] || die "CI=${CI} が付いています（OG の playwright の retries が 1 になり関門が緩む）。CI を外して実行してください"
+# 127.0.0.1 の port が空いているか（node で listen して閉じる。塞がっていれば 1）
+port_free() { node -e "const s=require('net').createServer();s.once('error',()=>process.exit(1));s.listen(Number(process.argv[1]),'127.0.0.1',()=>s.close(()=>process.exit(0)))" "$1"; }
+for p in "${E2E_PORT}" "${EMBED_PORT}"; do
+  port_free "${p}" || die "port ${p} が使われています（OG の e2e の E2E_PORT=${E2E_PORT} / EMBED_PORT=${EMBED_PORT}）。他の OG の e2e が走っていない時間に、空いている 52xx を OG_E2E_PORT / OG_EMBED_PORT で付けてやり直してください（例 OG_E2E_PORT=5292 OG_EMBED_PORT=5293）"
+done
+export OG_E2E_PORT="${E2E_PORT}" OG_EMBED_PORT="${EMBED_PORT}"
+
 [ -d "${OG_DIR}" ] && git -C "${OG_DIR}" rev-parse --git-dir >/dev/null 2>&1 || die "OG のリポジトリがありません: ${OG_DIR}"
 og_commit="$(git -C "${OG_DIR}" rev-parse --verify --quiet "${commit_arg}^{commit}")" || die "OG にコミット ${commit_arg} がありません"
 og_head="$(git -C "${OG_DIR}" rev-parse HEAD)"
@@ -34,8 +54,8 @@ og_head="$(git -C "${OG_DIR}" rev-parse HEAD)"
 dirty="$(og_status)"
 [ -z "${dirty}" ] || die "OG の作業木が clean ではありません（未追跡を含む。clean にしてから）: $(echo "${dirty}" | head -5 | tr '\n' ' ')"
 
-# 受け入れのタグ（そのコミットを指す m<n>-accepted。複数あれば版の大きいもの）
-og_accepted="$(git -C "${OG_DIR}" tag --points-at "${og_commit}" | grep -E '^m[0-9]+-accepted$' | sort -V | tail -1 || true)"
+# 受け入れのタグ（そのコミットを指す m<n>-accepted か点の版 m<n>.<k>-accepted（ADR-0009 D1-2）。複数あれば版の大きいもの）
+og_accepted="$(git -C "${OG_DIR}" tag --points-at "${og_commit}" | grep -E '^m[0-9]+(\.[0-9]+)?-accepted$' | sort -V | tail -1 || true)"
 if [ -z "${og_accepted}" ]; then
   [ "${IMPORT_PAINT_ALLOW_UNTAGGED:-0}" = "1" ] || die "OG のコミット ${og_commit:0:12} を指す受け入れのタグ（m<n>-accepted）がありません（取り込みの基点は受け入れ済みのタグだけ、ADR-0008 D10-1）"
   echo "import-paint: 試験: 受け入れのタグなしで取り込みます（BUILD.json の ogAccepted = null。check-paint-artifact が拒む）" >&2

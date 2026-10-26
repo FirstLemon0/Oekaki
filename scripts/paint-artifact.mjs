@@ -9,13 +9,15 @@
  * schema 2（M8、ilust-sup-followup-02 / ADR-0008 D10）: 取り込みの関門の記録を足す。
  * - `ogCi`（'ran' | 'skipped'）… OG の `npm run ci` を回したか。'skipped' は check-paint-artifact が拒む（試験の SAFE_PUSH_TEST_CHECKS のときだけ警告）
  * - `ogClean`（true）… OG の作業木が未追跡を含めて clean（`git status --porcelain` が空）だった。false / 無しは拒む
- * - `ogRef`（取り込みに渡した名前、例 'm7-accepted'）・`ogAccepted`（そのコミットを指す受け入れのタグ `m<n>-accepted`。無ければ拒む）
+ * - `ogRef`（取り込みに渡した名前、例 'm7-accepted'）・`ogAccepted`（そのコミットを指す受け入れのタグ `m<n>-accepted`、点の版 `m<n>.<k>-accepted` も可。無ければ拒む）
  * - `entryJsGzipBytes` … embed.html が直接読む JS（module script + modulepreload）の gz。旧名 `initialJsGzipBytes` は 1 版だけ同じ値で残す
  *   （埋め込みの本当の初期 JS は入口の動的 import の先も含むので、それは OG の check-embed の値を `ogInitialJsGzipBytes` に写す）
  * schema 1（M7 までの取り込み）は読めるが、関門の記録が無い旨の警告を出す（配信済みの成果物の移行の印）。
  *
  * embed.html の CSP の meta（robustness-security-02、OG の build:embed が M8 から入れる）: あれば head の先頭・`script-src 'self'`・
- * `object-src 'none'` を求め、無ければ移行の印として警告だけ（ogContract が CSP_META_REQUIRED_FROM_CONTRACT 以上 = m8-accepted 以降の取り込みでは不合格）。
+ * `object-src 'none'` を求め、無ければ移行の印として警告だけ（ogContract が CSP_META_REQUIRED_FROM_CONTRACT 以上、または ogAccepted が m8 以降 = m8-accepted 以降の取り込みでは不合格）。
+ *
+ * 初期 JS の増え方（ilust-sup-followup-04）: `checkInitialJsGrowth` が origin/main の BUILD.json と比べて警告を返す（check-paint-artifact が出す）。
  *
  *   node scripts/paint-artifact.mjs write <dir> --og-commit=<sha> --og-contract=<版> --embed-api=<n> --og-ci=ran|skipped --og-clean=true|false
  *        [--og-ref=<名前>] [--og-accepted=<タグ>] [--og-initial-js-gz=<n>] [--vite=<版>]
@@ -33,10 +35,22 @@ export const BUILD_SCHEMA = 2;
 /** 読める schema（1 = M7 までの取り込み。関門の記録なし = 警告） */
 export const READABLE_SCHEMAS = [1, 2];
 export const OG_CI_VALUES = ['ran', 'skipped'];
-/** 受け入れのタグの形（ADR-0008 D10-1: 取り込みの基点は受け入れ済みのタグだけ） */
-export const ACCEPTED_TAG_RE = /^m\d+-accepted$/;
+/**
+ * 受け入れのタグの形（ADR-0008 D10-1: 取り込みの基点は受け入れ済みのタグだけ）。
+ * 点の版（ADR-0009 D1-2、例 `m8.1-accepted`）も受け入れ済みのタグとして扱う
+ */
+export const ACCEPTED_TAG_RE = /^m\d+(?:\.\d+)?-accepted$/;
 /** CSP の meta を必須にする契約の版（M8 で 0.10.0 を適用 = m8-accepted 以降の取り込み）。それより前は無くても警告だけ */
 export const CSP_META_REQUIRED_FROM_CONTRACT = '0.10.0';
+/** CSP の meta を必須にする受け入れの版（m8 以降。契約の版の読み違いがあっても、受け入れのタグからも必須にする。robustness-security-06） */
+export const CSP_META_REQUIRED_FROM_MILESTONE = 8;
+/**
+ * 埋め込みの初期 JS（OG の check-embed の値 = ogInitialJsGzipBytes）の増え方の警告（ilust-sup-followup-04）。
+ * OG の check-embed の予算は 560 KB gz（KiB）。origin/main の取り込みから +8 KB を超えるか、予算の 98 % を超えたら警告する（落とさない）
+ */
+export const OG_EMBED_INITIAL_BUDGET_BYTES = 560 * 1024;
+export const INITIAL_JS_GROWTH_WARN_BYTES = 8 * 1024;
+export const INITIAL_JS_BUDGET_WARN_RATIO = 0.98;
 
 /** 製品名の字面（UI に出さない約束。OG の check:embed と同じ考え方で、成果物に 1 つでもあれば失敗） */
 export const PRODUCT_NAME_RE = /クリスタ|CLIP\s*STUDIO|CELSYS|セルシス|clipstudio/i;
@@ -134,14 +148,27 @@ export function readCspMeta(html) {
 /** script-src に入っていてはいけない値（'self' の外から・文字列から実行できる） */
 const UNSAFE_SCRIPT_SOURCES = new Set(['*', "'unsafe-inline'", "'unsafe-eval'", 'data:', 'blob:', 'http:', 'https:']);
 
+/** 受け入れのタグの版の大きい方の数（'m8.1-accepted' → 8、形が違えば null） */
+export function acceptedMilestone(tag) {
+  const m = /^m(\d+)(?:\.\d+)?-accepted$/.exec(String(tag ?? ''));
+  return m ? Number(m[1]) : null;
+}
+
+/** CSP の meta が必須の成果物か（契約 0.10.0 以降か、受け入れのタグが m8 以降） */
+export function cspMetaRequired({ ogContract, ogAccepted } = {}) {
+  if (typeof ogContract === 'string' && compareVersions(ogContract, CSP_META_REQUIRED_FROM_CONTRACT) >= 0) return true;
+  const ms = acceptedMilestone(ogAccepted);
+  return ms !== null && ms >= CSP_META_REQUIRED_FROM_MILESTONE;
+}
+
 /** CSP の meta の検査。{ errors, warnings, present } */
-export function checkCspMeta(html, { ogContract } = {}) {
+export function checkCspMeta(html, { ogContract, ogAccepted } = {}) {
   const errors = [];
   const warnings = [];
   const csp = readCspMeta(html);
   if (!csp) {
-    const required = typeof ogContract === 'string' && compareVersions(ogContract, CSP_META_REQUIRED_FROM_CONTRACT) >= 0;
-    const msg = `embed.html に CSP の meta がありません（契約 ${CSP_META_REQUIRED_FROM_CONTRACT} 以降 = m8-accepted からの取り込みでは必須）`;
+    const required = cspMetaRequired({ ogContract, ogAccepted });
+    const msg = `embed.html に CSP の meta がありません（契約 ${CSP_META_REQUIRED_FROM_CONTRACT} 以降・m${CSP_META_REQUIRED_FROM_MILESTONE} 以降の受け入れのタグからの取り込みでは必須）`;
     if (required) errors.push(msg);
     else warnings.push(`${msg}。移行の印: 今の成果物（契約 ${ogContract ?? '?'}）は警告だけ`);
     return { errors, warnings, present: false };
@@ -187,7 +214,7 @@ export function makeBuildInfo(
   if (!Number.isInteger(api) || api < 1) throw new Error(`embed-api が不正です: ${embedApi}`);
   if (!OG_CI_VALUES.includes(ogCi)) throw new Error(`og-ci は ran か skipped です: ${ogCi}`);
   if (typeof ogClean !== 'boolean') throw new Error(`og-clean は true か false です: ${ogClean}`);
-  if (ogAccepted !== null && !ACCEPTED_TAG_RE.test(String(ogAccepted))) throw new Error(`og-accepted は m<n>-accepted の形です: ${ogAccepted}`);
+  if (ogAccepted !== null && !ACCEPTED_TAG_RE.test(String(ogAccepted))) throw new Error(`og-accepted は m<n>-accepted（点の版は m<n>.<k>-accepted）の形です: ${ogAccepted}`);
   const ogInitial = ogInitialJsGzipBytes === null || ogInitialJsGzipBytes === undefined ? null : Number(ogInitialJsGzipBytes);
   if (ogInitial !== null && (!Number.isInteger(ogInitial) || ogInitial < 0)) throw new Error(`og-initial-js-gz が不正です: ${ogInitialJsGzipBytes}`);
   const files = {};
@@ -312,7 +339,7 @@ export function verifyPaintArtifact(dir, { allowTestImports = false } = {}) {
         }
         if (/rel=["']manifest["']/.test(text)) errors.push(`manifest の link があります: ${f}`);
         if (f === 'embed.html') {
-          const csp = checkCspMeta(text, { ogContract: info.ogContract });
+          const csp = checkCspMeta(text, { ogContract: info.ogContract, ogAccepted: info.ogAccepted });
           errors.push(...csp.errors);
           warnings.push(...csp.warnings);
         }
@@ -320,6 +347,32 @@ export function verifyPaintArtifact(dir, { allowTestImports = false } = {}) {
     }
   }
   return { present: true, errors, warnings, info };
+}
+
+/**
+ * 埋め込みの初期 JS の増え方（ilust-sup-followup-04）。base = origin/main の BUILD.json（無ければ null）。
+ * 戻り値は警告の文の配列（落とさない。OG の check-embed の予算 560 KB gz が門で、ここは事前に気づくための印）。
+ * - 今の ogInitialJsGzipBytes が予算の 98 % を超えた
+ * - origin/main の取り込みの値から +8 KB を超えて増えた（同じ値・減った・どちらかが記録なしなら何も言わない）
+ */
+export function checkInitialJsGrowth(current, base) {
+  const warnings = [];
+  const cur = current && Number.isInteger(current.ogInitialJsGzipBytes) ? current.ogInitialJsGzipBytes : null;
+  if (cur === null) return warnings;
+  const kb = (n) => (n / 1024).toFixed(1);
+  const limit = OG_EMBED_INITIAL_BUDGET_BYTES * INITIAL_JS_BUDGET_WARN_RATIO;
+  if (cur > limit) {
+    warnings.push(
+      `埋め込みの初期 JS が ${kb(cur)} KB gz で、OG の check-embed の予算 ${kb(OG_EMBED_INITIAL_BUDGET_BYTES)} KB の ${Math.round(INITIAL_JS_BUDGET_WARN_RATIO * 100)} % を超えています（余裕 ${kb(OG_EMBED_INITIAL_BUDGET_BYTES - cur)} KB。次の取り込みで OG の check:embed が落ちうる）`,
+    );
+  }
+  const prev = base && Number.isInteger(base.ogInitialJsGzipBytes) ? base.ogInitialJsGzipBytes : null;
+  if (prev !== null && cur - prev > INITIAL_JS_GROWTH_WARN_BYTES) {
+    warnings.push(
+      `埋め込みの初期 JS が origin/main の取り込み（OG ${String(base.ogCommit ?? '?').slice(0, 12)}）の ${kb(prev)} KB から ${kb(cur)} KB gz に +${kb(cur - prev)} KB 増えました（警告の閾値 +${kb(INITIAL_JS_GROWTH_WARN_BYTES)} KB）`,
+    );
+  }
+  return warnings;
 }
 
 /** 試験の差し替え（tools/safe-push.sh の SAFE_PUSH_TEST_CHECKS）のときだけ、ci の省略・タグ無しの取り込みを警告にする */

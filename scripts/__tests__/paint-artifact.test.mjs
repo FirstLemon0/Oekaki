@@ -6,9 +6,13 @@ import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  ACCEPTED_TAG_RE,
+  acceptedMilestone,
   BUILD_JSON,
   checkCspMeta,
+  checkInitialJsGrowth,
   compareVersions,
+  cspMetaRequired,
   fontBinFiles,
   listFiles,
   makeBuildInfo,
@@ -202,6 +206,16 @@ describe('取り込みの関門の記録（schema 2、ilust-sup-followup-02 / AD
     expect(verifyPaintArtifact(dir, { allowTestImports: true }).errors.join('\n')).toMatch(/受け入れのタグの形ではありません/);
   });
 
+  it('ilust-reimport-m8-1: 点の版の受け入れのタグ（m8.1-accepted、ADR-0009 D1-2）も受け入れのタグ。形の崩れたものは拒む', () => {
+    for (const ok of ['m7-accepted', 'm8-accepted', 'm8.1-accepted', 'm10.2-accepted']) expect(ACCEPTED_TAG_RE.test(ok), ok).toBe(true);
+    for (const bad of ['m8.-accepted', 'm8.1.2-accepted', 'm8.1', 'v8.1-accepted', 'm8-1-accepted', 'm8.1-accepted-x']) expect(ACCEPTED_TAG_RE.test(bad), bad).toBe(false);
+    const dir = makeArtifact({ 'embed.html': withCsp(EMBED_HTML) });
+    const info = sign(dir, { ogContract: '0.10.3', ogRef: 'm8.1-accepted', ogAccepted: 'm8.1-accepted' });
+    expect(info.ogAccepted).toBe('m8.1-accepted');
+    expect(verifyPaintArtifact(dir).errors).toEqual([]);
+    expect(() => sign(makeArtifact(), { ogAccepted: 'm8.1.2-accepted' })).toThrow(/m<n>-accepted/);
+  });
+
   it('schema 1（M7 までの取り込み）は読めて、関門の記録が無い旨の警告だけ。知らない schema は不合格', () => {
     const dir = makeArtifact();
     sign(dir);
@@ -257,10 +271,55 @@ describe('embed.html の CSP の meta（robustness-security-02 の Ilust 側）'
     expect(checkCspMeta(html).errors.join('\n')).toMatch(/最初の script より後/);
   });
 
+  it('robustness-security-06: 受け入れのタグが m8 以降（m8.1-accepted を含む）なら、契約の版の記録に関係なく meta は必須', () => {
+    expect(acceptedMilestone('m8.1-accepted')).toBe(8);
+    expect(acceptedMilestone('m7-accepted')).toBe(7);
+    expect(acceptedMilestone(null)).toBeNull();
+    expect(cspMetaRequired({ ogContract: '0.9.2', ogAccepted: 'm7-accepted' })).toBe(false);
+    expect(cspMetaRequired({ ogContract: '0.9.2', ogAccepted: 'm8.1-accepted' })).toBe(true);
+    expect(cspMetaRequired({ ogContract: '0.10.3', ogAccepted: null })).toBe(true);
+    const dir = makeArtifact();
+    // 契約の版を読み違えた（古い値の）記録でも、m8.1-accepted の取り込みなら meta が無ければ不合格
+    sign(dir, { ogContract: '0.9.2', ogRef: 'm8.1-accepted', ogAccepted: 'm8.1-accepted' });
+    expect(verifyPaintArtifact(dir).errors.join('\n')).toMatch(/CSP の meta がありません/);
+    const dir2 = makeArtifact({ 'embed.html': withCsp(EMBED_HTML) });
+    sign(dir2, { ogContract: '0.10.3', ogRef: 'm8.1-accepted', ogAccepted: 'm8.1-accepted' });
+    expect(verifyPaintArtifact(dir2).errors).toEqual([]);
+  });
+
   it('版の比較', () => {
     expect(compareVersions('0.9.2', '0.10.0')).toBeLessThan(0);
     expect(compareVersions('0.10.0', '0.10.0')).toBe(0);
     expect(compareVersions('0.10.1', '0.10.0')).toBeGreaterThan(0);
     expect(compareVersions('1.0', '0.10.0')).toBeGreaterThan(0);
+  });
+});
+
+describe('埋め込みの初期 JS の増え方の警告（ilust-sup-followup-04）', () => {
+  const KB = 1024;
+  it('origin/main の取り込みから +8 KB を超えたら警告、8 KB ちょうどまでは何も言わない', () => {
+    const base = { ogCommit: 'b'.repeat(40), ogInitialJsGzipBytes: 538 * KB };
+    expect(checkInitialJsGrowth({ ogInitialJsGzipBytes: 538 * KB + 8 * KB }, base)).toEqual([]);
+    const w = checkInitialJsGrowth({ ogInitialJsGzipBytes: 538 * KB + 8 * KB + 1 }, base);
+    expect(w).toHaveLength(1);
+    expect(w[0]).toMatch(/origin\/main の取り込み（OG bbbbbbbbbbbb）の 538\.0 KB から 546\.0 KB gz に \+8\.0 KB/);
+    // 減った・同じは何も言わない
+    expect(checkInitialJsGrowth({ ogInitialJsGzipBytes: 500 * KB }, base)).toEqual([]);
+  });
+
+  it('OG の check-embed の予算 560 KB の 98 %（548.8 KB）を超えたら警告（origin/main が無くても）', () => {
+    expect(checkInitialJsGrowth({ ogInitialJsGzipBytes: Math.floor(560 * KB * 0.98) }, null)).toEqual([]);
+    const w = checkInitialJsGrowth({ ogInitialJsGzipBytes: Math.floor(560 * KB * 0.98) + 1 }, null);
+    expect(w).toHaveLength(1);
+    expect(w[0]).toMatch(/予算 560\.0 KB の 98 % を超えています/);
+    // m8-accepted の実測 551.8 KB（cycle8）: 予算の 98 % を超え、m7-accepted 538.3 KB からは +13.5 KB = 警告 2 つ
+    const both = checkInitialJsGrowth({ ogInitialJsGzipBytes: Math.round(551.8 * KB) }, { ogCommit: 'baabbe0', ogInitialJsGzipBytes: 551_184 });
+    expect(both).toHaveLength(2);
+  });
+
+  it('どちらかが記録なし（null・schema 1）なら増分は言わない', () => {
+    expect(checkInitialJsGrowth({ ogInitialJsGzipBytes: null }, { ogInitialJsGzipBytes: 1 })).toEqual([]);
+    expect(checkInitialJsGrowth({ ogInitialJsGzipBytes: 300 * KB }, { ogInitialJsGzipBytes: null })).toEqual([]);
+    expect(checkInitialJsGrowth(null, null)).toEqual([]);
   });
 });
