@@ -295,9 +295,9 @@ describe('embed.html の CSP の meta（robustness-security-02 の Ilust 側）'
   });
 });
 
-describe('埋め込みの初期 JS の増え方の警告（ilust-sup-followup-04）', () => {
+describe('ilust-js-growth-warn: 埋め込みの初期 JS の増え方の警告（ilust-sup-followup-04）', () => {
   const KB = 1024;
-  it('origin/main の取り込みから +8 KB を超えたら警告、8 KB ちょうどまでは何も言わない', () => {
+  it('ilust-js-growth-warn: origin/main の取り込みから +8 KB を超えたら警告、8 KB ちょうどまでは何も言わない', () => {
     const base = { ogCommit: 'b'.repeat(40), ogInitialJsGzipBytes: 538 * KB };
     expect(checkInitialJsGrowth({ ogInitialJsGzipBytes: 538 * KB + 8 * KB }, base)).toEqual([]);
     const w = checkInitialJsGrowth({ ogInitialJsGzipBytes: 538 * KB + 8 * KB + 1 }, base);
@@ -307,7 +307,7 @@ describe('埋め込みの初期 JS の増え方の警告（ilust-sup-followup-04
     expect(checkInitialJsGrowth({ ogInitialJsGzipBytes: 500 * KB }, base)).toEqual([]);
   });
 
-  it('OG の check-embed の予算 560 KB の 98 %（548.8 KB）を超えたら警告（origin/main が無くても）', () => {
+  it('ilust-js-growth-warn: OG の check-embed の予算 560 KB の 98 %（548.8 KB）を超えたら警告（origin/main が無くても）', () => {
     expect(checkInitialJsGrowth({ ogInitialJsGzipBytes: Math.floor(560 * KB * 0.98) }, null)).toEqual([]);
     const w = checkInitialJsGrowth({ ogInitialJsGzipBytes: Math.floor(560 * KB * 0.98) + 1 }, null);
     expect(w).toHaveLength(1);
