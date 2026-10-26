@@ -6,7 +6,8 @@
  *
  * 今の FreeDraw の約束をそのまま守る（設計案 §4 の対応表）:
  * - 「終わる」→ 下からのシート（透過 PNG を書き出す / 描き続ける / 保存して終わる）。文言は FreeDraw と同じ。保存は親のシートだけ（OG の保存の文言は出さない）
- * - 保存の種別 free / after / before（freeDrawingKind、?save=after|before で markBeforeAfter）。何も描いていなければ保存しない
+ * - 保存の種別 free / after / before（freeDrawingKind、?save=after|before で markBeforeAfter）。何も描いていなければ保存しない。
+ *   markBeforeAfter は保存の枝の外で、付くまで「保存して終わる」のたびに呼ぶ（FreeDraw と同じ。ilust-sup-followup-05、og/finishFlow.ts）
  * - 5 分以上の実描画でストリーク（ogEmbed.onStroke の pen / eraser の区間 → 今の activeDrawingMs → recordFreeActivity）
  * - 透過 PNG は長辺 2048、名前は exportFileName('free')（seichotsu-free-YYYYMMDD-HHMM.png）
  * - ギャラリーの画像は WebP（長辺 1024）+ meta.og、文書（.ognk）は ogDocs。2 つをメモリで作ってから 1 トランザクションで書く（容量不足でも結果を保って再試行）
@@ -33,6 +34,7 @@ import { lazyScreen } from '../lazyScreen';
 import { connectOgEmbed, OG_EMBED_URL, type OgEmbedApi } from '../og/embedApi';
 import { createSpanLog, embedConfigFrom, newOgDocId, paperFor, saveOgFree, type OgSaveOutcome } from '../og/freeSession';
 import { continueTargetOf, type ContinueTarget } from '../og/ogDrawing';
+import { runOgFinish } from '../og/finishFlow';
 import {
   acquireDraftLock,
   createDraftKeeper,
@@ -108,6 +110,8 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
   const target = useRef<ContinueTarget | null>(null);
   const savedDrawing = useRef<Drawing | null>(null);
   const retry = useRef<(() => Promise<OgSaveOutcome>) | null>(null);
+  /** Before / After の印を付け終えたか（保存の後に印だけ失敗したら、次に押したときに付け直す。ilust-sup-followup-05） */
+  const markedRef = useRef(false);
   const savedRef = useRef(false);
   const restoredRef = useRef(false);
   const busyRef = useRef(false);
@@ -380,37 +384,34 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
     setBusy(true);
     setError(null);
     try {
-      if (!savedDrawing.current) {
-        const outcome = retry.current
-          ? await retry.current()
-          : await saveOgFree({
+      // 保存 → Before / After の印（保存の枝の外で、付くまで毎回。ilust-sup-followup-05）→ 記録と下書きの掃除 → 離れる（og/finishFlow.ts）
+      const result = await runOgFinish({
+        save,
+        // 続きから描いた絵は元の Before / After の記録を変えない
+        continuing: target.current !== null,
+        refs: { savedDrawing, retry, marked: markedRef },
+        deps: {
+          save: () =>
+            saveOgFree({
               api,
               kind: freeDrawingKind(save),
               docId: docId.current,
               ogContract: ogPaintInfo()?.ogContract ?? 'unknown',
               target: target.current,
               save: saveOgDrawing,
-            });
-        if (outcome.status === 'failed') {
-          retry.current = outcome.retry;
-          setError(outcome.reason === 'quota' ? QUOTA_FAILED : SAVE_FAILED);
-          return;
-        }
-        retry.current = null;
-        if (outcome.status === 'saved') {
-          savedDrawing.current = outcome.drawing;
-          // 続きから描いた絵は元の Before / After の記録を変えない
-          if (save && !target.current) await markBeforeAfter(outcome.drawing.id, save);
-        }
-      }
-      await recordFreeActivity(spans.current.activeMs());
-      savedRef.current = true;
-      setSaved(true);
-      await (keeperRef.current ?? ogDraftStore).clear();
-      await api.discardRecovery().catch(() => undefined);
-      leave();
-    } catch {
-      setError(SAVE_FAILED);
+            }),
+          markBeforeAfter,
+          finalize: async () => {
+            await recordFreeActivity(spans.current.activeMs());
+            savedRef.current = true;
+            setSaved(true);
+            await (keeperRef.current ?? ogDraftStore).clear();
+            await api.discardRecovery().catch(() => undefined);
+          },
+          leave,
+        },
+      });
+      if (result.status === 'failed') setError(result.reason === 'quota' ? QUOTA_FAILED : SAVE_FAILED);
     } finally {
       busyRef.current = false;
       setBusy(false);

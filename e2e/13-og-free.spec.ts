@@ -14,6 +14,9 @@
  *   印を失ってもジャーナルから出す、期限切れは掃除、別のタブで開いている間は下書きに触れない（Web Locks og-free-draft）。
  *   配信していた埋め込み（8af7b0f）で保存した .ognk（e2e/fixtures/og-8af7b0f.ognk）を今の埋め込みが同じ画素で開く。
  *   旧お絵描きに戻した理由を通知の末尾と設定の画面に出す
+ * - M9（ilust-sup-followup-06、受け入れ ilust-dropped-tiles-e2e）: 保存の後に埋め込みの診断の口 `ogEmbedDiagnostics.droppedTiles()` が空
+ *   （保存の範囲の外に落ちたタイルが無い）。この口は ogEmbed v1 の契約の外なので、無い成果物では確かめずに注記だけ残す
+ *   （根本の直し = ogEmbed v2 の serializeProject の結果に droppedTiles を含める、は ADR-0009 の先送りの一覧）
  * - M8 wave 2（UR-002 S4、ilust-sup-followup-10）: 下書きの口（saveDraft / latestDraft / openDraft）の無い成果物（OG 8af7b0f より前）には繋がず、
  *   今までのお絵描きに戻る（理由 version）。続きから描くときは親の Blob をそのまま openProject に渡す（下の og-8af7b0f.ognk の試験が通る）
  */
@@ -235,8 +238,17 @@ test.describe('新しいお絵描き', () => {
     }, png.toString('base64'));
     expect(corners).toEqual([0, 0, 0, 0]);
     await expect(sheet.getByText('透過 PNG を書き出しました。')).toBeVisible();
+    // ilust-dropped-tiles-e2e: 保存の後に診断の口を読む。保存して終わると iframe は外れるので、口（埋め込みの realm の関数）を先に親で持っておく
+    await holdOgDiagnostics(page);
     await sheet.getByRole('button', { name: '保存して終わる' }).click();
     await expect(page.locator(OG_ROOT)).toHaveCount(0);
+    const dropped = await heldDroppedTiles(page);
+    if (dropped === null) {
+      // ogEmbedDiagnostics は v1 の契約の外の口: 無い成果物では確かめない（落とさない）
+      test.info().annotations.push({ type: 'skip', description: 'ogEmbedDiagnostics.droppedTiles が無い成果物（v1 の契約の外の診断の口）' });
+    } else {
+      expect(dropped).toEqual([]);
+    }
 
     // ギャラリーの『自由』のタイル
     await page.getByRole('link', { name: 'ギャラリー' }).click();
@@ -583,3 +595,24 @@ async function waitDraftSettled(page: Page, after: number): Promise<void> {
     last = now;
   }
 }
+
+/**
+ * 埋め込みの診断の口（window.ogEmbedDiagnostics、v1 の契約の外）を親の window に持っておく（ilust-sup-followup-06）。
+ * 「保存して終わる」の後は iframe が外れるが、持っておいた関数（埋め込みの realm の記録を読むだけ）はそのまま呼べる
+ */
+async function holdOgDiagnostics(page: Page): Promise<void> {
+  await page.locator(OG_FRAME).evaluate((el) => {
+    const w = (el as HTMLIFrameElement).contentWindow as unknown as { ogEmbedDiagnostics?: { droppedTiles?: () => unknown[] } } | null;
+    (window as unknown as { __e2eOgDiag?: unknown }).__e2eOgDiag = w?.ogEmbedDiagnostics ?? null;
+  });
+}
+
+/** 持っておいた診断の口の droppedTiles()（口が無ければ null） */
+async function heldDroppedTiles(page: Page): Promise<unknown[] | null> {
+  return page.evaluate(() => {
+    const d = (window as unknown as { __e2eOgDiag?: { droppedTiles?: () => unknown[] } | null }).__e2eOgDiag;
+    if (!d || typeof d.droppedTiles !== 'function') return null;
+    return JSON.parse(JSON.stringify(d.droppedTiles())) as unknown[];
+  });
+}
+
