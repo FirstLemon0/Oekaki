@@ -308,6 +308,85 @@ describe('tools/safe-push.sh 手順 2b: 埋め込みのペイントの版（ilus
   });
 });
 
+describe('tools/safe-push.sh の STOP の行の mode（ilust-sup-followup-04、ADR-0010 D6-4、受け入れ ilust-safe-push-mode）', () => {
+  const logOf = (work) => readFileSync(git(work, 'rev-parse', '--path-format=absolute', '--git-path', 'safe-push.log'), 'utf8');
+  const stopRows = (work) =>
+    logOf(work)
+      .split('\n')
+      .filter((l) => l.split('\t')[1] === 'STOP')
+      .map((l) => l.split('\t'));
+
+  it('--dry-run で緑の確認が落ちると、画面と記録の STOP の行に mode=DRY-RUN と理由が出る（HEAD は 40 字）', () => {
+    const { origin, work } = setup();
+    const before = originHead(origin);
+    commitFile(work, 'a.txt');
+    const r = spawnSync('bash', ['tools/safe-push.sh', '--dry-run'], {
+      cwd: work,
+      env: { ...GIT_ENV, SAFE_PUSH_TEST_CHECKS: 'echo "e2e: 1 failed" >&2; exit 1', SEICHOTSU_DEPLOY_URL: '' },
+      encoding: 'utf8',
+    });
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toMatch(/止めました（mode=DRY-RUN）: 緑の確認（試験用）が失敗しました/);
+    expect(originHead(origin)).toBe(before);
+    const rows = stopRows(work);
+    expect(rows).toHaveLength(1);
+    const [at, kind, head, mode, reason] = rows[0];
+    expect(at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+    expect(kind).toBe('STOP');
+    expect(head).toBe(git(work, 'rev-parse', 'HEAD'));
+    expect(mode).toBe('mode=DRY-RUN');
+    expect(reason).toBe('reason=緑の確認（試験用）が失敗しました');
+    expect(rows[0]).toHaveLength(5);
+  });
+
+  it('本番の実行（引数なし）で止めると mode=PUSH が出る', () => {
+    const { origin, work } = setup();
+    const before = originHead(origin);
+    commitFile(work, 'a.txt');
+    const r = safePush(work, 'exit 1');
+    expect(r.code).not.toBe(0);
+    expect(r.out).toMatch(/止めました（mode=PUSH）/);
+    expect(originHead(origin)).toBe(before);
+    const rows = stopRows(work);
+    expect(rows).toHaveLength(1);
+    expect(rows[0][3]).toBe('mode=PUSH');
+    expect(rows[0][4]).toMatch(/^reason=緑の確認/);
+  });
+
+  it('理由に複数のファイル名が並んでも 1 行・5 列のまま（列を崩さない）', () => {
+    const { work } = setup();
+    commitFile(work, 'a.txt');
+    writeFileSync(join(work, 'stray-1.txt'), 'x');
+    writeFileSync(join(work, 'stray-2.txt'), 'y');
+    const r = safePush(work);
+    expect(r.code).not.toBe(0);
+    const lines = logOf(work).split('\n').filter(Boolean);
+    expect(lines).toHaveLength(1);
+    const cols = lines[0].split('\t');
+    expect(cols).toHaveLength(5);
+    expect(cols[3]).toBe('mode=PUSH');
+    expect(cols[4]).toMatch(/^reason=想定外の未追跡のファイルがあります: stray-1\.txt stray-2\.txt/);
+  });
+
+  it('OG の parseSafePushLog と同じ規則（TAB 区切り・3 列目が 40 字の sha・以降 key=value）で mode と reason が読める', () => {
+    const { work } = setup();
+    commitFile(work, 'a.txt');
+    safePush(work, 'exit 1');
+    const parsed = [];
+    for (const line of logOf(work).split('\n')) {
+      const cols = line.split('\t');
+      if (cols.length < 3 || !/^[0-9a-f]{40}$/.test(cols[2] ?? '')) continue;
+      const kv = {};
+      for (const c of cols.slice(3)) {
+        const i = c.indexOf('=');
+        if (i > 0) kv[c.slice(0, i)] = c.slice(i + 1);
+      }
+      parsed.push({ kind: cols[1], head: cols[2], ...kv });
+    }
+    expect(parsed).toEqual([{ kind: 'STOP', head: git(work, 'rev-parse', 'HEAD'), mode: 'PUSH', reason: '緑の確認（試験用）が失敗しました' }]);
+  });
+});
+
 describe('tools/safe-push.sh 手順 5 の待ち（ilust-sup-followup-09）', () => {
   it('壁時計で区切る（コメントと実装が 600 秒で一致し、30 回の固定の繰り返しが無い）', () => {
     const text = readFileSync(join(ROOT, 'tools', 'safe-push.sh'), 'utf8');

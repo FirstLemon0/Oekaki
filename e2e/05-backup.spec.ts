@@ -8,10 +8,14 @@
 import { expect, test, type Page } from '@playwright/test';
 import { drawLine, gotoApp, wipeIndexedDb } from './helpers';
 
-/** 設定画面を開き、見出しが出るまで待つ（ハッシュ遷移だけでは描画完了を保証しないため） */
+/**
+ * 設定画面を開き、見出しが出るまで待つ（ハッシュ遷移だけでは描画完了を保証しないため）。
+ * 待ちは 15 秒（既定の 5 秒では、2026-10-28T02:02Z の safe-push が負荷 load1 ≈ 9 の下でここで止まった。単独では 4/4 合格・
+ * 2026-10-28 に load1 ≈ 10〜15 で 04 と続けて ×4 回しても再現せず = 機能の回帰ではなく描画の待ちの揺れ。ilust-sup-followup-04）
+ */
 async function gotoSettings(page: Page): Promise<void> {
   await gotoApp(page, '#/settings');
-  await expect(page.getByRole('heading', { name: '設定', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '設定', level: 1 })).toBeVisible({ timeout: 15_000 });
 }
 
 test.describe('バックアップ', () => {

@@ -20,7 +20,7 @@
 #      配信中の /paint/BUILD.json の buildId と HEAD の public/paint/BUILD.json の一致（paint_deploy=match|mismatch|unknown|none）を
 #      記録する（一致しなくても巻き戻さない）。配信の URL は環境変数 SEICHOTSU_DEPLOY_URL か `git config seichotsu.deployUrl`
 #      （無ければ照合は飛ばして記録だけ）
-#   記録は .git/safe-push.log（手元だけ）に 1 行ずつ追記し、最後に要約を出す（OG の docs/progress/m8/README.md に写す）。
+#   記録は .git/safe-push.log（手元だけ）に 1 行ずつ追記し（止めたときは STOP の行に mode=DRY-RUN|PUSH と reason=…）、最後に要約を出す（OG の docs/progress/m8/README.md に写す）。
 #
 # 試験用: SAFE_PUSH_TEST_CHECKS に手順 3 の代わりのコマンドを入れられる（origin がローカルのパスのときだけ。GitHub には使えない）。
 #   そのときだけ手順 2b の ogCi = skipped・受け入れのタグなしを警告にする（check-paint-artifact と同じ）。
@@ -39,9 +39,16 @@ done
 
 LOG="$(git rev-parse --git-path safe-push.log)"
 started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+# 止めた実行が dry-run か本番の push かを、画面と記録の両方に書く（ilust-sup-followup-04、ADR-0010 D6-4）
+MODE=PUSH
+[ "${DRY_RUN}" = 1 ] && MODE=DRY-RUN
+# 記録の行（TAB 区切り: 時刻・STOP・HEAD の 40 字・mode=…・reason=…）。OG の check-ilust-remote.mjs の parseSafePushLog が
+# key=value として読める形にする（HEAD を短くしない）。理由の中の TAB と改行は空白にする（列を崩さない）
 die() {
-  echo "safe-push: 止めました: $*" >&2
-  printf '%s\tSTOP\t%s\t%s\n' "${started}" "$(git rev-parse --short HEAD 2>/dev/null || echo '-')" "$*" >> "${LOG}" 2>/dev/null || true
+  local reason
+  reason="$(printf '%s' "$*" | tr '\t\r\n' '   ')"
+  echo "safe-push: 止めました（mode=${MODE}）: $*" >&2
+  printf '%s\tSTOP\t%s\tmode=%s\treason=%s\n' "${started}" "$(git rev-parse HEAD 2>/dev/null || echo '-')" "${MODE}" "${reason}" >> "${LOG}" 2>/dev/null || true
   exit 1
 }
 step() { echo "== safe-push: $*"; }
