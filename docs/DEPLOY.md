@@ -136,7 +136,7 @@ OG の作業木はそのコミットで、未追跡を含めて clean（`git sta
 
 OGNK の形式か `ogContract` が上がる取り込みの前には、配信中の埋め込みで保存した `.ognk` のフィクスチャを
 `OG_FIXTURE_NAME=og-<短い sha> npx playwright test --config=e2e/fixtures/og-fixture.config.ts` で足し、`e2e/13-og-free.spec.ts` に「ギャラリーから続けると同じ画素」の試験を足します
-（今あるのは `e2e/fixtures/og-8af7b0f.ognk`）。
+（今あるのは `e2e/fixtures/og-8af7b0f.ognk`・`og-b1433b4.ognk`、下書きは `og-<版>-draft-{opfs,idb}.json`）。`ogContract` が変わるのに配信中の版のフィクスチャが無いと `safe-push.sh` の手順 2b が止めます。
 
 新しいお絵描きの下書きの印は localStorage（`seichotsu.ogDraft.free`、24 時間）にあり、タブやアプリを閉じた後に開き直しても「続きから / 捨てる」が出ます。
 下書きの本体は OG の自動保存の記録（ジャーナル）だけで、埋め込みの下書きの口（`saveDraft` / `latestDraft` / `openDraft`、OG 8af7b0f 以降）が無い成果物には繋がず、

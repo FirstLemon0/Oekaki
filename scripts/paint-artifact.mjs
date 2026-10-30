@@ -353,7 +353,9 @@ export function verifyPaintArtifact(dir, { allowTestImports = false } = {}) {
  * 埋め込みの初期 JS の増え方（ilust-sup-followup-04）。base = origin/main の BUILD.json（無ければ null）。
  * 戻り値は警告の文の配列（落とさない。OG の check-embed の予算 560 KB gz が門で、ここは事前に気づくための印）。
  * - 今の ogInitialJsGzipBytes が予算の 98 % を超えた
- * - origin/main の取り込みの値から +8 KB を超えて増えた（同じ値・減った・どちらかが記録なしなら何も言わない）
+ * - origin/main の取り込みの値から +8 KB を超えて増えた（同じ値・減ったなら何も言わない）
+ * - origin/main の BUILD.json に値が無い（schema 1）: 増え方を比べていないことを 1 行言う（黙らない。ilust-sup-followup-03、ADR-0011 D6-5）
+ * base が null（origin/main に埋め込みが無い）・今の値が無いときは増え方について何も言わない
  */
 export function checkInitialJsGrowth(current, base) {
   const warnings = [];
@@ -367,6 +369,9 @@ export function checkInitialJsGrowth(current, base) {
     );
   }
   const prev = base && Number.isInteger(base.ogInitialJsGzipBytes) ? base.ogInitialJsGzipBytes : null;
+  if (base && prev === null) {
+    warnings.push(`origin/main の BUILD.json（OG ${String(base.ogCommit ?? '?').slice(0, 12)}）は schema ${String(base.schema ?? 1)} で ogInitialJsGzipBytes が無いため、初期 JS の増え方の比べはしていません`);
+  }
   if (prev !== null && cur - prev > INITIAL_JS_GROWTH_WARN_BYTES) {
     warnings.push(
       `埋め込みの初期 JS が origin/main の取り込み（OG ${String(base.ogCommit ?? '?').slice(0, 12)}）の ${kb(prev)} KB から ${kb(cur)} KB gz に +${kb(cur - prev)} KB 増えました（警告の閾値 +${kb(INITIAL_JS_GROWTH_WARN_BYTES)} KB）`,

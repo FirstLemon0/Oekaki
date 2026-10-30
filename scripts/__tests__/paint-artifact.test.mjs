@@ -317,9 +317,19 @@ describe('ilust-js-growth-warn: 埋め込みの初期 JS の増え方の警告�
     expect(both).toHaveLength(2);
   });
 
-  it('どちらかが記録なし（null・schema 1）なら増分は言わない', () => {
+  it('今の値が記録なし・origin/main に埋め込みが無いなら増分は言わない', () => {
     expect(checkInitialJsGrowth({ ogInitialJsGzipBytes: null }, { ogInitialJsGzipBytes: 1 })).toEqual([]);
-    expect(checkInitialJsGrowth({ ogInitialJsGzipBytes: 300 * KB }, { ogInitialJsGzipBytes: null })).toEqual([]);
+    expect(checkInitialJsGrowth({ ogInitialJsGzipBytes: 300 * KB }, null)).toEqual([]);
     expect(checkInitialJsGrowth(null, null)).toEqual([]);
+  });
+
+  it('ilust-artifact-growth-note: origin/main の BUILD.json に値が無い（schema 1）と、比べていないことを 1 行言う（黙らない）', () => {
+    const w = checkInitialJsGrowth({ ogInitialJsGzipBytes: 300 * KB }, { schema: 1, ogCommit: 'c'.repeat(40) });
+    expect(w).toEqual([expect.stringMatching(/origin\/main の BUILD\.json（OG cccccccccccc）は schema 1 .*増え方の比べはしていません/)]);
+    // 値が null の記録も同じ（schema が無ければ 1 と読む）。今の値が無ければ比べるものが無いので言わない
+    expect(checkInitialJsGrowth({ ogInitialJsGzipBytes: 300 * KB }, { ogInitialJsGzipBytes: null })).toHaveLength(1);
+    expect(checkInitialJsGrowth({ ogInitialJsGzipBytes: null }, { schema: 1 })).toEqual([]);
+    // 値があれば言わない
+    expect(checkInitialJsGrowth({ ogInitialJsGzipBytes: 300 * KB }, { schema: 2, ogInitialJsGzipBytes: 300 * KB })).toEqual([]);
   });
 });

@@ -12,7 +12,9 @@
 #      origin/main..HEAD と HEAD のツリーに .zip が無い（コミットは呼び出し側が「パスを名指しした git add」で作る）
 #   2b. 埋め込みのペイントの版（ADR-0008 D10、ilust-sup-followup-02）: HEAD の public/paint/BUILD.json が origin/main から変わったなら、
 #      その取り込みは ogCi = ran・ogClean = true・受け入れのタグ（ogAccepted）つきであること。さらに新しい ogCommit が
-#      origin/main の ogCommit の子孫であること（OG のリポジトリ ${OG_DIR:-../OG-nanika} で git merge-base --is-ancestor。版の後退を拒む）
+#      origin/main の ogCommit の子孫であること（OG のリポジトリ ${OG_DIR:-../OG-nanika} で git merge-base --is-ancestor。版の後退を拒む）。
+#      ogContract が origin/main と違うなら、配信中の版のフィクスチャ e2e/fixtures/og-<origin/main の ogCommit の 7 字>* が HEAD のツリーにあること
+#      （ADR-0011 D6-4。7 字 = OG_FIXTURE_NAME の命名の og-b1433b4 に合わせる。配信中の版で作った絵が開ける試験なしに形を上げない）
 #   3. 緑の確認（すべて、1 つでも落ちたら push しない）: port 4173 が空き、npm ci、npm run build、check-bundle、
 #      check-paint-artifact、npm test（vitest）、CI=1 npx playwright test --retries=0（SW を有効にした project を含む）
 #   4. git push origin HEAD:main（--force / --force-with-lease は使わない。フックも非 fast-forward と zip を拒む）
@@ -111,6 +113,12 @@ if ! git diff --quiet "${base}" "${head}" -- "${PAINT_JSON}"; then
     [ "${new_clean}" = true ] || die "新しい埋め込みの取り込みの ogClean が true ではありません（${new_clean:-記録なし}。OG の作業木が clean なときに tools/import-paint.sh で取り込み直す）"
     [ "${new_ci}" = ran ] || soft_stop "新しい埋め込みの取り込みの ogCi が ran ではありません（${new_ci:-記録なし}。IMPORT_PAINT_SKIP_OG_CI なしで取り込み直す）"
     [ -n "${new_acc}" ] || soft_stop "新しい埋め込みの取り込みに受け入れのタグ（ogAccepted）がありません（取り込みの基点は m<n>-accepted だけ）"
+    new_contract="$(paint_field "${head}" ogContract)"
+    old_contract="$(paint_field "${base}" ogContract)"
+    if [ -n "${old_og}" ] && [ -n "${old_contract}" ] && [ -n "${new_contract}" ] && [ "${old_contract}" != "${new_contract}" ]; then
+      git ls-tree --name-only "${head}" e2e/fixtures/ 2>/dev/null | grep -q "^e2e/fixtures/og-${old_og:0:7}" \
+        || die "ogContract が ${old_contract} から ${new_contract} に変わるのに、配信中の版のフィクスチャ e2e/fixtures/og-${old_og:0:7}* がありません（OG_FIXTURE_NAME=og-${old_og:0:7} で先に作る）"
+    fi
   fi
 fi
 if [ -n "${new_og}" ] && [ -n "${old_og}" ] && [ "${new_og}" != "${old_og}" ]; then

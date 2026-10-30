@@ -12,7 +12,7 @@
  * - M8（ADR-0008 D10、ilust-sup-followup-04 / -06 / -13）:
  *   下書きの印は localStorage（期限 24 時間）。タブ・アプリを閉じて開き直してもジャーナルが残り「続きから」で同じ画素、
  *   印を失ってもジャーナルから出す、期限切れは掃除、別のタブで開いている間は下書きに触れない（Web Locks og-free-draft）。
- *   配信していた埋め込み（8af7b0f）で保存した .ognk（e2e/fixtures/og-8af7b0f.ognk）を今の埋め込みが同じ画素で開く。
+ *   配信していた埋め込み（8af7b0f・b1433b4）で保存した .ognk（e2e/fixtures/og-<版>.ognk）を今の埋め込みが同じ画素で開く。
  *   旧お絵描きに戻した理由を通知の末尾と設定の画面に出す
  * - M9（ilust-sup-followup-06、受け入れ ilust-dropped-tiles-e2e）: 保存の後に埋め込みの診断の口 `ogEmbedDiagnostics.droppedTiles()` が空
  *   （保存の範囲の外に落ちたタイルが無い）。この口は ogEmbed v1 の契約の外なので、無い成果物では確かめずに注記だけ残す
@@ -474,62 +474,68 @@ test.describe('新しいお絵描き', () => {
     await expect.poll(async () => (await ogPixels(frameC)).sha, { timeout: 15_000 }).toBe(before.sha);
   });
 
-  test('過去の埋め込み（8af7b0f）で保存した .ognk を今の埋め込みが『ギャラリーから続ける』で同じ画素で開く（ilust-sup-followup-06）', async ({ page }) => {
-    const fx = JSON.parse(readFileSync(join(FIXTURES, 'og-8af7b0f.json'), 'utf8')) as {
-      ogCommit: string;
-      ogContract: string;
-      embedApi: number;
-      og: Record<string, unknown>;
-      pixels: { sha: string; opaque: number; w: number; h: number };
-    };
-    expect(fx.ogCommit).toMatch(/^8af7b0f/);
-    const b64 = readFileSync(join(FIXTURES, 'og-8af7b0f.ognk')).toString('base64');
-    const id = 'drawing-og-fixture-8af7b0f';
-    await gotoApp(page);
-    await page.evaluate(
-      async ({ id, b64, fx }) => {
-        const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-        const c = new OffscreenCanvas(64, 40);
-        const g = c.getContext('2d')!;
-        g.fillStyle = '#f2efe8';
-        g.fillRect(0, 0, 64, 40);
-        const image = await c.convertToBlob({ type: 'image/webp' });
-        const at = '2026-10-21T22:21:52.428Z';
-        await new Promise<void>((resolve, reject) => {
-          const req = indexedDB.open('seichotsu');
-          req.onsuccess = () => {
-            const tx = req.result.transaction(['drawings', 'ogDocs'], 'readwrite');
-            tx.objectStore('drawings').put({ id, lessonId: null, kind: 'free', image, createdAt: at, strokes: null, meta: { og: fx.og }, updatedAt: at });
-            tx.objectStore('ogDocs').put({
-              id,
-              drawingId: id,
-              bytes: new Blob([bin], { type: 'application/x-ognk' }),
-              format: 'ognk',
-              ogContract: fx.ogContract,
-              embedApi: fx.embedApi,
-              updatedAt: at,
-            });
-            tx.oncomplete = () => {
-              req.result.close();
-              resolve();
+  // 配信していた版ごとに 1 本（8af7b0f = ilust-sup-followup-06、b1433b4 = 2026-10-30 の push で配信した m9.1-accepted、ilust-sup-followup-02 / ADR-0011 D6-2）
+  for (const [ver, note] of [
+    ['8af7b0f', 'ilust-sup-followup-06'],
+    ['b1433b4', 'ilust-sup-followup-02'],
+  ] as const) {
+    test(`過去の埋め込み（${ver}）で保存した .ognk を今の埋め込みが『ギャラリーから続ける』で同じ画素で開く（${note}）`, async ({ page }) => {
+      const fx = JSON.parse(readFileSync(join(FIXTURES, `og-${ver}.json`), 'utf8')) as {
+        ogCommit: string;
+        ogContract: string;
+        embedApi: number;
+        og: Record<string, unknown>;
+        pixels: { sha: string; opaque: number; w: number; h: number };
+      };
+      expect(fx.ogCommit.startsWith(ver)).toBe(true);
+      const b64 = readFileSync(join(FIXTURES, `og-${ver}.ognk`)).toString('base64');
+      const id = `drawing-og-fixture-${ver}`;
+      await gotoApp(page);
+      await page.evaluate(
+        async ({ id, b64, fx }) => {
+          const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+          const c = new OffscreenCanvas(64, 40);
+          const g = c.getContext('2d')!;
+          g.fillStyle = '#f2efe8';
+          g.fillRect(0, 0, 64, 40);
+          const image = await c.convertToBlob({ type: 'image/webp' });
+          const at = '2026-10-21T22:21:52.428Z';
+          await new Promise<void>((resolve, reject) => {
+            const req = indexedDB.open('seichotsu');
+            req.onsuccess = () => {
+              const tx = req.result.transaction(['drawings', 'ogDocs'], 'readwrite');
+              tx.objectStore('drawings').put({ id, lessonId: null, kind: 'free', image, createdAt: at, strokes: null, meta: { og: fx.og }, updatedAt: at });
+              tx.objectStore('ogDocs').put({
+                id,
+                drawingId: id,
+                bytes: new Blob([bin], { type: 'application/x-ognk' }),
+                format: 'ognk',
+                ogContract: fx.ogContract,
+                embedApi: fx.embedApi,
+                updatedAt: at,
+              });
+              tx.oncomplete = () => {
+                req.result.close();
+                resolve();
+              };
+              tx.onerror = () => reject(tx.error);
             };
-            tx.onerror = () => reject(tx.error);
-          };
-          req.onerror = () => reject(req.error);
-        });
-      },
-      { id, b64, fx },
-    );
-    await gotoApp(page, `#/gallery/${id}`);
-    await page.getByRole('link', { name: '続きから描く' }).click();
-    await expect(page).toHaveURL(/#\/free\?og=/);
-    const frame = await openOgFreeReady(page);
-    await waitOgContent(frame);
-    // 書き出し（透過 PNG・長辺 2048）の画素のハッシュが、保存した版（8af7b0f）で描いたときと同じ
-    await expect.poll(async () => (await ogPixels(frame)).sha, { timeout: 15_000 }).toBe(fx.pixels.sha);
-    const now = await ogPixels(frame);
-    expect({ opaque: now.opaque, w: now.w, h: now.h }).toEqual({ opaque: fx.pixels.opaque, w: fx.pixels.w, h: fx.pixels.h });
-  });
+            req.onerror = () => reject(req.error);
+          });
+        },
+        { id, b64, fx },
+      );
+      await gotoApp(page, `#/gallery/${id}`);
+      await page.getByRole('link', { name: '続きから描く' }).click();
+      await expect(page).toHaveURL(/#\/free\?og=/);
+      const frame = await openOgFreeReady(page);
+      await waitOgContent(frame);
+      // 書き出し（透過 PNG・長辺 2048）の画素のハッシュが、保存した版で描いたときと同じ
+      await expect.poll(async () => (await ogPixels(frame)).sha, { timeout: 15_000 }).toBe(fx.pixels.sha);
+      const now = await ogPixels(frame);
+      expect({ opaque: now.opaque, w: now.w, h: now.h }).toEqual({ opaque: fx.pixels.opaque, w: fx.pixels.w, h: fx.pixels.h });
+    });
+  }
 
   test('親の設定が渡る: テーマ（system を解決）・ペン専用・左利き、変えるとすぐ当て直す', async ({ page }) => {
     await gotoApp(page, '#/settings?section=practice');

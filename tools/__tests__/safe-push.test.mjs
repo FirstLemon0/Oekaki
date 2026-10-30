@@ -288,6 +288,35 @@ describe('tools/safe-push.sh 手順 2b: 埋め込みのペイントの版（ilus
     expect(r.code, r.out).toBe(0);
   });
 
+  it('ilust-fixture-rule: ogContract が変わるのに配信中の版のフィクスチャが無ければ止め、あれば通す（ADR-0011 D6-4）', () => {
+    const { base, work } = setup();
+    const { og, A, B } = makeOgRepo(base);
+    commitPaint(work, { ogCommit: A, ogContract: '0.11.1' });
+    git(work, 'push', 'origin', 'HEAD:main');
+    commitPaint(work, { ogCommit: B, ogContract: '0.12.0' });
+    const stopped = safePush(work, 'true', { OG_DIR: og });
+    expect(stopped.code).not.toBe(0);
+    expect(stopped.out).toContain(`e2e/fixtures/og-${A.slice(0, 7)}`);
+    mkdirSync(join(work, 'e2e', 'fixtures'), { recursive: true });
+    commitFile(work, `e2e/fixtures/og-${A.slice(0, 7)}.json`, '{}\n');
+    const r = safePush(work, 'true', { OG_DIR: og });
+    expect(r.code, r.out).toBe(0);
+  });
+
+  it('ilust-fixture-rule: ogContract が同じ・記録が無いならフィクスチャは問わない', () => {
+    const { base, work } = setup();
+    const { og, A, B } = makeOgRepo(base);
+    commitPaint(work, { ogCommit: A, ogContract: '0.11.1' });
+    git(work, 'push', 'origin', 'HEAD:main');
+    commitPaint(work, { ogCommit: B, ogContract: '0.11.1' });
+    const same = safePush(work, 'true', { OG_DIR: og });
+    expect(same.code, same.out).toBe(0);
+    // 新しい取り込みに ogContract の記録が無い（フィクスチャの規則は比べられない）
+    commitPaint(work, { ogCommit: B });
+    const none = safePush(work, 'true', { OG_DIR: og });
+    expect(none.code, none.out).toBe(0);
+  });
+
   it('--dry-run は push せず、記録に DRY-RUN と paint_gate を残す', () => {
     const { base, origin, work } = setup();
     const { og, A, B } = makeOgRepo(base);
