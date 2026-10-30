@@ -60,8 +60,7 @@ for (const SERVED_OG of SERVED_VERSIONS) for (const store of ['opfs', 'idb'] as 
     // 現在の build が今の埋め込みであること（フィクスチャの版と違う = 版をまたいでいる）
     await setOgEngine(page, true);
     const served = (await page.evaluate(async () => (await fetch('/paint/BUILD.json', { cache: 'no-store' })).json())) as { ogCommit: string };
-    // XXX-TIGHTEN: b1433b4 はこのコミットの時点ではまだ今の版。m10.1-accepted の取り込みの直後のコミットでこの条件を外す
-    if (SERVED_OG !== 'b1433b4') expect(served.ogCommit.startsWith(SERVED_OG), '今の public/paint/ が配信中と同じ版だと版をまたいだ試験にならない').toBe(false);
+    expect(served.ogCommit.startsWith(SERVED_OG), '今の public/paint/ が配信中と同じ版だと版をまたいだ試験にならない').toBe(false);
 
     // 前の版が残したものを書く（アプリの JS が動かない同じオリジンのページで）
     await page.goto('/manifest.webmanifest');
