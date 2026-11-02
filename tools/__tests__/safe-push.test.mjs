@@ -298,9 +298,37 @@ describe('tools/safe-push.sh 手順 2b: 埋め込みのペイントの版（ilus
     expect(stopped.code).not.toBe(0);
     expect(stopped.out).toContain(`e2e/fixtures/og-${A.slice(0, 7)}`);
     mkdirSync(join(work, 'e2e', 'fixtures'), { recursive: true });
-    commitFile(work, `e2e/fixtures/og-${A.slice(0, 7)}.json`, '{}\n');
+    // ilust-fixture-enumeration（ADR-0012 D6-2 / ilust-sup-followup-05）: 4 つ（.ognk・.json・-draft-opfs.json・-draft-idb.json）の全部が要る。
+    // 1 つずつ足し、足りない間はどれが無いかを名指しで止める
+    const suffixes = ['.json', '.ognk', '-draft-opfs.json', '-draft-idb.json'];
+    for (let i = 0; i < suffixes.length; i++) {
+      commitFile(work, `e2e/fixtures/og-${A.slice(0, 7)}${suffixes[i]}`, '{}\n');
+      const r = safePush(work, 'true', { OG_DIR: og });
+      if (i < suffixes.length - 1) {
+        expect(r.code, r.out).not.toBe(0);
+        expect(r.out).toMatch(/フィクスチャ .* がそろっていません/);
+        for (const missing of suffixes.slice(i + 1)) expect(r.out).toContain(`og-${A.slice(0, 7)}${missing}`);
+        for (const present of suffixes.slice(0, i + 1)) expect(r.out).not.toContain(` og-${A.slice(0, 7)}${present}`);
+      } else {
+        expect(r.code, r.out).toBe(0);
+      }
+    }
+  });
+
+  it('ilust-fixture-enumeration: 別の版のフィクスチャや名前の前方一致（og-<7 字>x…）では 4 つの代わりにならない', () => {
+    const { base, work } = setup();
+    const { og, A, B } = makeOgRepo(base);
+    commitPaint(work, { ogCommit: A, ogContract: '0.12.0' });
+    git(work, 'push', 'origin', 'HEAD:main');
+    commitPaint(work, { ogCommit: B, ogContract: '0.13.0' });
+    mkdirSync(join(work, 'e2e', 'fixtures'), { recursive: true });
+    for (const suffix of ['.ognk', '.json', '-draft-opfs.json', '-draft-idb.json']) {
+      commitFile(work, `e2e/fixtures/og-${B.slice(0, 7)}${suffix}`, '{}\n');
+      commitFile(work, `e2e/fixtures/og-${A.slice(0, 7)}-old${suffix}`, '{}\n');
+    }
     const r = safePush(work, 'true', { OG_DIR: og });
-    expect(r.code, r.out).toBe(0);
+    expect(r.code).not.toBe(0);
+    expect(r.out).toMatch(/がそろっていません/);
   });
 
   it('ilust-fixture-rule: ogContract が同じ・記録が無いならフィクスチャは問わない', () => {

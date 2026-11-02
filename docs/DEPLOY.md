@@ -105,14 +105,23 @@ main への push は `tools/safe-push.sh` だけで行います（2026-10-19 の
    `git config seichotsu.deployUrl https://<サービス名>.onrender.com` で一度だけ設定しておく（無ければ照合は飛ばす）。
    エージェントは push しません（M8 から。エージェントは commit と `bash tools/safe-push.sh --dry-run` の緑まで。push は利用者が `bash tools/safe-push.sh` を実行する）。
 4. `.git/hooks/pre-push`（`tools/hooks/pre-push`、safe-push が入れる）が、fast-forward でない更新・ブランチの削除・`.zip` を含む push を拒みます。
-5. 戻すときは `git revert` で新しいコミットを積み、同じく safe-push で push します（履歴を書き換えない）。
+5. 戻すときは `git revert` で新しいコミットを積み、同じく safe-push で push します（履歴を書き換えない）。**ただし `public/paint/`（埋め込みのペイント）を除く**:
+   埋め込みの取り込みを revert すると `public/paint/BUILD.json` の `ogCommit` が origin/main の祖先に戻り、手順 2b が版の後退として拒みます。
+   埋め込みの不具合の戻し方は ⑨ の「埋め込みの不具合のとき」（ADR-0012 D6-4、ilust-sup-followup-04）。
 
 ## ⑨ 新しいお絵描き（UR-002）
 
 自由お絵描き（`#/free`）は埋め込みのペイント（`/paint/embed.html`）で開きます（2026-10-20 の S3 から既定）。設定の「新しいお絵描き（試験中）」
 （`paintEngine`）を off にすると今までのお絵描き（v2）に戻ります。ギャラリーの新しいお絵描きの絵は「続きから描く」で同じ文書を開けます。
-レッスンの採点のキャンバスはいつも今までのものです。不具合があれば `src/ui/paintEngine.ts` の `DEFAULT_PAINT_ENGINE` を `'v2'` に戻すコミットを
-先に safe-push で出します（設定で on / off を選んだ人の値はそのまま）。
+レッスンの採点のキャンバスはいつも今までのものです。
+
+**埋め込みの不具合のとき**（ADR-0012 D6-4、ilust-sup-followup-04）:
+
+1. `public/paint/` は **revert しない**（取り込みを戻すと `ogCommit` が配信中の版の祖先になり、safe-push の手順 2b が版の後退として拒む）。
+2. 先に `src/ui/paintEngine.ts` の `DEFAULT_PAINT_ENGINE` を `'v2'` に戻すコミットだけを safe-push で出す（設定を触っていない利用者は今までのお絵描きに戻る。
+   設定で on / off を選んだ利用者の値はそのまま = **on を選んだ利用者は埋め込みを使い続ける**）。
+3. OG で直して点の版（`m<n>.<k>-accepted`）を打ってもらい、`tools/import-paint.sh m<n>.<k>-accepted` で取り込んで**前へ直す**（新しい `ogCommit` は配信中の版の子孫なので 2b を通る）。
+   直った取り込みを配信した後で `DEFAULT_PAINT_ENGINE` を `'og'` に戻す。
 
 埋め込みのペイント（`public/paint/`）の更新は `tools/import-paint.sh <OG-nanika の受け入れのタグ>`（例 `tools/import-paint.sh m8.1-accepted`）で行います。
 取り込みの元は **受け入れ済みのタグ（`m<n>-accepted`、点の版 `m<n>.<k>-accepted` も可。ADR-0009 D1-2）が指すコミットだけ**（ADR-0008 D10-1）。
@@ -134,9 +143,12 @@ OG の作業木はそのコミットで、未追跡を含めて clean（`git sta
 さらに埋め込みの初期 JS（OG の check-embed の値 `ogInitialJsGzipBytes`）を origin/main の取り込みと比べ、+8 KB を超えたか OG の予算 560 KB の 98 % を超えたら
 警告します（落とさない。ilust-sup-followup-04）。
 
-OGNK の形式か `ogContract` が上がる取り込みの前には、配信中の埋め込みで保存した `.ognk` のフィクスチャを
-`OG_FIXTURE_NAME=og-<短い sha> npx playwright test --config=e2e/fixtures/og-fixture.config.ts` で足し、`e2e/13-og-free.spec.ts` に「ギャラリーから続けると同じ画素」の試験を足します
-（今あるのは `e2e/fixtures/og-8af7b0f.ognk`・`og-b1433b4.ognk`、下書きは `og-<版>-draft-{opfs,idb}.json`）。`ogContract` が変わるのに配信中の版のフィクスチャが無いと `safe-push.sh` の手順 2b が止めます。
+OGNK の形式か `ogContract` が上がる取り込みの前には（**取り込み直す前の `public/paint/` のうちに**）、その版の埋め込みで保存した `.ognk` と下書きのフィクスチャを
+`OG_FIXTURE_NAME=og-<7 字> OG_DRAFT_FIXTURE_NAME=og-<7 字>-draft npx playwright test --config=e2e/fixtures/og-fixture.config.ts` で作り、名指しの `git add` でコミットします
+（4 つ: `og-<7 字>.ognk`・`og-<7 字>.json`・`og-<7 字>-draft-opfs.json`・`og-<7 字>-draft-idb.json`。今あるのは `8af7b0f`・`b1433b4`・`8ea71f2`）。
+`e2e/13-og-free.spec.ts`（「ギャラリーから続けると同じ画素」）と `e2e/19-og-draft-cross-version.spec.ts`（下書きの「続きから」）は `e2e/fixtures/` を列挙して版ごとに回すので、試験に手で足す必要はありません
+（一覧が空なら赤。今の `public/paint/` と同じ版の下書きのフィクスチャは版をまたがないので理由つきで飛ばし、次の取り込みの後に走る。ADR-0012 D6-2、ilust-sup-followup-05）。
+`ogContract` が変わるのに配信中の版のフィクスチャの 4 つのどれかが無いと `safe-push.sh` の手順 2b が止めます。
 
 新しいお絵描きの下書きの印は localStorage（`seichotsu.ogDraft.free`、24 時間）にあり、タブやアプリを閉じた後に開き直しても「続きから / 捨てる」が出ます。
 下書きの本体は OG の自動保存の記録（ジャーナル）だけで、埋め込みの下書きの口（`saveDraft` / `latestDraft` / `openDraft`、OG 8af7b0f 以降）が無い成果物には繋がず、

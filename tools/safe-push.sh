@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # main への push はこのスクリプトだけで行う（UR-002 / ADR-0007 D5。利用者の選択 2026-10-19 = main に直接、Render の本番へ即反映）。
-# 手で `git push` しない。force-push しない。履歴を書き換えない（戻すときは git revert の新しいコミット）。
+# 手で `git push` しない。force-push しない。履歴を書き換えない（戻すときは git revert の新しいコミット。ただし public/paint を除く:
+# 埋め込みの不具合では public/paint を revert しない = 手順 2b が版の後退を拒む。DEFAULT_PAINT_ENGINE='v2' を先に出し、OG の点の版を取り込んで前へ直す。
+# docs/DEPLOY.md ⑧-5 / ⑨、ADR-0012 D6-4）。
 #
 #   tools/safe-push.sh            … 確かめてから origin main へ fast-forward で push し、Render の反映を待って照合する
 #   tools/safe-push.sh --dry-run  … push の直前まで（緑の確認まで）を行い、push しない
@@ -13,8 +15,9 @@
 #   2b. 埋め込みのペイントの版（ADR-0008 D10、ilust-sup-followup-02）: HEAD の public/paint/BUILD.json が origin/main から変わったなら、
 #      その取り込みは ogCi = ran・ogClean = true・受け入れのタグ（ogAccepted）つきであること。さらに新しい ogCommit が
 #      origin/main の ogCommit の子孫であること（OG のリポジトリ ${OG_DIR:-../OG-nanika} で git merge-base --is-ancestor。版の後退を拒む）。
-#      ogContract が origin/main と違うなら、配信中の版のフィクスチャ e2e/fixtures/og-<origin/main の ogCommit の 7 字>* が HEAD のツリーにあること
-#      （ADR-0011 D6-4。7 字 = OG_FIXTURE_NAME の命名の og-b1433b4 に合わせる。配信中の版で作った絵が開ける試験なしに形を上げない）
+#      ogContract が origin/main と違うなら、配信中の版のフィクスチャ 4 つ e2e/fixtures/og-<origin/main の ogCommit の 7 字>{.ognk,.json,-draft-opfs.json,-draft-idb.json}
+#      がどれも HEAD のツリーにあること（ADR-0011 D6-4、ADR-0012 D6-2 / ilust-sup-followup-05 で「どれか 1 つ」から 4 つ全部に。7 字 = OG_FIXTURE_NAME の命名の
+#      og-b1433b4 に合わせる。配信中の版で作った絵と下書きが開ける試験なしに形を上げない。試験は e2e/13・19 がフィクスチャを列挙して回す）
 #   3. 緑の確認（すべて、1 つでも落ちたら push しない）: port 4173 が空き、npm ci、npm run build、check-bundle、
 #      check-paint-artifact、npm test（vitest）、CI=1 npx playwright test --retries=0（SW を有効にした project を含む）
 #   4. git push origin HEAD:main（--force / --force-with-lease は使わない。フックも非 fast-forward と zip を拒む）
@@ -116,8 +119,13 @@ if ! git diff --quiet "${base}" "${head}" -- "${PAINT_JSON}"; then
     new_contract="$(paint_field "${head}" ogContract)"
     old_contract="$(paint_field "${base}" ogContract)"
     if [ -n "${old_og}" ] && [ -n "${old_contract}" ] && [ -n "${new_contract}" ] && [ "${old_contract}" != "${new_contract}" ]; then
-      git ls-tree --name-only "${head}" e2e/fixtures/ 2>/dev/null | grep -q "^e2e/fixtures/og-${old_og:0:7}" \
-        || die "ogContract が ${old_contract} から ${new_contract} に変わるのに、配信中の版のフィクスチャ e2e/fixtures/og-${old_og:0:7}* がありません（OG_FIXTURE_NAME=og-${old_og:0:7} で先に作る）"
+      fx_tree="$(git ls-tree --name-only "${head}" e2e/fixtures/ 2>/dev/null || true)"
+      fx_missing=""
+      for fx_suffix in .ognk .json -draft-opfs.json -draft-idb.json; do
+        printf '%s\n' "${fx_tree}" | grep -qxF "e2e/fixtures/og-${old_og:0:7}${fx_suffix}" || fx_missing="${fx_missing} og-${old_og:0:7}${fx_suffix}"
+      done
+      [ -z "${fx_missing}" ] \
+        || die "ogContract が ${old_contract} から ${new_contract} に変わるのに、配信中の版のフィクスチャ e2e/fixtures/og-${old_og:0:7}{.ognk,.json,-draft-opfs.json,-draft-idb.json} がそろっていません（無い:${fx_missing}。OG_FIXTURE_NAME=og-${old_og:0:7} と OG_DRAFT_FIXTURE_NAME=og-${old_og:0:7}-draft で先に作る）"
     fi
   fi
 fi

@@ -12,7 +12,7 @@
  * - M8（ADR-0008 D10、ilust-sup-followup-04 / -06 / -13）:
  *   下書きの印は localStorage（期限 24 時間）。タブ・アプリを閉じて開き直してもジャーナルが残り「続きから」で同じ画素、
  *   印を失ってもジャーナルから出す、期限切れは掃除、別のタブで開いている間は下書きに触れない（Web Locks og-free-draft）。
- *   配信していた埋め込み（8af7b0f・b1433b4）で保存した .ognk（e2e/fixtures/og-<版>.ognk）を今の埋め込みが同じ画素で開く。
+ *   配信していた埋め込み（e2e/fixtures/og-<版>.ognk を列挙。8af7b0f・b1433b4・8ea71f2 …）で保存した .ognk を今の埋め込みが同じ画素で開く。
  *   旧お絵描きに戻した理由を通知の末尾と設定の画面に出す
  * - M9（ilust-sup-followup-06、受け入れ ilust-dropped-tiles-e2e）: 保存の後に埋め込みの診断の口 `ogEmbedDiagnostics.droppedTiles()` が空
  *   （保存の範囲の外に落ちたタイルが無い）。この口は ogEmbed v1 の契約の外なので、無い成果物では確かめずに注記だけ残す
@@ -20,7 +20,7 @@
  * - M8 wave 2（UR-002 S4、ilust-sup-followup-10）: 下書きの口（saveDraft / latestDraft / openDraft）の無い成果物（OG 8af7b0f より前）には繋がず、
  *   今までのお絵描きに戻る（理由 version）。続きから描くときは親の Blob をそのまま openProject に渡す（下の og-8af7b0f.ognk の試験が通る）
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
@@ -43,6 +43,15 @@ import {
 } from './og-helpers';
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
+/**
+ * 配信していた埋め込みの .ognk のフィクスチャ（e2e/fixtures/og-<版 7〜12 字>.ognk）を列挙する（ilust-sup-followup-05、ADR-0012 D6-2）。
+ * 手書きの一覧を持たない: make-og-fixture.gen.ts で足した版は自動で試験に入る（足し忘れ・消し忘れの分岐をなくす）
+ */
+const OGNK_FIXTURE = /^og-([0-9a-f]{7,12})\.ognk$/;
+const OGNK_VERSIONS = readdirSync(FIXTURES)
+  .map((f) => OGNK_FIXTURE.exec(f)?.[1])
+  .filter((v): v is string => v !== undefined)
+  .sort();
 
 test('既定（設定を触らない新しい端末）で #/free は新しいお絵描き、設定の「新しいお絵描き（試験中）」は on（UR-002 S3）', async ({ page }) => {
   await gotoApp(page, '#/free');
@@ -474,12 +483,15 @@ test.describe('新しいお絵描き', () => {
     await expect.poll(async () => (await ogPixels(frameC)).sha, { timeout: 15_000 }).toBe(before.sha);
   });
 
-  // 配信していた版ごとに 1 本（8af7b0f = ilust-sup-followup-06、b1433b4 = 2026-10-30 の push で配信した m9.1-accepted、ilust-sup-followup-02 / ADR-0011 D6-2）
-  for (const [ver, note] of [
-    ['8af7b0f', 'ilust-sup-followup-06'],
-    ['b1433b4', 'ilust-sup-followup-02'],
-  ] as const) {
-    test(`過去の埋め込み（${ver}）で保存した .ognk を今の埋め込みが『ギャラリーから続ける』で同じ画素で開く（${note}）`, async ({ page }) => {
+  // 配信していた版ごとに 1 本。版は e2e/fixtures/ の og-<版>.ognk の列挙（ilust-sup-followup-05、ADR-0012 D6-2）。
+  // 8af7b0f = ilust-sup-followup-06、b1433b4 = 2026-10-30 の push で配信した m9.1-accepted（ADR-0011 D6-2）、8ea71f2 = m10.2-accepted（ADR-0012 D6-2）
+  test('ilust-fixture-enumeration: .ognk のフィクスチャの一覧が空でなく、どの版も .ognk と .json がそろう', () => {
+    expect(OGNK_VERSIONS.length, 'e2e/fixtures/og-<版>.ognk が 1 つも無い').toBeGreaterThan(0);
+    for (const ver of OGNK_VERSIONS) expect(existsSync(join(FIXTURES, `og-${ver}.json`)), `og-${ver}.json`).toBe(true);
+  });
+
+  for (const ver of OGNK_VERSIONS) {
+    test(`過去の埋め込み（${ver}）で保存した .ognk を今の埋め込みが『ギャラリーから続ける』で同じ画素で開く（e2e/fixtures/og-${ver}.ognk）`, async ({ page }) => {
       const fx = JSON.parse(readFileSync(join(FIXTURES, `og-${ver}.json`), 'utf8')) as {
         ogCommit: string;
         ogContract: string;
