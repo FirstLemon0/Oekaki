@@ -105,7 +105,7 @@ main への push は `tools/safe-push.sh` だけで行います（2026-10-19 の
    `git config seichotsu.deployUrl https://<サービス名>.onrender.com` で一度だけ設定しておく（無ければ照合は飛ばす）。
    エージェントは push しません（M8 から。エージェントは commit と `bash tools/safe-push.sh --dry-run` の緑まで。push は利用者が `bash tools/safe-push.sh` を実行する）。
 4. `.git/hooks/pre-push`（`tools/hooks/pre-push`、safe-push が入れる）が、fast-forward でない更新・ブランチの削除・`.zip` を含む push を拒みます。
-5. 戻すときは `git revert` で新しいコミットを積み、同じく safe-push で push します（履歴を書き換えない）。**ただし `public/paint/`（埋め込みのペイント）を除く**:
+5. 戻すときは `git revert` で新しいコミットを積み、同じく safe-push で push します（履歴を書き換えない）。**ただし public/paint を除く**（`public/paint/` = 埋め込みのペイント）:
    埋め込みの取り込みを revert すると `public/paint/BUILD.json` の `ogCommit` が origin/main の祖先に戻り、手順 2b が版の後退として拒みます。
    埋め込みの不具合の戻し方は ⑨ の「埋め込みの不具合のとき」（ADR-0012 D6-4、ilust-sup-followup-04）。
 
