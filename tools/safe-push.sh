@@ -13,7 +13,9 @@
 #   2. 載せるものの確認: 作業木と index が clean（今のコミットのツリーで確かめる）、未追跡は zip 1 つだけ、
 #      origin/main..HEAD と HEAD のツリーに .zip が無い（コミットは呼び出し側が「パスを名指しした git add」で作る）
 #   2b. 埋め込みのペイントの版（ADR-0008 D10、ilust-sup-followup-02）: HEAD の public/paint/BUILD.json が origin/main から変わったなら、
-#      その取り込みは ogCi = ran・ogClean = true・受け入れのタグ（ogAccepted）つきであること。さらに新しい ogCommit が
+#      その取り込みは ogCi = ran か recorded・ogClean = true・受け入れのタグ（ogAccepted）つきであること。ogCi = recorded（記録のある C の ci の
+#      使い回し、ADR-0013 D6-4）なら、BUILD.json の ogCiCommit が ogCommit そのものか祖先で差が docs/ だけ、ogCiRecord の sha256 が ogCommit の
+#      docs/PROGRESS.md の行と一致することを OG のリポジトリで確かめ直す（scripts/og-ci-record.mjs verify-build）。さらに新しい ogCommit が
 #      origin/main の ogCommit の子孫であること（OG のリポジトリ ${OG_DIR:-../OG-nanika} で git merge-base --is-ancestor。版の後退を拒む）。
 #      ogContract が origin/main と違うなら、配信中の版のフィクスチャ 4 つ e2e/fixtures/og-<origin/main の ogCommit の 7 字>{.ognk,.json,-draft-opfs.json,-draft-idb.json}
 #      がどれも HEAD のツリーにあること（ADR-0011 D6-4、ADR-0012 D6-2 / ilust-sup-followup-05 で「どれか 1 つ」から 4 つ全部に。7 字 = OG_FIXTURE_NAME の命名の
@@ -99,6 +101,7 @@ commits="$(git rev-list --count "${base}..${head}")"
 # 2b. 埋め込みのペイントの版（取り込みの関門と後退の拒否）
 step "2b. 埋め込みのペイントの版（関門の記録・origin/main からの後退なし）"
 PAINT_JSON=public/paint/BUILD.json
+og_repo="${OG_DIR:-$(cd .. && pwd)/OG-nanika}"
 # git の木の BUILD.json の 1 つの値（無ければ空）
 paint_field() { git show "$1:${PAINT_JSON}" 2>/dev/null | node -e "let s='';process.stdin.on('data',(d)=>(s+=d)).on('end',()=>{try{const v=JSON.parse(s)[process.argv[1]];process.stdout.write(v===undefined||v===null?'':String(v))}catch{}})" "$2" || true; }
 new_og="$(paint_field "${head}" ogCommit)"
@@ -114,7 +117,16 @@ if ! git diff --quiet "${base}" "${head}" -- "${PAINT_JSON}"; then
       if [ -n "${SAFE_PUSH_TEST_CHECKS:-}" ]; then echo "safe-push: 試験のため警告だけ: $*" >&2; else die "$*"; fi
     }
     [ "${new_clean}" = true ] || die "新しい埋め込みの取り込みの ogClean が true ではありません（${new_clean:-記録なし}。OG の作業木が clean なときに tools/import-paint.sh で取り込み直す）"
-    [ "${new_ci}" = ran ] || soft_stop "新しい埋め込みの取り込みの ogCi が ran ではありません（${new_ci:-記録なし}。IMPORT_PAINT_SKIP_OG_CI なしで取り込み直す）"
+    if [ "${new_ci}" = recorded ]; then
+      # 記録のある C の ci の使い回し（ADR-0013 D6-4）: 何を使い回したかを OG の git で確かめ直す（記録のファイルは要らない）
+      git -C "${og_repo}" rev-parse --git-dir >/dev/null 2>&1 || die "ogCi = recorded を確かめる OG のリポジトリがありません（${og_repo}。OG_DIR で指定）"
+      [ -f scripts/og-ci-record.mjs ] || die "ogCi = recorded を確かめる scripts/og-ci-record.mjs がありません"
+      node scripts/og-ci-record.mjs verify-build --og-dir="${og_repo}" --og-commit="${new_og}" \
+        --record-commit="$(paint_field "${head}" ogCiCommit)" --record-sha="$(paint_field "${head}" ogCiRecord)" \
+        || die "新しい埋め込みの取り込みの ogCi = recorded の記録（ogCiCommit / ogCiRecord）を確かめられません（上の理由。記録を使わずに取り込み直す: --og-ci-record=none）"
+    else
+      [ "${new_ci}" = ran ] || soft_stop "新しい埋め込みの取り込みの ogCi が ran でも recorded でもありません（${new_ci:-記録なし}。IMPORT_PAINT_SKIP_OG_CI なしで取り込み直す）"
+    fi
     [ -n "${new_acc}" ] || soft_stop "新しい埋め込みの取り込みに受け入れのタグ（ogAccepted）がありません（取り込みの基点は m<n>-accepted だけ）"
     new_contract="$(paint_field "${head}" ogContract)"
     old_contract="$(paint_field "${base}" ogContract)"
@@ -130,7 +142,6 @@ if ! git diff --quiet "${base}" "${head}" -- "${PAINT_JSON}"; then
   fi
 fi
 if [ -n "${new_og}" ] && [ -n "${old_og}" ] && [ "${new_og}" != "${old_og}" ]; then
-  og_repo="${OG_DIR:-$(cd .. && pwd)/OG-nanika}"
   git -C "${og_repo}" rev-parse --git-dir >/dev/null 2>&1 || die "埋め込みの版の前後を確かめる OG のリポジトリがありません（${og_repo}。OG_DIR で指定）"
   git -C "${og_repo}" cat-file -e "${old_og}^{commit}" 2>/dev/null || die "OG のリポジトリに origin/main の ogCommit ${old_og:0:12} がありません（${og_repo}）"
   git -C "${og_repo}" cat-file -e "${new_og}^{commit}" 2>/dev/null || die "OG のリポジトリに HEAD の ogCommit ${new_og:0:12} がありません（${og_repo}）"

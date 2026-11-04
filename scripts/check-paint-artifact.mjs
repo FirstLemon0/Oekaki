@@ -3,7 +3,8 @@
  * public/paint/（埋め込みのペイントの成果物）の照合（ADR-0007 D5-3 の 1 つ。tools/safe-push.sh が push の前に回す）。
  * - public/paint/ が無ければ合格（S1 はペイントなしで出してよい）
  * - あれば BUILD.json の一覧・sha256・合計と実物が一致し、sw.js / manifest / .map / sandbox / bench / OG のソース / 製品名が無いこと
- * - 取り込みの関門の記録（schema 2、ADR-0008 D10）: ogCi = skipped・ogClean ≠ true・受け入れのタグ（ogAccepted）無しは不合格
+ * - 取り込みの関門の記録（schema 2、ADR-0008 D10）: ogCi = skipped・ogClean ≠ true・受け入れのタグ（ogAccepted）無しは不合格。
+ *   ogCi は ran か recorded（記録のある C の ci の使い回し、ADR-0013 D6-4。ogCiRecord の sha256 と ogCiCommit が要る）を通す
  *   （tools/safe-push.sh の試験 = SAFE_PUSH_TEST_CHECKS のときだけ ci の省略とタグ無しを警告にする）。schema 1（M7 までの取り込み）は警告
  * - embed.html の CSP の meta: あれば script-src 'self'・object-src 'none' を求める。無ければ移行の印として警告（契約 0.10.0 以降は不合格）
  *   （契約 0.10.0 以降か、受け入れのタグが m8 以降 = m8.1-accepted の取り込みは meta が必須。robustness-security-06）
@@ -55,7 +56,8 @@ for (const dir of dirs) {
     console.error(`check-paint-artifact: ${dir}: 不合格 ${r.errors.length} 件`);
     for (const e of r.errors) console.error(`  ✗ ${e}`);
   } else {
-    const gate = r.info.schema >= 2 ? `・ci ${r.info.ogCi}・clean ${r.info.ogClean}・${r.info.ogAccepted ?? 'タグなし'}` : '・schema 1';
+    const rec = r.info.ogCi === 'recorded' ? `（記録 ${String(r.info.ogCiCommit).slice(0, 12)} sha256 ${String(r.info.ogCiRecord).slice(0, 12)}…）` : '';
+    const gate = r.info.schema >= 2 ? `・ci ${r.info.ogCi}${rec}・clean ${r.info.ogClean}・${r.info.ogAccepted ?? 'タグなし'}` : '・schema 1';
     console.log(
       `check-paint-artifact: ${dir}: 合格（OG ${r.info.ogCommit}・契約 ${r.info.ogContract}・API v${r.info.embedApi}${gate}・${Object.keys(r.info.files).length} ファイル・${r.info.totalBytes} B` +
         `${r.warnings.length ? `・警告 ${r.warnings.length}` : ''}）`,

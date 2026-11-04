@@ -11,6 +11,10 @@
 //   - OG の e2e が書き直す追跡済みの docs/progress/ の画像だけは og_commit の版に戻して取り込む（例外は狭い）
 //   - ilust-sup-followup-03: OG の e2e の port（OG_E2E_PORT / OG_EMBED_PORT）が塞がっていれば ci の前にすぐ止める。CI=1 は拒む
 //   - 点の版の受け入れのタグ（m8.1-accepted、ADR-0009 D1-2）からも取り込める
+//   - ilust-sup-followup-01（ADR-0013 D6-2）: og_commit の契約が今の（HEAD の）public/paint と違うのに今の版のフィクスチャ 4 つが HEAD に無ければ、ci の前に止める
+//   - ilust-sup-followup-06（ADR-0013 D6-4）: 記録のある C の ci を条件つきで使い回す（ogCi = recorded・ogCiRecord・ogCiCommit）。
+//     条件が欠ける・--og-ci-record=none なら従来どおり ci を回す（ogCi = ran）。build:embed と check:embed はいつも回す
+import { createHash } from 'node:crypto';
 import { createServer } from 'node:net';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -43,6 +47,8 @@ delete GIT_ENV.IMPORT_PAINT_ALLOW_UNTAGGED;
 delete GIT_ENV.CI;
 delete GIT_ENV.OG_E2E_PORT;
 delete GIT_ENV.OG_EMBED_PORT;
+delete GIT_ENV.OG_CI_RECORD;
+delete GIT_ENV.OG_CI_RECORD_DIR;
 
 /** 今空いている 127.0.0.1 の port を 2 つ（OG の e2e の既定 5190 / 5191 が他の作業で塞がっていても試験が揺れないように） */
 function freePorts() {
@@ -131,7 +137,7 @@ function makeIlust(base) {
   git(il, 'init', '-b', 'main');
   copyFileSync(join(ROOT, 'tools', 'import-paint.sh'), join(il, 'tools', 'import-paint.sh'));
   chmodSync(join(il, 'tools', 'import-paint.sh'), 0o755);
-  for (const f of ['paint-artifact.mjs', 'check-paint-artifact.mjs']) copyFileSync(join(ROOT, 'scripts', f), join(il, 'scripts', f));
+  for (const f of ['paint-artifact.mjs', 'check-paint-artifact.mjs', 'og-ci-record.mjs']) copyFileSync(join(ROOT, 'scripts', f), join(il, 'scripts', f));
   return il;
 }
 
@@ -141,8 +147,8 @@ function setup(opts) {
   return { base, og: makeOg(base, opts), il: makeIlust(base) };
 }
 
-function importPaint(il, og, ref, extraEnv = {}) {
-  const r = spawnSync('bash', ['tools/import-paint.sh', ref], {
+function importPaint(il, og, ref, extraEnv = {}, extraArgs = []) {
+  const r = spawnSync('bash', ['tools/import-paint.sh', ref, ...extraArgs], {
     cwd: il,
     env: { ...GIT_ENV, ...freePorts(), OG_DIR: og, ...extraEnv },
     encoding: 'utf8',
@@ -340,6 +346,129 @@ describe('tools/import-paint.sh', () => {
     expect(readBuild(il)).toMatchObject({ ogRef: 'm8.1-accepted', ogAccepted: 'm8.1-accepted', ogContract: '0.10.3', ogCi: 'ran', ogClean: true });
     expect(r.out).toMatch(/受け入れ m8\.1-accepted/);
     expect(r.out).not.toMatch(/CSP の meta がありません/);
+  });
+
+  /** Ilust の HEAD に今の埋め込みの BUILD.json（と、あればフィクスチャ）をコミットする */
+  function commitCurrentPaint(il, { ogCommit, ogContract, fixtures = [] }) {
+    write(il, 'public/paint/BUILD.json', JSON.stringify({ schema: 2, ogCommit, ogContract, ogCi: 'ran', ogClean: true, ogAccepted: 'm6-accepted' }));
+    for (const f of fixtures) write(il, `e2e/fixtures/${f}`, '{}\n');
+    git(il, 'add', 'public/paint/BUILD.json', ...fixtures.map((f) => `e2e/fixtures/${f}`));
+    git(il, 'commit', '-q', '-m', `paint ${ogCommit.slice(0, 7)}`);
+  }
+  const FX_SUFFIXES = ['.ognk', '.json', '-draft-opfs.json', '-draft-idb.json'];
+
+  it('ilust-fixture-precheck: 契約が変わるのに今の版のフィクスチャ 4 つが HEAD に無ければ、OG の ci の前に止める（生成のコマンドを出す）', () => {
+    const { og, il } = setup();
+    const cur = 'a1b2c3d'.padEnd(40, '0');
+    commitCurrentPaint(il, { ogCommit: cur, ogContract: '0.9.1', fixtures: ['og-a1b2c3d.ognk', 'og-a1b2c3d.json'] });
+    const r = importPaint(il, og, 'm7-accepted');
+    expect(r.code, r.out).not.toBe(0);
+    expect(r.out).toMatch(/契約が 0\.9\.1 から 0\.9\.2 に変わるのに/);
+    expect(r.out).toContain('og-a1b2c3d-draft-opfs.json');
+    expect(r.out).toContain('og-a1b2c3d-draft-idb.json');
+    expect(r.out).not.toContain(' og-a1b2c3d.ognk');
+    expect(r.out).toContain('OG_FIXTURE_NAME=og-a1b2c3d OG_DRAFT_FIXTURE_NAME=og-a1b2c3d-draft');
+    expect(r.out).not.toContain('== OG: npm run ci');
+    expect(existsSync(join(og, 'out', 'ci-ran'))).toBe(false);
+    // 作業木にあるだけ（コミットしていない）では足りない
+    for (const sfx of FX_SUFFIXES) write(il, `e2e/fixtures/og-a1b2c3d${sfx}`, '{}\n');
+    expect(importPaint(il, og, 'm7-accepted').code).not.toBe(0);
+    git(il, 'add', ...FX_SUFFIXES.map((sfx) => `e2e/fixtures/og-a1b2c3d${sfx}`));
+    git(il, 'commit', '-q', '-m', 'fixtures');
+    const ok = importPaint(il, og, 'm7-accepted');
+    expect(ok.code, ok.out).toBe(0);
+    expect(ok.out).toMatch(/フィクスチャ 4 つが HEAD にあります/);
+    expect(readBuild(il)).toMatchObject({ ogContract: '0.9.2', ogCi: 'ran' });
+  });
+
+  it('ilust-fixture-precheck: 契約が同じならフィクスチャは問わない', () => {
+    const { og, il } = setup();
+    commitCurrentPaint(il, { ogCommit: 'b'.repeat(40), ogContract: '0.9.2' });
+    const r = importPaint(il, og, 'm7-accepted');
+    expect(r.code, r.out).toBe(0);
+    expect(r.out).not.toMatch(/フィクスチャ/);
+  });
+
+  /**
+   * 偽の OG を封の形にする: C（seal-check.sh を足す）→ 記録（../OG-nanika-pkg/logs/<C>-ci.json）→ E（docs/PROGRESS.md に記録の行だけ）に m7.1-accepted。
+   * srcChange なら E で src も変える（差が docs/ の外）。sealExit は偽の seal-check.sh の終了コード
+   */
+  function sealLike(base, og, { sealExit = 0, srcChange = false, retries = 0 } = {}) {
+    write(og, 'scripts/pkg/seal-check.sh', `#!/usr/bin/env bash\necho "sealed (fake) $*"\nexit ${sealExit}\n`);
+    chmodSync(join(og, 'scripts/pkg/seal-check.sh'), 0o755);
+    git(og, 'add', 'scripts');
+    git(og, 'commit', '-q', '-m', 'C');
+    const c = git(og, 'rev-parse', 'HEAD');
+    const record = {
+      schema: 'og-ci-record/1',
+      commit: c,
+      command: 'npm run ci',
+      ciEnv: 'unset',
+      exit: 0,
+      clean: true,
+      porcelainBefore: [],
+      porcelainAfter: [],
+      untracked: [],
+      headAfter: c,
+      vitest: { ran: true, failed: 0, filesFailed: 0, errors: 0 },
+      e2e: { ran: true, failed: 0, flaky: 0, didNotRun: 0, interrupted: 0, retryAttempts: retries, retries },
+    };
+    const body = `${JSON.stringify(record, null, 2)}\n`;
+    write(join(base, 'OG-nanika-pkg', 'logs'), `${c}-ci.json`, body);
+    const sha = createHash('sha256').update(body).digest('hex');
+    write(og, 'docs/progress/m7/README.md', `ci の記録 \`../OG-nanika-pkg/logs/${c}-ci.json\`（sha256 \`${sha}\`）\n`);
+    write(og, 'docs/PROGRESS.md', `# PROGRESS\n  ci の記録 \`../OG-nanika-pkg/logs/${c}-ci.json\`（sha256 \`${sha}\`）、ログ（sha256 \`${'b'.repeat(64)}\`）\n`);
+    if (srcChange) write(og, 'src/core/VERSION', '0.9.2\n// changed\n');
+    git(og, 'add', 'docs', 'src');
+    git(og, 'commit', '-q', '-m', 'E (evidence)');
+    git(og, 'tag', '-a', 'm7.1-accepted', '-m', 'M7.1 accepted (point release)');
+    return { c, sha };
+  }
+
+  it('ilust-ci-record-reuse: 記録の commit が祖先で差が docs/ だけ・seal-check 0・記録が緑・sha256 が PROGRESS と一致なら ci を省き ogCi = recorded（build:embed / check:embed は回す）', () => {
+    const { base, og, il } = setup();
+    const { c, sha } = sealLike(base, og);
+    const r = importPaint(il, og, 'm7.1-accepted');
+    expect(r.code, r.out).toBe(0);
+    expect(r.out).toMatch(/npm run ci を記録で代えます/);
+    expect(r.out).not.toContain('== OG: npm run ci\n');
+    expect(r.out).toContain('== OG: npm run build:embed');
+    expect(r.out).toContain('== OG: npm run check:embed');
+    expect(existsSync(join(og, 'out', 'ci-ran'))).toBe(false);
+    const b = readBuild(il);
+    expect(b).toMatchObject({ ogCi: 'recorded', ogCiRecord: sha, ogCiCommit: c, ogAccepted: 'm7.1-accepted', ogClean: true, ogInitialJsGzipBytes: 4321 });
+    const check = spawnSync('node', ['scripts/check-paint-artifact.mjs'], { cwd: il, env: GIT_ENV, encoding: 'utf8' });
+    expect(check.status, check.stderr).toBe(0);
+    expect(check.stdout).toMatch(/ci recorded（記録/);
+  });
+
+  it('ilust-ci-record-reuse: --og-ci-record=none・差が docs/ の外・seal-check が 0 でない・retries のある記録なら ci を回す（ogCi = ran）', () => {
+    const cases = [
+      [{}, ['--og-ci-record=none'], /記録を使わない|npm run ci/],
+      [{ srcChange: true }, [], /docs\/ の外があります: src\/core\/VERSION/],
+      [{ sealExit: 1 }, [], /seal-check.*exit 0 ではありません/],
+      [{ retries: 1 }, [], /retries/],
+    ];
+    for (const [opts, args, re] of cases) {
+      const { base, og, il } = setup();
+      sealLike(base, og, opts);
+      const r = importPaint(il, og, 'm7.1-accepted', {}, args);
+      expect(r.code, r.out).toBe(0);
+      expect(r.out, JSON.stringify(opts)).toMatch(re);
+      expect(r.out).toContain('== OG: npm run ci');
+      expect(existsSync(join(og, 'out', 'ci-ran'))).toBe(true);
+      const b = readBuild(il);
+      expect(b.ogCi).toBe('ran');
+      expect(b).not.toHaveProperty('ogCiRecord');
+    }
+  });
+
+  it('知らない 2 つ目の引数は拒む', () => {
+    const { og, il } = setup();
+    const r = importPaint(il, og, 'm7-accepted', {}, ['--skip-ci']);
+    expect(r.code).not.toBe(0);
+    expect(r.out).toMatch(/知らない引数です: --skip-ci/);
+    expect(existsSync(join(og, 'out', 'ci-ran'))).toBe(false);
   });
 
   it('robustness-security-06: m8.1-accepted の成果物に CSP の meta が無ければ照合で止まり、public/paint/ を置き換えない', () => {

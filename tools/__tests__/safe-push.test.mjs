@@ -274,7 +274,7 @@ describe('tools/safe-push.sh 手順 2b: 埋め込みのペイントの版（ilus
     commitPaint(work, { ogCommit: B, ogCi: 'skipped', ogAccepted: null });
     r = safePush(work, 'true', { OG_DIR: og });
     expect(r.code, r.out).toBe(0);
-    expect(r.out).toMatch(/試験のため警告だけ: 新しい埋め込みの取り込みの ogCi が ran ではありません/);
+    expect(r.out).toMatch(/試験のため警告だけ: 新しい埋め込みの取り込みの ogCi が ran でも recorded でもありません/);
     expect(r.out).toMatch(/試験のため警告だけ: 新しい埋め込みの取り込みに受け入れのタグ/);
   });
 
@@ -343,6 +343,65 @@ describe('tools/safe-push.sh 手順 2b: 埋め込みのペイントの版（ilus
     commitPaint(work, { ogCommit: B });
     const none = safePush(work, 'true', { OG_DIR: og });
     expect(none.code, none.out).toBe(0);
+  });
+
+  /** 偽の OG に封の形を足す: A の子 C（src）→ E（docs/PROGRESS.md に C の記録の行だけ）。記録の sha256 を返す */
+  function sealOg(og, A) {
+    git(og, 'checkout', '-q', '-b', 'sealed', A);
+    writeFileSync(join(og, 'f.txt'), 'C\n');
+    git(og, 'add', 'f.txt');
+    git(og, 'commit', '-q', '-m', 'C');
+    const C = git(og, 'rev-parse', 'HEAD');
+    const sha = 'e'.repeat(64);
+    mkdirSync(join(og, 'docs'), { recursive: true });
+    writeFileSync(join(og, 'docs', 'PROGRESS.md'), `ci の記録 \`../OG-nanika-pkg/logs/${C}-ci.json\`（sha256 \`${sha}\`）\n`);
+    git(og, 'add', 'docs');
+    git(og, 'commit', '-q', '-m', 'E (docs)');
+    const E = git(og, 'rev-parse', 'HEAD');
+    git(og, 'checkout', '-q', 'main');
+    return { C, E, sha };
+  }
+  /** safe-push の 2b が呼ぶ scripts/og-ci-record.mjs を作業木に置いてコミットする */
+  function commitRecordTool(work) {
+    mkdirSync(join(work, 'scripts'), { recursive: true });
+    copyFileSync(join(ROOT, 'scripts', 'og-ci-record.mjs'), join(work, 'scripts', 'og-ci-record.mjs'));
+    git(work, 'add', 'scripts/og-ci-record.mjs');
+    git(work, 'commit', '-q', '-m', 'og-ci-record');
+  }
+
+  it('ilust-ci-record-reuse: ogCi = recorded は、ogCiCommit が ogCommit の祖先で差が docs/ だけ・ogCiRecord が PROGRESS の行と一致なら通す（ADR-0013 D6-4）', () => {
+    const { base, origin, work } = setup();
+    const { og, A } = makeOgRepo(base);
+    const { C, E, sha } = sealOg(og, A);
+    commitRecordTool(work);
+    commitPaint(work, { ogCommit: A });
+    git(work, 'push', 'origin', 'HEAD:main');
+    commitPaint(work, { ogCommit: E, ogCi: 'recorded', ogCiCommit: C, ogCiRecord: sha });
+    const r = safePush(work, 'true', { OG_DIR: og });
+    expect(r.code, r.out).toBe(0);
+    expect(originHead(origin)).toBe(git(work, 'rev-parse', 'HEAD'));
+  });
+
+  it('ilust-ci-record-reuse: ogCi = recorded でも記録が確かめられなければ止める（試験の差し替えでも警告にしない）', () => {
+    const { base, origin, work } = setup();
+    const { og, A, B } = makeOgRepo(base);
+    const { C, E, sha } = sealOg(og, A);
+    commitRecordTool(work);
+    commitPaint(work, { ogCommit: A });
+    git(work, 'push', 'origin', 'HEAD:main');
+    const before = originHead(origin);
+    for (const bad of [
+      { ogCommit: E, ogCiCommit: C, ogCiRecord: 'a'.repeat(64) }, // sha256 が PROGRESS と違う
+      { ogCommit: E, ogCiCommit: C }, // sha256 が無い
+      { ogCommit: B, ogCiCommit: A, ogCiRecord: sha }, // 差が docs/ の外（f.txt）
+    ]) {
+      commitPaint(work, { ogCi: 'recorded', ...bad });
+      const r = safePush(work, 'true', { OG_DIR: og });
+      expect(r.code, JSON.stringify(bad)).not.toBe(0);
+      expect(r.out).toMatch(/ogCi = recorded の記録.*確かめられません/);
+      git(work, 'reset', '-q', '--hard', 'HEAD~1');
+    }
+    expect(originHead(origin)).toBe(before);
   });
 
   it('--dry-run は push せず、記録に DRY-RUN と paint_gate を残す', () => {

@@ -216,6 +216,34 @@ describe('取り込みの関門の記録（schema 2、ilust-sup-followup-02 / AD
     expect(() => sign(makeArtifact(), { ogAccepted: 'm8.1.2-accepted' })).toThrow(/m<n>-accepted/);
   });
 
+  it('ilust-ci-record-reuse: ogCi = recorded は ogCiRecord（sha256）と ogCiCommit つきなら合格（試験の差し替えなしでも）、欠ければ不合格（ADR-0013 D6-4）', () => {
+    const rec = { ogCi: 'recorded', ogCiRecord: 'f'.repeat(64), ogCiCommit: 'c'.repeat(40) };
+    const dir = makeArtifact();
+    const info = sign(dir, rec);
+    expect(info).toMatchObject(rec);
+    // キーの並び: ogCi の直後に記録の 2 つ
+    const keys = Object.keys(info);
+    expect(keys.slice(keys.indexOf('ogCi'), keys.indexOf('ogCi') + 4)).toEqual(['ogCi', 'ogCiRecord', 'ogCiCommit', 'ogClean']);
+    expect(verifyPaintArtifact(dir).errors).toEqual([]);
+    for (const patch of [{ ogCiRecord: undefined }, { ogCiCommit: undefined }, { ogCiRecord: 'abc' }, { ogCiCommit: 'c'.repeat(12) }]) {
+      patchBuild(dir, { ...rec, ...patch });
+      const r = verifyPaintArtifact(dir, { allowTestImports: true });
+      expect(r.errors.join('\n'), JSON.stringify(patch)).toMatch(/ogCi が recorded なのに ogCi(Record|Commit)/);
+    }
+    // ran に記録の欄は付けない
+    patchBuild(dir, { ogCi: 'ran', ogCiRecord: 'f'.repeat(64), ogCiCommit: 'c'.repeat(40) });
+    expect(verifyPaintArtifact(dir).errors.join('\n')).toMatch(/ogCi = recorded のときだけ/);
+    // ran の BUILD.json に記録の欄は出ない
+    expect(Object.keys(sign(makeArtifact()))).not.toContain('ogCiRecord');
+  });
+
+  it('ilust-ci-record-reuse: makeBuildInfo は recorded に記録の 2 つを求め、ran / skipped には付けさせない', () => {
+    expect(() => sign(makeArtifact(), { ogCi: 'recorded' })).toThrow(/og-ci-record/);
+    expect(() => sign(makeArtifact(), { ogCi: 'recorded', ogCiRecord: 'f'.repeat(64) })).toThrow(/og-ci-commit/);
+    expect(() => sign(makeArtifact(), { ogCi: 'ran', ogCiRecord: 'f'.repeat(64) })).toThrow(/recorded のときだけ/);
+    expect(() => sign(makeArtifact(), { ogCi: 'maybe' })).toThrow(/ran \/ recorded \/ skipped/);
+  });
+
   it('schema 1（M7 までの取り込み）は読めて、関門の記録が無い旨の警告だけ。知らない schema は不合格', () => {
     const dir = makeArtifact();
     sign(dir);

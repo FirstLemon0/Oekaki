@@ -7,7 +7,9 @@
  * sandbox / bench / OG のソース / 製品名の字面が無い」を確かめる。
  *
  * schema 2（M8、ilust-sup-followup-02 / ADR-0008 D10）: 取り込みの関門の記録を足す。
- * - `ogCi`（'ran' | 'skipped'）… OG の `npm run ci` を回したか。'skipped' は check-paint-artifact が拒む（試験の SAFE_PUSH_TEST_CHECKS のときだけ警告）
+ * - `ogCi`（'ran' | 'recorded' | 'skipped'）… OG の `npm run ci` を回したか。'skipped' は check-paint-artifact が拒む（試験の SAFE_PUSH_TEST_CHECKS のときだけ警告）。
+ *   'recorded'（M13、ilust-sup-followup-06 / ADR-0013 D6-4）= 記録のある C の ci を使い回した（scripts/og-ci-record.mjs が条件を全部確かめた）。
+ *   そのときだけ `ogCiRecord`（記録の JSON の sha256、64 桁）と `ogCiCommit`（記録の commit、40 桁）を持つ。無い・形が違えば拒む
  * - `ogClean`（true）… OG の作業木が未追跡を含めて clean（`git status --porcelain` が空）だった。false / 無しは拒む
  * - `ogRef`（取り込みに渡した名前、例 'm7-accepted'）・`ogAccepted`（そのコミットを指す受け入れのタグ `m<n>-accepted`、点の版 `m<n>.<k>-accepted` も可。無ければ拒む）
  * - `entryJsGzipBytes` … embed.html が直接読む JS（module script + modulepreload）の gz。旧名 `initialJsGzipBytes` は 1 版だけ同じ値で残す
@@ -19,7 +21,8 @@
  *
  * 初期 JS の増え方（ilust-sup-followup-04）: `checkInitialJsGrowth` が origin/main の BUILD.json と比べて警告を返す（check-paint-artifact が出す）。
  *
- *   node scripts/paint-artifact.mjs write <dir> --og-commit=<sha> --og-contract=<版> --embed-api=<n> --og-ci=ran|skipped --og-clean=true|false
+ *   node scripts/paint-artifact.mjs write <dir> --og-commit=<sha> --og-contract=<版> --embed-api=<n> --og-ci=ran|recorded|skipped
+ *        [--og-ci-record=<記録の sha256> --og-ci-commit=<記録の commit>] --og-clean=true|false
  *        [--og-ref=<名前>] [--og-accepted=<タグ>] [--og-initial-js-gz=<n>] [--vite=<版>]
  *   node scripts/paint-artifact.mjs verify <dir>
  */
@@ -34,7 +37,9 @@ export const BUILD_JSON = 'BUILD.json';
 export const BUILD_SCHEMA = 2;
 /** 読める schema（1 = M7 までの取り込み。関門の記録なし = 警告） */
 export const READABLE_SCHEMAS = [1, 2];
-export const OG_CI_VALUES = ['ran', 'skipped'];
+export const OG_CI_VALUES = ['ran', 'recorded', 'skipped'];
+const SHA40_RE = /^[0-9a-f]{40}$/;
+const SHA64_RE = /^[0-9a-f]{64}$/;
 /**
  * 受け入れのタグの形（ADR-0008 D10-1: 取り込みの基点は受け入れ済みのタグだけ）。
  * 点の版（ADR-0009 D1-2、例 `m8.1-accepted`）も受け入れ済みのタグとして扱う
@@ -200,6 +205,8 @@ export function makeBuildInfo(
     ogContract,
     embedApi,
     ogCi,
+    ogCiRecord = null,
+    ogCiCommit = null,
     ogClean,
     ogRef = null,
     ogAccepted = null,
@@ -212,7 +219,11 @@ export function makeBuildInfo(
   if (!/^\d+\.\d+\.\d+/.test(String(ogContract))) throw new Error(`og-contract が不正です: ${ogContract}`);
   const api = Number(embedApi);
   if (!Number.isInteger(api) || api < 1) throw new Error(`embed-api が不正です: ${embedApi}`);
-  if (!OG_CI_VALUES.includes(ogCi)) throw new Error(`og-ci は ran か skipped です: ${ogCi}`);
+  if (!OG_CI_VALUES.includes(ogCi)) throw new Error(`og-ci は ran / recorded / skipped です: ${ogCi}`);
+  if (ogCi === 'recorded') {
+    if (!SHA64_RE.test(String(ogCiRecord ?? ''))) throw new Error(`og-ci = recorded には og-ci-record（記録の sha256、64 桁）が要ります: ${ogCiRecord}`);
+    if (!SHA40_RE.test(String(ogCiCommit ?? ''))) throw new Error(`og-ci = recorded には og-ci-commit（記録の commit、40 桁）が要ります: ${ogCiCommit}`);
+  } else if (ogCiRecord || ogCiCommit) throw new Error(`og-ci-record / og-ci-commit は og-ci = recorded のときだけです（${ogCi}）`);
   if (typeof ogClean !== 'boolean') throw new Error(`og-clean は true か false です: ${ogClean}`);
   if (ogAccepted !== null && !ACCEPTED_TAG_RE.test(String(ogAccepted))) throw new Error(`og-accepted は m<n>-accepted（点の版は m<n>.<k>-accepted）の形です: ${ogAccepted}`);
   const ogInitial = ogInitialJsGzipBytes === null || ogInitialJsGzipBytes === undefined ? null : Number(ogInitialJsGzipBytes);
@@ -237,6 +248,7 @@ export function makeBuildInfo(
     ogRef: ogRef === null ? null : String(ogRef),
     ogAccepted: ogAccepted === null ? null : String(ogAccepted),
     ogCi,
+    ...(ogCi === 'recorded' ? { ogCiRecord: String(ogCiRecord), ogCiCommit: String(ogCiCommit) } : {}),
     ogClean,
     vite,
     createdAt,
@@ -272,8 +284,15 @@ export function checkImportGate(info, { allowTestImports = false } = {}) {
     warnings.push(`${BUILD_JSON} は schema 1（M7 までの取り込み）: ogCi / ogClean の記録がありません。次の取り込みで schema ${BUILD_SCHEMA} になります`);
     return { errors, warnings };
   }
-  if (!OG_CI_VALUES.includes(info.ogCi)) errors.push(`${BUILD_JSON} の ogCi が不正です（ran / skipped）: ${info.ogCi}`);
-  else if (info.ogCi === 'skipped') soft(`${BUILD_JSON} の ogCi が skipped です（OG の npm run ci を省いた取り込みは出せません。IMPORT_PAINT_SKIP_OG_CI なしで取り込み直す）`);
+  if (!OG_CI_VALUES.includes(info.ogCi)) errors.push(`${BUILD_JSON} の ogCi が不正です（ran / recorded / skipped）: ${info.ogCi}`);
+  else if (info.ogCi === 'recorded') {
+    // 記録のある C の ci の使い回し（ADR-0013 D6-4）。記録の sha256 と commit が無ければ、何を使い回したか辿れない
+    if (!SHA64_RE.test(String(info.ogCiRecord ?? ''))) errors.push(`${BUILD_JSON} の ogCi が recorded なのに ogCiRecord（記録の sha256、64 桁）がありません: ${info.ogCiRecord}`);
+    if (!SHA40_RE.test(String(info.ogCiCommit ?? ''))) errors.push(`${BUILD_JSON} の ogCi が recorded なのに ogCiCommit（記録の commit、40 桁）がありません: ${info.ogCiCommit}`);
+  } else if (info.ogCiRecord !== undefined || info.ogCiCommit !== undefined) {
+    errors.push(`${BUILD_JSON} の ogCiRecord / ogCiCommit は ogCi = recorded のときだけです（${info.ogCi}）`);
+  }
+  if (info.ogCi === 'skipped') soft(`${BUILD_JSON} の ogCi が skipped です（OG の npm run ci を省いた取り込みは出せません。IMPORT_PAINT_SKIP_OG_CI なしで取り込み直す）`);
   if (info.ogClean !== true) errors.push(`${BUILD_JSON} の ogClean が true ではありません（OG の作業木が未追跡を含めて clean なときだけ取り込める）: ${info.ogClean}`);
   if (info.ogAccepted === null || info.ogAccepted === undefined) soft(`${BUILD_JSON} の ogAccepted がありません（取り込みの基点は受け入れのタグ m<n>-accepted だけ、ADR-0008 D10-1）`);
   else if (!ACCEPTED_TAG_RE.test(String(info.ogAccepted))) errors.push(`${BUILD_JSON} の ogAccepted が受け入れのタグの形ではありません: ${info.ogAccepted}`);
@@ -405,6 +424,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
       ogContract: args['og-contract'],
       embedApi: args['embed-api'],
       ogCi: args['og-ci'],
+      ogCiRecord: args['og-ci-record'] || null,
+      ogCiCommit: args['og-ci-commit'] || null,
       ogClean: bool(args['og-clean']),
       ogRef: args['og-ref'] || null,
       ogAccepted: args['og-accepted'] || null,
@@ -415,7 +436,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     console.log(
       `BUILD.json: ${Object.keys(info.files).length} files, ${info.totalBytes} B, entry JS ${(info.entryJsGzipBytes / 1024).toFixed(1)} KB gz` +
         (info.ogInitialJsGzipBytes !== null ? `, OG initial JS ${(info.ogInitialJsGzipBytes / 1024).toFixed(1)} KB gz` : '') +
-        `, ogCi ${info.ogCi}, ogClean ${info.ogClean}, ogAccepted ${info.ogAccepted ?? '-'}, buildId ${info.buildId}`,
+        `, ogCi ${info.ogCi}${info.ogCiCommit ? ` (record ${info.ogCiCommit.slice(0, 12)} ${info.ogCiRecord.slice(0, 12)}…)` : ''}, ogClean ${info.ogClean}, ogAccepted ${info.ogAccepted ?? '-'}, buildId ${info.buildId}`,
     );
   } else if (cmd === 'verify' && dir) {
     const r = verifyPaintArtifact(dir, { allowTestImports: testImportsAllowed() });
@@ -425,7 +446,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     process.exit(r.errors.length ? 1 : 0);
   } else {
     console.error(
-      'usage: paint-artifact.mjs write <dir> --og-commit=… --og-contract=… --embed-api=… --og-ci=ran|skipped --og-clean=true|false [--og-ref=… --og-accepted=… --og-initial-js-gz=…] | verify <dir>',
+      'usage: paint-artifact.mjs write <dir> --og-commit=… --og-contract=… --embed-api=… --og-ci=ran|recorded|skipped [--og-ci-record=<sha256> --og-ci-commit=<sha>] --og-clean=true|false [--og-ref=… --og-accepted=… --og-initial-js-gz=…] | verify <dir>',
     );
     process.exit(2);
   }

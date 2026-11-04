@@ -96,7 +96,8 @@ main への push は `tools/safe-push.sh` だけで行います（2026-10-19 の
 1. コミットは「パスを名指しした `git add <path>…`」で作る（`git add -A` / `git add .` / `git add -u` は使わない。手元の zip を巻き込まないため）。
 2. `tools/safe-push.sh` を実行する。次を全部確かめてから `git push origin HEAD:main`（fast-forward だけ。force は使わない）:
    - ブランチが main、origin/main が HEAD の祖先、作業木が clean、未追跡は手元の zip 1 つだけ、push する範囲に `.zip` が無い
-   - 埋め込みのペイント（`public/paint/BUILD.json`）が origin/main から変わるなら、その取り込みが `ogCi = ran`・`ogClean = true`・受け入れのタグ（`ogAccepted`）つきで、
+   - 埋め込みのペイント（`public/paint/BUILD.json`）が origin/main から変わるなら、その取り込みが `ogCi = ran` か `recorded`・`ogClean = true`・受け入れのタグ（`ogAccepted`）つきで
+     （`recorded` なら `ogCiCommit` が `ogCommit` の祖先で差が `docs/` だけ・`ogCiRecord` が `ogCommit` の `docs/PROGRESS.md` の行と一致することを OG の git で確かめ直す）、
      新しい `ogCommit` が origin/main の `ogCommit` の子孫（OG のリポジトリ `../OG-nanika` か `OG_DIR` で `git merge-base --is-ancestor`。版の後退を拒む）
    - port 4173 が空き、`npm ci`、`npm run build`、`node scripts/check-bundle.mjs`、`node scripts/check-paint-artifact.mjs`、`npm test`、
      `CI=1 npx playwright test --retries=0`（Service Worker を有効にした project を含む）がすべて緑
@@ -135,20 +136,33 @@ OG の作業木はそのコミットで、未追跡を含めて clean（`git sta
   `OG_DIR=../OG-nanika-ilust OG_E2E_PORT=5292 OG_EMBED_PORT=5293 tools/import-paint.sh m8.1-accepted`
 - 最初に OG の e2e の port（既定 5190 / 5191、`OG_E2E_PORT` / `OG_EMBED_PORT`）が空いているかを確かめ、塞がっていれば ci の前にすぐ止まる
 - `CI=1` は付けない（OG の playwright の retries が 1 になり関門が緩むので、取り込みは CI を拒む）
-- **揺れ（1 本の flaky）で落ちたら同じコマンドでやり直す**（関門は緩めない）ci の後にもう一度 clean を確かめます（例外は OG の e2e が証跡として書き直す追跡済みの `docs/progress/` の画像だけで、
-取り込みが og のコミットの版に戻してから厳密に確かめます）。OG 側の `npm run ci`（省かない）・`build:embed`・`check:embed` が緑のときだけ置き換え、`public/paint/BUILD.json`（schema 2）に
+- **揺れ（1 本の flaky）で落ちたら同じコマンドでやり直す**（関門は緩めない）
+- **記録のある C の ci の使い回し**（ogCi = recorded、ADR-0013 D6-4、ilust-sup-followup-06）: OG の封は候補 C で `npm run ci` の全部を回し、記録の JSON の sha256 を
+  `docs/PROGRESS.md` に書きます。受け入れのタグ（証跡のコミット E）が C に docs を足しただけなら、`scripts/og-ci-record.mjs` が次を **全部** 確かめたときだけ OG の
+  `npm run ci` を省きます: 記録の commit が og のコミットそのものか祖先で差が `docs/` だけ、OG の `scripts/pkg/seal-check.sh --no-dist <記録> <og>` が exit 0、
+  記録が exit 0・clean・e2e の retries 0（再試行 0）・失敗 0、記録の sha256 が og のコミットの `docs/PROGRESS.md` の行と一致。`build:embed` と `check:embed` は必ず回し、
+  BUILD.json に `ogCi = recorded`・`ogCiRecord`（sha256）・`ogCiCommit` を書きます。記録は既定で PROGRESS の行から `../OG-nanika-pkg/logs/` に探し（`--og-ci-record=<path>` で明示、
+  `--og-ci-record=none` で使わない）、どれか欠ければ従来どおり ci を回します（`ogCi = ran`）
+- **取り込みの前のフィクスチャ**（ADR-0013 D6-2、ilust-sup-followup-01）: og のコミットの `src/core/VERSION` が今の（HEAD の）`public/paint/BUILD.json` の `ogContract` と違うのに、
+  今の版の 4 つのフィクスチャ（下の段落）が HEAD に無ければ、OG の ci より前に止まります（生成のコマンドを出す。取り込んだ後は作れないため）
+
+ci の後にもう一度 clean を確かめます（例外は OG の e2e が証跡として書き直す追跡済みの `docs/progress/` の画像だけで、
+取り込みが og のコミットの版に戻してから厳密に確かめます）。OG 側の `npm run ci`（上の記録の条件を全部満たすときだけ記録で代える）・`build:embed`・`check:embed` が緑のときだけ置き換え、`public/paint/BUILD.json`（schema 2）に
 ハッシュと関門の記録（`ogRef`・`ogAccepted`・`ogCi`・`ogClean`・`entryJsGzipBytes`・`ogInitialJsGzipBytes`）を書きます。`check-paint-artifact` は
-`ogCi = skipped`・`ogClean ≠ true`・タグ無しの取り込みを拒み、`embed.html` の CSP の meta（`script-src 'self'`・`object-src 'none'`）を確かめます
+`ogCi = skipped`・`ogClean ≠ true`・タグ無し・`recorded` なのに `ogCiRecord` / `ogCiCommit` の無い取り込みを拒み、`embed.html` の CSP の meta（`script-src 'self'`・`object-src 'none'`）を確かめます
 （契約 0.10.0 以降か受け入れのタグが m8 以降なら meta は必須。meta の無い成果物は M7 までの成果物だけ警告で通す移行の印）。
 さらに埋め込みの初期 JS（OG の check-embed の値 `ogInitialJsGzipBytes`）を origin/main の取り込みと比べ、+8 KB を超えたか OG の予算 560 KB の 98 % を超えたら
 警告します（落とさない。ilust-sup-followup-04）。
 
 OGNK の形式か `ogContract` が上がる取り込みの前には（**取り込み直す前の `public/paint/` のうちに**）、その版の埋め込みで保存した `.ognk` と下書きのフィクスチャを
 `OG_FIXTURE_NAME=og-<7 字> OG_DRAFT_FIXTURE_NAME=og-<7 字>-draft npx playwright test --config=e2e/fixtures/og-fixture.config.ts` で作り、名指しの `git add` でコミットします
-（4 つ: `og-<7 字>.ognk`・`og-<7 字>.json`・`og-<7 字>-draft-opfs.json`・`og-<7 字>-draft-idb.json`。今あるのは `8af7b0f`・`b1433b4`・`8ea71f2`）。
+（4 つ: `og-<7 字>.ognk`・`og-<7 字>.json`・`og-<7 字>-draft-opfs.json`・`og-<7 字>-draft-idb.json`。今あるのは `8af7b0f`・`b1433b4`・`8ea71f2`・`9b77f43`）。
 `e2e/13-og-free.spec.ts`（「ギャラリーから続けると同じ画素」）と `e2e/19-og-draft-cross-version.spec.ts`（下書きの「続きから」）は `e2e/fixtures/` を列挙して版ごとに回すので、試験に手で足す必要はありません
 （一覧が空なら赤。今の `public/paint/` と同じ版の下書きのフィクスチャは版をまたがないので理由つきで飛ばし、次の取り込みの後に走る。ADR-0012 D6-2、ilust-sup-followup-05）。
-`ogContract` が変わるのに配信中の版のフィクスチャの 4 つのどれかが無いと `safe-push.sh` の手順 2b が止めます。
+`ogContract` が変わるのに配信中の版のフィクスチャの 4 つのどれかが無いと `safe-push.sh` の手順 2b が止めます（取り込みの前は `import-paint.sh` が HEAD の版で同じ 4 つを求める）。
+`e2e/20-og-embed-idb-names.spec.ts` は、描いて保存した後に埋め込みが作った IndexedDB（`og-` で始まるもの）が既知の一覧だけであることを確かめます
+（`og-files-autosave`・`og-files-recent`・`og-materials`・`og-nanika-gradients`・`og-nanika-settings`・`og-subtools`。m12 の埋め込みは空の `og-files-timelapse` も作るので、
+それは m13-accepted 以降の埋め込みでだけ「無い」を求める。ADR-0013 D6-8）。
 
 新しいお絵描きの下書きの印は localStorage（`seichotsu.ogDraft.free`、24 時間）にあり、タブやアプリを閉じた後に開き直しても「続きから / 捨てる」が出ます。
 下書きの本体は OG の自動保存の記録（ジャーナル）だけで、埋め込みの下書きの口（`saveDraft` / `latestDraft` / `openDraft`、OG 8af7b0f 以降）が無い成果物には繋がず、
