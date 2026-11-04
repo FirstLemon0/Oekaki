@@ -1,0 +1,29 @@
+{
+  "comment": "make-og-fixture.gen.ts が書いた。.ognk を書いた埋め込みの版と、そのときの透過 PNG（長辺 2048）の画素の要約",
+  "ogCommit": "9b77f439df977d3752d20c4e86b8cafdf23ce110",
+  "buildId": "9b77f439df97-ffa39ba3efe5",
+  "ogContract": "0.13.0",
+  "embedApi": 1,
+  "og": {
+    "docId": "og-7c34a7ba-556b-431f-85d0-126faecc8680",
+    "docSize": {
+      "w": 2048,
+      "h": 1195
+    },
+    "contentRect": {
+      "x": 561,
+      "y": 362,
+      "w": 732,
+      "h": 415
+    },
+    "engine": "og",
+    "ogContract": "0.13.0"
+  },
+  "ognkBytes": 29823,
+  "pixels": {
+    "sha": "1139fbdd1a3584ef6d9d5482c05b854609b16e1722f3c5adb43c887407e1676f",
+    "opaque": 13329,
+    "w": 2048,
+    "h": 1195
+  }
+}
