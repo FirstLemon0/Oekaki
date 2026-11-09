@@ -17,6 +17,8 @@ interface PaintBuildInfo {
   ogContract: string;
   /** 埋め込み API の版（ogEmbed.version） */
   embedApi: number;
+  /** 取り込みの基点の受け入れのタグ（例 'm13.1-accepted'。無ければ null）。古い埋め込みが残した空の DB の片付けの判定に使う（src/ui/og/embedDbCleanup.ts） */
+  ogAccepted: string | null;
 }
 function readPaintBuild(): PaintBuildInfo | null {
   const p = fileURLToPath(new URL('./public/paint/BUILD.json', import.meta.url));
@@ -30,6 +32,7 @@ function readPaintBuild(): PaintBuildInfo | null {
     files: info.files,
     ogContract: typeof info.ogContract === 'string' ? info.ogContract : 'unknown',
     embedApi: typeof info.embedApi === 'number' ? info.embedApi : 0,
+    ogAccepted: typeof info.ogAccepted === 'string' && info.ogAccepted ? info.ogAccepted : null,
   };
 }
 const paintBuild = readPaintBuild();
@@ -88,7 +91,9 @@ export default defineConfig({
     __OG_PAINT_FILES__: JSON.stringify(paintBuild?.files ?? {}),
     // 自由お絵描き（OgFreeDraw）が保存の記録に使う成果物の版（無ければ null = ペイント無し。src/ui/og/paintInfo.ts）
     __OG_PAINT_INFO__: JSON.stringify(
-      paintBuild ? { buildId: paintBuild.buildId, ogContract: paintBuild.ogContract, embedApi: paintBuild.embedApi } : null,
+      paintBuild
+        ? { buildId: paintBuild.buildId, ogContract: paintBuild.ogContract, embedApi: paintBuild.embedApi, ogAccepted: paintBuild.ogAccepted }
+        : null,
     ),
   },
   build: {

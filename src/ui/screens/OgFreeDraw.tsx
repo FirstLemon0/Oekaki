@@ -47,6 +47,7 @@ import {
   type OgDraftMark,
 } from '../og/ogDraft';
 import { fallbackStorage, recordFallback, withReason, type OgFallbackReason } from '../og/fallbackReason';
+import { dropEmptyTimelapseDb } from '../og/embedDbCleanup';
 import { ogPaintInfo } from '../og/paintInfo';
 import '../og/ogFree.css';
 
@@ -242,6 +243,10 @@ export function OgFreeDraw({ save, continueId }: { save?: 'before' | 'after'; co
           setDraftOffer(null);
         }
         showToast(SHARED_NOTICE);
+      } else {
+        // 古い埋め込み（m12）が残した空の og-files-timelapse を片付ける（m13 以降の埋め込みだけ・中身があれば残す・失敗は無視。
+        // ロックを取れたタブだけ = 別のタブの埋め込みが開いていない。OG ADR-0014 D3-2、src/ui/og/embedDbCleanup.ts）
+        void dropEmptyTimelapseDb(ogPaintInfo()?.ogAccepted);
       }
       offs.push(
         api.onStroke((s) => {

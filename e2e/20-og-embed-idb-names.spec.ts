@@ -9,6 +9,7 @@
  * （cycle13 ilust-sup-followup-02、データは壊さない空の DB）。OG の M13 で埋め込みでは登録しない（files の RegisterOptions.timelapse = !embedded）ので、
  * - 受け入れのタグが m13 以降の埋め込み: `og-files-timelapse` が **無い** ことを求める（strict）
  * - m12 以前: あってもよい。あったかどうかを注記に記録する（pending。m13-accepted の取り込み = M14 で strict になる）
+ * - 片付け（OG ADR-0014 D3-2）: m13 以降の埋め込みで #/free を開くと、古い埋め込みが残した空の `og-files-timelapse` を消す（2 本目の試験、src/ui/og/embedDbCleanup.ts）
  */
 import { expect, test } from '@playwright/test';
 import { drawOg, finishOg, openOgFree, setOgEngine, waitOgContent } from './og-helpers';
@@ -61,5 +62,46 @@ test('embed-idb-names: 描いて保存した後に埋め込みが作った Index
       type: 'pending',
       description: `${build.ogAccepted ?? '?'} の埋め込みは ${TIMELAPSE_DB} を${hasTimelapse ? '作る' : '作らない'}（m${STRICT_FROM_MILESTONE} 以降で strict）`,
     });
+  }
+});
+
+// 古い埋め込み（m12）が残した空の og-files-timelapse の片付け（OG ADR-0014 D3-2、src/ui/og/embedDbCleanup.ts）:
+// m13 以降の埋め込みで #/free を開く（下書きのロックを取れたタブ）と、空なら消える。m12 以前は触らない（埋め込みが自分で作る）。
+// 中身のある DB を残すこと・DB を作らないことは vitest（src/ui/og/embedDbCleanup.test.ts）で確かめる
+test('embed-idb-cleanup: m13 以降の埋め込みで #/free を開くと、古い埋め込みが残した空の og-files-timelapse が消える', async ({ page }) => {
+  test.setTimeout(90_000);
+  await setOgEngine(page, true);
+  // m12 の埋め込みが作った形（版 1・records（keyPath docId）と frames、中身なし）を先に置く
+  await page.evaluate(
+    (name) =>
+      new Promise<void>((resolve, reject) => {
+        const req = indexedDB.open(name, 1);
+        req.onupgradeneeded = () => {
+          req.result.createObjectStore('records', { keyPath: 'docId' });
+          req.result.createObjectStore('frames');
+        };
+        req.onsuccess = () => {
+          req.result.close();
+          resolve();
+        };
+        req.onerror = () => reject(req.error);
+      }),
+    TIMELAPSE_DB,
+  );
+  const names = async () => page.evaluate(async () => (await indexedDB.databases()).map((d) => d.name ?? ''));
+  expect(await names()).toContain(TIMELAPSE_DB);
+  await openOgFree(page);
+  const build = (await page.evaluate(async () => (await fetch('/paint/BUILD.json', { cache: 'no-store' })).json())) as { ogAccepted?: string | null };
+  const ms = acceptedMilestone(build.ogAccepted);
+  if (ms !== null && ms >= STRICT_FROM_MILESTONE) {
+    await expect.poll(async () => (await names()).includes(TIMELAPSE_DB), { timeout: 15_000, message: `${TIMELAPSE_DB}（空）が片付かない` }).toBe(false);
+    // 片付けた後も成長通と埋め込みの DB は残る（ほかの DB に触らない）
+    expect((await names()).filter((n) => n.startsWith('og-')).length).toBeGreaterThan(0);
+  } else {
+    test.info().annotations.push({
+      type: 'pending',
+      description: `${build.ogAccepted ?? '?'} の埋め込みでは片付けない（m${STRICT_FROM_MILESTONE} 以降で消す。今の埋め込みは ${TIMELAPSE_DB} を自分で作る）`,
+    });
+    expect(await names()).toContain(TIMELAPSE_DB);
   }
 });

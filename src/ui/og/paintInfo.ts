@@ -8,6 +8,8 @@ export interface OgPaintInfo {
   readonly ogContract: string;
   /** 成果物の埋め込み API の版 */
   readonly embedApi: number;
+  /** 取り込みの基点の受け入れのタグ（例 'm13.1-accepted'）。この版より前のビルドの define には無い = undefined */
+  readonly ogAccepted?: string | null;
 }
 
 export function ogPaintInfo(): OgPaintInfo | null {
