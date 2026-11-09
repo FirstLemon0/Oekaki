@@ -44,6 +44,12 @@ test('embed-idb-names: 描いて保存した後に埋め込みが作った Index
     type: 'embed-idb-names',
     description: `OG ${String(build.ogCommit ?? '?').slice(0, 12)} (${build.ogAccepted ?? '-'}): ${og.join(', ')}`,
   });
+  // og-subtools（ilust-sup-followup-01、ADR-0014 D3-7）: m13 / m13.1 の埋め込みはキャンバスへの .abr の drop を受けてここに書く（上限 64 MB・512 本・復号 256 MB）。
+  // 次の取り込み（m14-accepted 以降）で埋め込みは .abr を受けなくなる。名前は既知の一覧に入れたまま、あったかどうかを記録だけする（合否は変えない）
+  test.info().annotations.push({
+    type: 'og-subtools',
+    description: `${build.ogAccepted ?? '?'}: og-subtools ${og.includes('og-subtools') ? 'あり' : 'なし'}（m13.1 の埋め込みは .abr の drop を受ける、次の取り込みで外れる）`,
+  });
   expect(og.length, '埋め込みの DB が 1 つも無い（埋め込みが開いていない?）').toBeGreaterThan(0);
   const unknown = og.filter((n) => !KNOWN_OG_DBS.includes(n) && n !== TIMELAPSE_DB);
   expect(unknown, '既知の一覧に無い DB（増やすなら一覧と OG の ADR を書き換える）').toEqual([]);
