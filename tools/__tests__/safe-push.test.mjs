@@ -4,6 +4,7 @@
 //   (2) zip を stage した / コミットした push
 //   (3) 想定外の未追跡のファイルがある push
 //   (4) 緑の確認（e2e など）が落ちた push
+//   (5) 確かめている間に HEAD・作業木が動いた push（確かめていないコミットを載せない。push は確かめた sha だけ）
 // あわせて、緑なら fast-forward で push されること、試験用の差し替えは origin が GitHub だと使えないことも確かめる。
 import { execFileSync, spawnSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, chmodSync } from 'node:fs';
@@ -153,6 +154,39 @@ describe('tools/safe-push.sh', () => {
     expect(r.code).not.toBe(0);
     expect(r.out).toMatch(/緑の確認.*失敗/);
     expect(originHead(origin)).toBe(before);
+  });
+
+  it('(5) 確かめている間に HEAD が動いたら止め、確かめていないコミットを載せない（2026-11-09 の食い違い。push は確かめた sha だけ）', () => {
+    const { origin, work } = setup();
+    const before = originHead(origin);
+    commitFile(work, 'a.txt');
+    const verified = git(work, 'rev-parse', 'HEAD');
+    // 緑の確認の最中に別の書き手が commit する（HEAD が動く）
+    const moveHead = `printf 'late\\n' > late.txt && git add late.txt && git -c user.name=t -c user.email=t@example.invalid commit -q -m late`;
+    let r = safePush(work, moveHead);
+    expect(r.code).not.toBe(0);
+    expect(r.out).toMatch(/確かめている間に HEAD が [0-9a-f]{7} から [0-9a-f]{7} に動きました/);
+    expect(originHead(origin)).toBe(before);
+    let log = readFileSync(git(work, 'rev-parse', '--path-format=absolute', '--git-path', 'safe-push.log'), 'utf8');
+    expect(log).toMatch(new RegExp(`\\tSTOP\\t[0-9a-f]{40}\\tmode=PUSH\\treason=確かめている間に HEAD が ${verified.slice(0, 7)}`));
+    expect(log).not.toMatch(/\tPUSHED\t/);
+    // dry-run でも同じ（動いた HEAD に緑の行を残さない）
+    const moved = git(work, 'rev-parse', 'HEAD');
+    const dry = spawnSync('bash', ['tools/safe-push.sh', '--dry-run'], {
+      cwd: work,
+      env: { ...GIT_ENV, SAFE_PUSH_TEST_CHECKS: moveHead.replaceAll('late', 'later'), SEICHOTSU_DEPLOY_URL: '' },
+      encoding: 'utf8',
+    });
+    expect(dry.status).not.toBe(0);
+    log = readFileSync(git(work, 'rev-parse', '--path-format=absolute', '--git-path', 'safe-push.log'), 'utf8');
+    expect(log).not.toContain(`\tDRY-RUN\t${moved}`);
+    // 動かなければ、押すのは確かめた sha で、記録の行の head と origin/main が一致する
+    r = safePush(work);
+    expect(r.code).toBe(0);
+    const head = git(work, 'rev-parse', 'HEAD');
+    expect(originHead(origin)).toBe(head);
+    log = readFileSync(git(work, 'rev-parse', '--path-format=absolute', '--git-path', 'safe-push.log'), 'utf8');
+    expect(log).toContain(`\tPUSHED\t${head}\t`);
   });
 
   it('main 以外のブランチ・push するコミットが無いときは止める', () => {

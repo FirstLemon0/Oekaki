@@ -22,7 +22,8 @@
 #      og-b1433b4 に合わせる。配信中の版で作った絵と下書きが開ける試験なしに形を上げない。試験は e2e/13・19 がフィクスチャを列挙して回す）
 #   3. 緑の確認（すべて、1 つでも落ちたら push しない）: port 4173 が空き、npm ci、npm run build、check-bundle、
 #      check-paint-artifact、npm test（vitest）、CI=1 npx playwright test --retries=0（SW を有効にした project を含む）
-#   4. git push origin HEAD:main（--force / --force-with-lease は使わない。フックも非 fast-forward と zip を拒む）
+#   2c. 確かめている間に HEAD・作業木・index が動いていないこと（動いていれば止める。確かめていないコミットを載せない）
+#   4. git push origin <手順 1 の HEAD>:main（HEAD:main ではなく確かめたコミットの sha。--force / --force-with-lease は使わない。フックも非 fast-forward と zip を拒む）
 #   5. Render の反映を待ち（壁時計で最大 SAFE_PUSH_DEPLOY_WAIT_S = 600 秒）、配信中の /BUILD_ID と HEAD の一致（deploy=match|timeout）と、
 #      配信中の /paint/BUILD.json の buildId と HEAD の public/paint/BUILD.json の一致（paint_deploy=match|mismatch|unknown|none）を
 #      記録する（一致しなくても巻き戻さない）。配信の URL は環境変数 SEICHOTSU_DEPLOY_URL か `git config seichotsu.deployUrl`
@@ -174,6 +175,13 @@ if [ -f public/paint/BUILD.json ]; then
   paint="$(node -p "const b=require('./public/paint/BUILD.json'); b.ogCommit.slice(0,12)+'/'+b.buildId")"
 fi
 
+# 2c. 確かめている間に HEAD・作業木・index が動いていないこと（2026-11-09: 確かめの最中に別の書き手が commit し、
+#     `git push origin HEAD:main` が確かめていないコミットまで載せた = 記録の行の head と origin/main が食い違った。
+#     push するのは手順 1 で読んだ ${head} そのもの、動いていたら止める = もう一度実行する）
+now_head="$(git rev-parse HEAD)"
+[ "${now_head}" = "${head}" ] || die "確かめている間に HEAD が ${head:0:7} から ${now_head:0:7} に動きました（確かめていないコミットは載せない。もう一度実行する）"
+git diff --quiet && git diff --cached --quiet || die "確かめている間に作業木か index が変わりました（clean にしてからもう一度実行する）"
+
 if [ "${DRY_RUN}" = 1 ]; then
   printf '%s\tDRY-RUN\t%s\tbase=%s\tcommits=%s\tchecks=%s\tpaint=%s\tpaint_gate=%s\n' "${started}" "${head}" "${base}" "${commits}" "${checks}" "${paint}" "${paint_gate}" >> "${LOG}"
   echo "safe-push: --dry-run のため push しません（${head} は緑、paint=${paint}、paint_gate=${paint_gate}）"
@@ -181,8 +189,8 @@ if [ "${DRY_RUN}" = 1 ]; then
 fi
 
 # 4. push（fast-forward だけ）
-step "4. git push origin HEAD:main"
-git push origin HEAD:main || die "git push が失敗しました（フックが拒んだか、origin が先に進んだ）"
+step "4. git push origin ${head:0:12}:main（手順 1 で読んで確かめたコミットだけ）"
+git push origin "${head}:refs/heads/main" || die "git push が失敗しました（フックが拒んだか、origin が先に進んだ）"
 
 # 5. デプロイの照合
 deploy_url="${SEICHOTSU_DEPLOY_URL:-$(git config --get seichotsu.deployUrl || true)}"
