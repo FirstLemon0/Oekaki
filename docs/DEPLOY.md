@@ -76,12 +76,19 @@ Render の Static Site は既定で「GitHub の対象ブランチに push す�
 同じオリジンで読めるので、多層防御として Render の Static Site の「Headers」に次の 1 行を **必ず** 足してください
 （robustness-security-06。サービスの作り直しは要りません。設定は Render のダッシュボードでだけでき、利用者の作業 = OG の RQ-13）。
 
+**本番の実際の値（2026-11-09 に利用者が設定、OG の RQ-13 は閉じた。OG ADR-0015 D1-5 / D6-3）**:
+
 | Path | Name | Value |
 |---|---|---|
-| `/*` | `Content-Security-Policy` | `script-src 'self'; object-src 'none'; worker-src 'self' blob:; base-uri 'self'; frame-ancestors 'self'` |
+| `/*` | `Content-Security-Policy` | `frame-ancestors 'self'` |
 
-- Path は `/*`（成長通と `/paint/*` の両方に掛かる）。Value は **`public/_headers` と 1 文字も違えない**（`frame-ancestors 'self'` を含む）。
-  値の正はリポジトリの `public/_headers`（Render はこのファイルを読まないので、画面の「Headers」に同じ値を入れる）
+- Path は `/*`（成長通と `/paint/*` の両方に掛かる）。ヘッダーは `frame-ancestors 'self'` **だけ**で、ほかの指令（`script-src`・`object-src`・`worker-src`・`base-uri`）は
+  meta の CSP（成長通の `index.html` と `/paint/embed.html`）が持つ。ヘッダーと meta は積集合で効くので、`public/_headers` の 5 指令の形と同じ制限になる。
+  これで十分なので、5 指令をヘッダーに書き直す依頼はしない（OG ADR-0015 D6-3）。
+- `public/_headers` は 5 指令を全部ヘッダーにした形の**控え**（Netlify / Cloudflare Pages の書式。Render はこのファイルを読まない）。その `frame-ancestors` は
+  本番の値と同じ `'self'` であること（`scripts/__tests__/headers.test.mjs`）。
+- 回帰の見張り: OG の `node scripts/check-ilust-remote.mjs --expect-pushed=head --require=S4 --deploy-url=https://oekaki-ct88.onrender.com`（`--require-csp` は =head で既定 on）が、
+  応答ヘッダーの frame-ancestors の出どころが `'self'` / `'none'` だけで meta もあるときだけ合格にする（ヘッダーが消える・`*` になる = 不合格）
 - 設定の後、配信で確かめる: `curl -sI https://<サービス名>.onrender.com/paint/embed.html | grep -i content-security-policy` と
   `curl -sI https://<サービス名>.onrender.com/ | grep -i content-security-policy` の両方に上の値が出る
 - meta の CSP は取り込みで入るので、このヘッダーの設定を待たずに push してよい（ADR-0009 D4-5）。ただしヘッダーが無い間は `frame-ancestors` が効いていない

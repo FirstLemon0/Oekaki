@@ -1,5 +1,7 @@
-# 配信の HTTP ヘッダー（Render の Static Site の「Headers」に同じ値を入れる。docs/DEPLOY.md ⑦）
-# Render はこのファイルを読まない（Netlify / Cloudflare Pages の書式の控え）。正はこのファイルで、scripts/__tests__/headers.test.mjs と
+# 配信の HTTP ヘッダーの控え（docs/DEPLOY.md ⑦）。本番（Render の Static Site の「Headers」、2026-11-09 に設定 = OG の RQ-13）の実際の値は
+# `/*` の Content-Security-Policy = `frame-ancestors 'self'` だけで、ほかの指令（script-src・object-src・worker-src・base-uri）は meta の CSP が持つ
+# （ヘッダーと meta は積集合で効くので、下の 5 指令と同じ制限になる）。下の行は 5 指令を全部ヘッダーにした形の控え。
+# Render はこのファイルを読まない（Netlify / Cloudflare Pages の書式）。scripts/__tests__/headers.test.mjs と
 # e2e/16-csp.spec.ts が中身を確かめる（UR-002 / robustness-security-05、受け入れ ilust-csp）。
 # - script-src 'self': インラインのスクリプトを動かさない（成長通と埋め込みのペイント /paint/ の両方）
 # - frame-ancestors 'self': ほかのサイトに iframe で埋め込まれない（成長通の #/free が同じオリジンの /paint/embed.html を開くのは許す）

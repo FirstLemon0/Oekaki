@@ -1,10 +1,12 @@
-// 配信の CSP（public/_headers、受け入れ ilust-csp）。Render の Headers に入れる値の正。meta の CSP（vite.config）と食い違わないこと。
+// 配信の CSP（public/_headers、受け入れ ilust-csp）。5 指令をヘッダーにした形の控え（本番の Render の Headers は frame-ancestors 'self' だけ = docs/DEPLOY.md ⑦）。
+// meta の CSP（vite.config）と食い違わないこと、frame-ancestors が本番の値と同じこと。
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const HEADERS = fileURLToPath(new URL('../../public/_headers', import.meta.url));
 const VITE_CONFIG = fileURLToPath(new URL('../../vite.config.ts', import.meta.url));
+const DEPLOY_MD = fileURLToPath(new URL('../../docs/DEPLOY.md', import.meta.url));
 
 /** _headers（Netlify / Cloudflare の書式）→ { path: { name: value } } */
 export function parseHeaders(text) {
@@ -59,6 +61,22 @@ describe('public/_headers の CSP', () => {
     const header = directives(csp);
     for (const [name, vals] of Object.entries(meta)) expect(header[name], name).toEqual(vals);
     expect(meta['frame-ancestors']).toBeUndefined();
+  });
+
+  it("本番の値（docs/DEPLOY.md ⑦、RQ-13 = frame-ancestors 'self' だけ）と控えの frame-ancestors が同じ、注記が本番の値を書いている（OG ADR-0015 D6-3）", () => {
+    const deploy = readFileSync(DEPLOY_MD, 'utf8');
+    const sec = deploy.slice(deploy.indexOf('## ⑦'), deploy.indexOf('## ⑧'));
+    const row = /\|\s*`\/\*`\s*\|\s*`Content-Security-Policy`\s*\|\s*`([^`]+)`\s*\|/.exec(sec);
+    expect(row, 'DEPLOY.md ⑦ の Headers の表の行').not.toBeNull();
+    const production = directives(row[1]);
+    expect(production).toEqual({ 'frame-ancestors': ["'self'"] });
+    expect(directives(csp)['frame-ancestors']).toEqual(production['frame-ancestors']);
+    const notes = readFileSync(HEADERS, 'utf8')
+      .split(/\r?\n/)
+      .filter((l) => l.startsWith('#'))
+      .join('\n');
+    expect(notes).toContain("frame-ancestors 'self'` だけ");
+    expect(notes).not.toMatch(/「Headers」に同じ値を入れる/);
   });
 
   it('parseHeaders: 注釈と空行を飛ばし、パスごとに名前と値を読む', () => {
