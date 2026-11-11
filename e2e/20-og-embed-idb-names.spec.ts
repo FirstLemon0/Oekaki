@@ -16,8 +16,15 @@
  * - 1 本目の注記（og-subtools のあり / なし）は版で文を分ける（m14 以降 = 「.abr を受けない」）。合否は変えない
  * - 3 本目: 受け入れのタグが m14 以降のときだけ、試験の中で作る小さな .abr（版 1・計算ブラシ 1 本、24 バイト = 第三者のファイルは入れない）を
  *   埋め込みのキャンバスに落とし、「開けませんでした」のトーストが出て、`og-subtools` の presets の件数が変わらないこと（strict）。m13.1 以前は理由つきで飛ばす
+ *
+ * 作品 ID（`.ognk` の manifest の `workId`、OG ADR-0016 D6-1 (v)・cycle16 ilust-sup-followup-02）: m15 の埋め込みは契約 0.13.3 のまま、保存する `.ognk` の manifest に
+ * 作品 ID（UUID、36 字）を書き、開いた `.ognk` の値を引き継ぐ（m14 以前は書かない。どちらの向きでも開ける = 形の変化だが互換）。
+ * - 4 本目: 受け入れのタグが m15 以降のときだけ、描いて保存した `ogDocs` の `.ognk` に作品 ID があり、ギャラリーの『続きから描く』で描き足して保存し直しても同じ値（strict）。
+ *   m14 以前は「書かない」を注記に記録する（pending。m15-accepted の取り込み = M16 で strict になる）
  */
+import { strFromU8, unzipSync } from 'fflate';
 import { expect, test, type Page } from '@playwright/test';
+import { gotoApp } from './helpers';
 import { drawOg, finishOg, openOgFree, setOgEngine, waitOgContent } from './og-helpers';
 
 /** 埋め込みが作ってよい IndexedDB（OG の files / materials / gradient / settings / tools-core の保存） */
@@ -28,6 +35,8 @@ const TIMELAPSE_DB = 'og-files-timelapse';
 const STRICT_FROM_MILESTONE = 13;
 /** 埋め込みが .abr を受けない（og-subtools に書かない）受け入れの版（OG ADR-0014 D10-4） */
 const ABR_REFUSED_FROM_MILESTONE = 14;
+/** 埋め込みが保存する .ognk の manifest に作品 ID（workId）を書く受け入れの版（OG ADR-0016 D6-1） */
+const WORK_ID_FROM_MILESTONE = 15;
 
 /** 'm12-accepted' / 'm11.1-accepted' → 12 / 11（形が違えば null） */
 function acceptedMilestone(tag: unknown): number | null {
@@ -200,4 +209,71 @@ test('embed-abr-refused: m14 以降の埋め込みはキャンバスに落とし
   await expect(frame.locator('.og-w-dialog').filter({ hasText: '他社ブラシ形式の読み込み' })).toHaveCount(0);
   expect(await persistedSubtools(page), 'og-subtools の presets の件数は落とす前と同じ').toBe(before);
   test.info().annotations.push({ type: 'embed-abr-refused', description: `${build.ogAccepted}: subtools ${before} → ${before}、toast「${text}」` });
+});
+
+/** 成長通の DB の ogDocs の全件（id・drawingId と、.ognk の manifest の workId。workId が無い・形が違えば null） */
+async function ogDocWorkIds(page: Page): Promise<{ id: string; drawingId: string; workId: string | null }[]> {
+  const rows = await page.evaluate(
+    () =>
+      new Promise<{ id: string; drawingId: string; b64: string }[]>((resolve, reject) => {
+        const req = indexedDB.open('seichotsu');
+        req.onsuccess = () => {
+          const g = req.result.transaction('ogDocs', 'readonly').objectStore('ogDocs').getAll();
+          g.onsuccess = async () => {
+            req.result.close();
+            const out: { id: string; drawingId: string; b64: string }[] = [];
+            for (const r of g.result as { id: string; drawingId: string; bytes: Blob }[]) {
+              const u8 = new Uint8Array(await r.bytes.arrayBuffer());
+              let bin = '';
+              for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode(...u8.subarray(i, i + 0x8000));
+              out.push({ id: r.id, drawingId: r.drawingId, b64: btoa(bin) });
+            }
+            resolve(out);
+          };
+          g.onerror = () => reject(g.error);
+        };
+        req.onerror = () => reject(req.error);
+      }),
+  );
+  return rows.map(({ id, drawingId, b64 }) => {
+    const files = unzipSync(new Uint8Array(Buffer.from(b64, 'base64')), { filter: (f) => f.name === 'manifest.json' });
+    const manifest = JSON.parse(strFromU8(files['manifest.json']!)) as { workId?: unknown };
+    const workId = typeof manifest.workId === 'string' && /^[0-9a-f-]{36}$/i.test(manifest.workId) ? manifest.workId : null;
+    return { id, drawingId, workId };
+  });
+}
+
+test('embed-ognk-work-id: m15 以降の埋め込みは保存した .ognk に作品 ID を書き、『続きから描く』で描き足して保存し直しても同じ値', async ({ page }) => {
+  test.setTimeout(120_000);
+  await setOgEngine(page, true);
+  const frame = await openOgFree(page);
+  const build = (await page.evaluate(async () => (await fetch('/paint/BUILD.json', { cache: 'no-store' })).json())) as { ogAccepted?: string | null };
+  const ms = acceptedMilestone(build.ogAccepted);
+  await drawOg(page, 2);
+  await waitOgContent(frame);
+  await finishOg(page);
+  const first = await ogDocWorkIds(page);
+  expect(first, '保存した ogDocs は 1 件').toHaveLength(1);
+  if (ms === null || ms < WORK_ID_FROM_MILESTONE) {
+    test.info().annotations.push({
+      type: 'pending',
+      description: `${build.ogAccepted ?? '?'} の埋め込みは .ognk に作品 ID を${first[0]!.workId ? '書く' : '書かない'}（m${WORK_ID_FROM_MILESTONE} 以降で strict）`,
+    });
+    return;
+  }
+  const workId = first[0]!.workId;
+  expect(workId, '.ognk の manifest の workId（UUID 36 字）').not.toBeNull();
+  // ギャラリーの『続きから描く』→ 描き足す → 保存し直す: 同じ ogDocs の 1 件が置き換わり、作品 ID は変わらない
+  await gotoApp(page, `#/gallery/${first[0]!.drawingId}`);
+  await page.getByRole('link', { name: '続きから描く' }).click();
+  await expect(page).toHaveURL(/#\/free\?og=/);
+  const frame2 = await openOgFree(page, new URL(page.url()).hash);
+  await waitOgContent(frame2);
+  await drawOg(page, 1);
+  await finishOg(page);
+  const second = await ogDocWorkIds(page);
+  expect(second, '描き足して保存し直しても ogDocs は 1 件のまま').toHaveLength(1);
+  expect(second[0]!.id).toBe(first[0]!.id);
+  expect(second[0]!.workId, '開いた .ognk の作品 ID を引き継ぐ').toBe(workId);
+  test.info().annotations.push({ type: 'embed-ognk-work-id', description: `${build.ogAccepted}: workId ${workId}（保存し直しても同じ）` });
 });
