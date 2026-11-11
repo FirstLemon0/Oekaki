@@ -12,6 +12,7 @@
 //   - ilust-sup-followup-03: OG の e2e の port（OG_E2E_PORT / OG_EMBED_PORT）が塞がっていれば ci の前にすぐ止める。CI=1 は拒む
 //   - 点の版の受け入れのタグ（m8.1-accepted、ADR-0009 D1-2）からも取り込める
 //   - ilust-sup-followup-01（ADR-0013 D6-2）: og_commit の契約が今の（HEAD の）public/paint と違うのに今の版のフィクスチャ 4 つが HEAD に無ければ、ci の前に止める
+//   - ilust-sup-followup-02（OG ADR-0016 D6-1 (iii)）: 契約が同じでも受け入れのタグ（ogAccepted）が変わる取り込みは同じ 4 つを求める。タグも契約も同じなら問わない
 //   - ilust-sup-followup-06（ADR-0013 D6-4）: 記録のある C の ci を条件つきで使い回す（ogCi = recorded・ogCiRecord・ogCiCommit）。
 //     条件が欠ける・--og-ci-record=none なら従来どおり ci を回す（ogCi = ran）。build:embed と check:embed はいつも回す
 import { createHash } from 'node:crypto';
@@ -349,8 +350,8 @@ describe('tools/import-paint.sh', () => {
   });
 
   /** Ilust の HEAD に今の埋め込みの BUILD.json（と、あればフィクスチャ）をコミットする */
-  function commitCurrentPaint(il, { ogCommit, ogContract, fixtures = [] }) {
-    write(il, 'public/paint/BUILD.json', JSON.stringify({ schema: 2, ogCommit, ogContract, ogCi: 'ran', ogClean: true, ogAccepted: 'm6-accepted' }));
+  function commitCurrentPaint(il, { ogCommit, ogContract, ogAccepted = 'm6-accepted', fixtures = [] }) {
+    write(il, 'public/paint/BUILD.json', JSON.stringify({ schema: 2, ogCommit, ogContract, ogCi: 'ran', ogClean: true, ogAccepted }));
     for (const f of fixtures) write(il, `e2e/fixtures/${f}`, '{}\n');
     git(il, 'add', 'public/paint/BUILD.json', ...fixtures.map((f) => `e2e/fixtures/${f}`));
     git(il, 'commit', '-q', '-m', `paint ${ogCommit.slice(0, 7)}`);
@@ -381,12 +382,52 @@ describe('tools/import-paint.sh', () => {
     expect(readBuild(il)).toMatchObject({ ogContract: '0.9.2', ogCi: 'ran' });
   });
 
-  it('ilust-fixture-precheck: 契約が同じならフィクスチャは問わない', () => {
+  it('ilust-fixture-precheck: 契約も受け入れのタグも同じならフィクスチャは問わない（同じタグの取り込み直し）', () => {
     const { og, il } = setup();
-    commitCurrentPaint(il, { ogCommit: 'b'.repeat(40), ogContract: '0.9.2' });
+    commitCurrentPaint(il, { ogCommit: 'b'.repeat(40), ogContract: '0.9.2', ogAccepted: 'm7-accepted' });
     const r = importPaint(il, og, 'm7-accepted');
     expect(r.code, r.out).toBe(0);
     expect(r.out).not.toMatch(/フィクスチャ/);
+  });
+
+  it('ilust-fixture-accepted-change（ilust-sup-followup-02、OG ADR-0016 D6-1 (iii)）: 契約が同じでも受け入れのタグが変わるなら今の ogCommit のフィクスチャ 4 つを求め、そろえば通す', () => {
+    const { og, il } = setup();
+    const cur = '9c4a7d9'.padEnd(40, '5');
+    commitCurrentPaint(il, { ogCommit: cur, ogContract: '0.9.2', ogAccepted: 'm6-accepted' });
+    const r = importPaint(il, og, 'm7-accepted');
+    expect(r.code, r.out).not.toBe(0);
+    expect(r.out).toMatch(/受け入れのタグが m6-accepted から m7-accepted に変わる（契約は 0\.9\.2 のまま）のに/);
+    for (const sfx of FX_SUFFIXES) expect(r.out).toContain(`og-9c4a7d9${sfx}`);
+    expect(r.out).toContain('OG_FIXTURE_NAME=og-9c4a7d9 OG_DRAFT_FIXTURE_NAME=og-9c4a7d9-draft');
+    expect(r.out).not.toContain('== OG: npm run ci');
+    expect(existsSync(join(og, 'out', 'ci-ran'))).toBe(false);
+    // 3 つだけでは足りない（4 つ全部）
+    for (const sfx of FX_SUFFIXES.slice(0, 3)) write(il, `e2e/fixtures/og-9c4a7d9${sfx}`, '{}\n');
+    git(il, 'add', ...FX_SUFFIXES.slice(0, 3).map((sfx) => `e2e/fixtures/og-9c4a7d9${sfx}`));
+    git(il, 'commit', '-q', '-m', 'three fixtures');
+    const three = importPaint(il, og, 'm7-accepted');
+    expect(three.code, three.out).not.toBe(0);
+    expect(three.out).toContain('og-9c4a7d9-draft-idb.json');
+    // 別の版のフィクスチャでは代わりにならない
+    write(il, 'e2e/fixtures/og-1111111-draft-idb.json', '{}\n');
+    git(il, 'add', 'e2e/fixtures/og-1111111-draft-idb.json');
+    git(il, 'commit', '-q', '-m', 'other fixture');
+    expect(importPaint(il, og, 'm7-accepted').code).not.toBe(0);
+    write(il, 'e2e/fixtures/og-9c4a7d9-draft-idb.json', '{}\n');
+    git(il, 'add', 'e2e/fixtures/og-9c4a7d9-draft-idb.json');
+    git(il, 'commit', '-q', '-m', 'fourth fixture');
+    const ok = importPaint(il, og, 'm7-accepted');
+    expect(ok.code, ok.out).toBe(0);
+    expect(ok.out).toMatch(/フィクスチャ 4 つが HEAD にあります（受け入れのタグが m6-accepted から m7-accepted に変わる/);
+    expect(readBuild(il)).toMatchObject({ ogContract: '0.9.2', ogAccepted: 'm7-accepted', ogCi: 'ran' });
+  });
+
+  it('ilust-fixture-accepted-change: 今の BUILD.json に ogAccepted の記録が無い（古い形）なら、受け入れのタグのある取り込みはフィクスチャを求める', () => {
+    const { og, il } = setup();
+    commitCurrentPaint(il, { ogCommit: 'c'.repeat(40), ogContract: '0.9.2', ogAccepted: null });
+    const r = importPaint(il, og, 'm7-accepted');
+    expect(r.code, r.out).not.toBe(0);
+    expect(r.out).toMatch(/受け入れのタグが 記録なし から m7-accepted に変わる/);
   });
 
   /**

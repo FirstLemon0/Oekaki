@@ -19,7 +19,9 @@
 #      origin/main の ogCommit の子孫であること（OG のリポジトリ ${OG_DIR:-../OG-nanika} で git merge-base --is-ancestor。版の後退を拒む）。
 #      ogContract が origin/main と違うなら、配信中の版のフィクスチャ 4 つ e2e/fixtures/og-<origin/main の ogCommit の 7 字>{.ognk,.json,-draft-opfs.json,-draft-idb.json}
 #      がどれも HEAD のツリーにあること（ADR-0011 D6-4、ADR-0012 D6-2 / ilust-sup-followup-05 で「どれか 1 つ」から 4 つ全部に。7 字 = OG_FIXTURE_NAME の命名の
-#      og-b1433b4 に合わせる。配信中の版で作った絵と下書きが開ける試験なしに形を上げない。試験は e2e/13・19 がフィクスチャを列挙して回す）
+#      og-b1433b4 に合わせる。配信中の版で作った絵と下書きが開ける試験なしに形を上げない。試験は e2e/13・19 がフィクスチャを列挙して回す）。
+#      OG ADR-0016 D6-1 (iii)（ilust-sup-followup-02）から、ogContract が同じでも ogAccepted（受け入れのタグ）が origin/main から変わるなら同じ 4 つを求める
+#      （M15 の埋め込みは契約 0.13.3 のまま .ognk に workId を書いた = 契約の文字列だけでは形の変化を見逃す）
 #   3. 緑の確認（すべて、1 つでも落ちたら push しない）: port 4173 が空き、npm ci、npm run build、check-bundle、
 #      check-paint-artifact、npm test（vitest）、CI=1 npx playwright test --retries=0（SW を有効にした project を含む）
 #   2c. 確かめている間に HEAD・作業木・index が動いていないこと（動いていれば止める。確かめていないコミットを載せない）
@@ -131,14 +133,22 @@ if ! git diff --quiet "${base}" "${head}" -- "${PAINT_JSON}"; then
     [ -n "${new_acc}" ] || soft_stop "新しい埋め込みの取り込みに受け入れのタグ（ogAccepted）がありません（取り込みの基点は m<n>-accepted だけ）"
     new_contract="$(paint_field "${head}" ogContract)"
     old_contract="$(paint_field "${base}" ogContract)"
+    old_acc="$(paint_field "${base}" ogAccepted)"
+    # フィクスチャを求める理由（契約の変化か受け入れのタグの変化。OG ADR-0016 D6-1 (iii)）
+    fx_why=""
     if [ -n "${old_og}" ] && [ -n "${old_contract}" ] && [ -n "${new_contract}" ] && [ "${old_contract}" != "${new_contract}" ]; then
+      fx_why="ogContract が ${old_contract} から ${new_contract} に変わる"
+    elif [ -n "${old_og}" ] && [ -n "${new_acc}" ] && [ "${old_acc}" != "${new_acc}" ]; then
+      fx_why="ogAccepted が ${old_acc:-記録なし} から ${new_acc} に変わる（ogContract は ${new_contract:-記録なし}）"
+    fi
+    if [ -n "${fx_why}" ]; then
       fx_tree="$(git ls-tree --name-only "${head}" e2e/fixtures/ 2>/dev/null || true)"
       fx_missing=""
       for fx_suffix in .ognk .json -draft-opfs.json -draft-idb.json; do
         printf '%s\n' "${fx_tree}" | grep -qxF "e2e/fixtures/og-${old_og:0:7}${fx_suffix}" || fx_missing="${fx_missing} og-${old_og:0:7}${fx_suffix}"
       done
       [ -z "${fx_missing}" ] \
-        || die "ogContract が ${old_contract} から ${new_contract} に変わるのに、配信中の版のフィクスチャ e2e/fixtures/og-${old_og:0:7}{.ognk,.json,-draft-opfs.json,-draft-idb.json} がそろっていません（無い:${fx_missing}。OG_FIXTURE_NAME=og-${old_og:0:7} と OG_DRAFT_FIXTURE_NAME=og-${old_og:0:7}-draft で先に作る）"
+        || die "${fx_why}のに、配信中の版のフィクスチャ e2e/fixtures/og-${old_og:0:7}{.ognk,.json,-draft-opfs.json,-draft-idb.json} がそろっていません（無い:${fx_missing}。OG_FIXTURE_NAME=og-${old_og:0:7} と OG_DRAFT_FIXTURE_NAME=og-${old_og:0:7}-draft で先に作る）"
     fi
   fi
 fi

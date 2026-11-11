@@ -379,6 +379,38 @@ describe('tools/safe-push.sh 手順 2b: 埋め込みのペイントの版（ilus
     expect(none.code, none.out).toBe(0);
   });
 
+  it('ilust-fixture-accepted-change（ilust-sup-followup-02、OG ADR-0016 D6-1 (iii)）: ogContract が同じでも ogAccepted が変わるなら配信中の版のフィクスチャ 4 つを求める', () => {
+    const { base, origin, work } = setup();
+    const { og, A, B } = makeOgRepo(base);
+    commitPaint(work, { ogCommit: A, ogContract: '0.13.3', ogAccepted: 'm14-accepted' });
+    git(work, 'push', 'origin', 'HEAD:main');
+    const before = originHead(origin);
+    commitPaint(work, { ogCommit: B, ogContract: '0.13.3', ogAccepted: 'm15-accepted' });
+    const stopped = safePush(work, 'true', { OG_DIR: og });
+    expect(stopped.code).not.toBe(0);
+    expect(stopped.out).toMatch(/ogAccepted が m14-accepted から m15-accepted に変わる（ogContract は 0\.13\.3）のに、配信中の版のフィクスチャ/);
+    for (const suffix of ['.ognk', '.json', '-draft-opfs.json', '-draft-idb.json']) expect(stopped.out).toContain(`og-${A.slice(0, 7)}${suffix}`);
+    expect(originHead(origin)).toBe(before);
+    mkdirSync(join(work, 'e2e', 'fixtures'), { recursive: true });
+    // 新しい版（B）のフィクスチャでは代わりにならない
+    for (const suffix of ['.ognk', '.json', '-draft-opfs.json', '-draft-idb.json']) commitFile(work, `e2e/fixtures/og-${B.slice(0, 7)}${suffix}`, '{}\n');
+    expect(safePush(work, 'true', { OG_DIR: og }).code).not.toBe(0);
+    for (const suffix of ['.ognk', '.json', '-draft-opfs.json', '-draft-idb.json']) commitFile(work, `e2e/fixtures/og-${A.slice(0, 7)}${suffix}`, '{}\n');
+    const ok = safePush(work, 'true', { OG_DIR: og });
+    expect(ok.code, ok.out).toBe(0);
+    expect(originHead(origin)).toBe(git(work, 'rev-parse', 'HEAD'));
+  });
+
+  it('ilust-fixture-accepted-change: ogAccepted も ogContract も同じ（同じタグの取り込み直し）ならフィクスチャは問わない', () => {
+    const { base, work } = setup();
+    const { og, A, B } = makeOgRepo(base);
+    commitPaint(work, { ogCommit: A, ogContract: '0.13.3', ogAccepted: 'm15-accepted' });
+    git(work, 'push', 'origin', 'HEAD:main');
+    commitPaint(work, { ogCommit: B, ogContract: '0.13.3', ogAccepted: 'm15-accepted' });
+    const r = safePush(work, 'true', { OG_DIR: og });
+    expect(r.code, r.out).toBe(0);
+  });
+
   /** 偽の OG に封の形を足す: A の子 C（src）→ E（docs/PROGRESS.md に C の記録の行だけ）。記録の sha256 を返す */
   function sealOg(og, A) {
     git(og, 'checkout', '-q', '-b', 'sealed', A);

@@ -151,7 +151,9 @@ OG の作業木はそのコミットで、未追跡を含めて clean（`git sta
   BUILD.json に `ogCi = recorded`・`ogCiRecord`（sha256）・`ogCiCommit` を書きます。記録は既定で PROGRESS の行から `../OG-nanika-pkg/logs/` に探し（`--og-ci-record=<path>` で明示、
   `--og-ci-record=none` で使わない）、どれか欠ければ従来どおり ci を回します（`ogCi = ran`）
 - **取り込みの前のフィクスチャ**（ADR-0013 D6-2、ilust-sup-followup-01）: og のコミットの `src/core/VERSION` が今の（HEAD の）`public/paint/BUILD.json` の `ogContract` と違うのに、
-  今の版の 4 つのフィクスチャ（下の段落）が HEAD に無ければ、OG の ci より前に止まります（生成のコマンドを出す。取り込んだ後は作れないため）
+  今の版の 4 つのフィクスチャ（下の段落）が HEAD に無ければ、OG の ci より前に止まります（生成のコマンドを出す。取り込んだ後は作れないため）。
+  OG ADR-0016 D6-1 (iii)（ilust-sup-followup-02）から、契約が同じでも**受け入れのタグが変わる取り込み**（今の `ogAccepted` → og のコミットを指すタグ）は同じ 4 つを求めます
+  （M15 の埋め込みは契約 0.13.3 のまま `.ognk` の manifest に `workId` を書いた = 契約の文字列だけでは形の変化を見逃す）
 
 ci の後にもう一度 clean を確かめます（例外は OG の e2e が証跡として書き直す追跡済みの `docs/progress/` の画像だけで、
 取り込みが og のコミットの版に戻してから厳密に確かめます）。OG 側の `npm run ci`（上の記録の条件を全部満たすときだけ記録で代える）・`build:embed`・`check:embed` が緑のときだけ置き換え、`public/paint/BUILD.json`（schema 2）に
@@ -161,12 +163,12 @@ ci の後にもう一度 clean を確かめます（例外は OG の e2e が証�
 さらに埋め込みの初期 JS（OG の check-embed の値 `ogInitialJsGzipBytes`）を origin/main の取り込みと比べ、+8 KB を超えたか OG の予算 560 KB の 98 % を超えたら
 警告します（落とさない。ilust-sup-followup-04）。
 
-OGNK の形式か `ogContract` が上がる取り込みの前には（**取り込み直す前の `public/paint/` のうちに**）、その版の埋め込みで保存した `.ognk` と下書きのフィクスチャを
+受け入れのタグ（`ogAccepted`）か OGNK の形式か `ogContract` が変わる取り込みの前には（**取り込み直す前の `public/paint/` のうちに**）、その版の埋め込みで保存した `.ognk` と下書きのフィクスチャを
 `OG_FIXTURE_NAME=og-<7 字> OG_DRAFT_FIXTURE_NAME=og-<7 字>-draft npx playwright test --config=e2e/fixtures/og-fixture.config.ts` で作り、名指しの `git add` でコミットします
-（4 つ: `og-<7 字>.ognk`・`og-<7 字>.json`・`og-<7 字>-draft-opfs.json`・`og-<7 字>-draft-idb.json`。今あるのは `8af7b0f`・`b1433b4`・`8ea71f2`・`9b77f43`）。
+（4 つ: `og-<7 字>.ognk`・`og-<7 字>.json`・`og-<7 字>-draft-opfs.json`・`og-<7 字>-draft-idb.json`。今あるのは `8af7b0f`・`b1433b4`・`8ea71f2`・`9b77f43`・`6f70b01`・`fcf778e`・`9c4a7d9`）。
 `e2e/13-og-free.spec.ts`（「ギャラリーから続けると同じ画素」）と `e2e/19-og-draft-cross-version.spec.ts`（下書きの「続きから」）は `e2e/fixtures/` を列挙して版ごとに回すので、試験に手で足す必要はありません
 （一覧が空なら赤。今の `public/paint/` と同じ版の下書きのフィクスチャは版をまたがないので理由つきで飛ばし、次の取り込みの後に走る。ADR-0012 D6-2、ilust-sup-followup-05）。
-`ogContract` が変わるのに配信中の版のフィクスチャの 4 つのどれかが無いと `safe-push.sh` の手順 2b が止めます（取り込みの前は `import-paint.sh` が HEAD の版で同じ 4 つを求める）。
+`ogContract` か `ogAccepted` が origin/main から変わるのに配信中の版のフィクスチャの 4 つのどれかが無いと `safe-push.sh` の手順 2b が止めます（取り込みの前は `import-paint.sh` が HEAD の版で同じ 4 つを求める）。
 `e2e/20-og-embed-idb-names.spec.ts` は、描いて保存した後に埋め込みが作った IndexedDB（`og-` で始まるもの）が既知の一覧だけであることを確かめます
 （`og-files-autosave`・`og-files-recent`・`og-materials`・`og-nanika-gradients`・`og-nanika-settings`・`og-subtools`。m12 の埋め込みは空の `og-files-timelapse` も作るので、
 それは m13-accepted 以降の埋め込みでだけ「無い」を求める。ADR-0013 D6-8）。

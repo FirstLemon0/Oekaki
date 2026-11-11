@@ -18,7 +18,9 @@
 #   どれか欠ければ従来どおり ci を回す（ogCi = ran）。関門は緩めない
 # - 取り込みの前のフィクスチャ（ilust-sup-followup-01 / ADR-0013 D6-2）: og_commit の src/core/VERSION が今の（HEAD の）public/paint/BUILD.json の
 #   ogContract と違うのに、今の版の 4 つのフィクスチャ e2e/fixtures/og-<今の ogCommit 7 字>{.ognk,.json,-draft-opfs.json,-draft-idb.json} が
-#   HEAD に無ければ、OG の ci より前に止める（フィクスチャの生成器は今の public/paint で書くので、取り込んだ後は作れない。safe-push の 2b と同じ 4 つ）
+#   HEAD に無ければ、OG の ci より前に止める（フィクスチャの生成器は今の public/paint で書くので、取り込んだ後は作れない。safe-push の 2b と同じ 4 つ）。
+#   OG ADR-0016 D6-1 (iii)（ilust-sup-followup-02）から、契約が同じでも受け入れのタグ（今の BUILD.json の ogAccepted → og_commit を指すタグ）が
+#   変わる取り込みは同じ 4 つを求める（M15 の埋め込みは契約 0.13.3 のまま .ognk の manifest に workId を書いた = 契約の文字列だけでは形の変化を見逃す）
 # - 取り込むのは OG の dist-embed/ の成果物だけ（OG のソース・.map・sw.js・manifest・sandbox・bench は入れない）
 # - public/paint/BUILD.json に OG のコミット・名前（ogRef）・受け入れのタグ（ogAccepted）・ci を回したか（ogCi）・clean だったか（ogClean）・
 #   契約の版・API の版・ファイルごとの sha256・合計・入口の JS の gz・OG の check-embed の初期 JS の gz を書き、
@@ -91,15 +93,25 @@ if [ -n "${cur_build}" ]; then
   cur_field() { printf '%s' "${cur_build}" | node -e "let s='';process.stdin.on('data',(d)=>(s+=d)).on('end',()=>{try{const v=JSON.parse(s)[process.argv[1]];process.stdout.write(v===undefined||v===null?'':String(v))}catch{}})" "$1"; }
   cur_og="$(cur_field ogCommit)"
   cur_contract="$(cur_field ogContract)"
-  if [ -n "${cur_og}" ] && [ "${cur_contract}" != "${new_contract}" ]; then
+  cur_accepted="$(cur_field ogAccepted)"
+  # フィクスチャを求める理由（契約の変化・受け入れのタグの変化。OG ADR-0016 D6-1 (iii)）。どちらも無ければ問わない
+  fx_why=""
+  if [ -n "${cur_og}" ]; then
+    if [ "${cur_contract}" != "${new_contract}" ]; then
+      fx_why="契約が ${cur_contract:-記録なし} から ${new_contract} に変わる"
+    elif [ -n "${og_accepted}" ] && [ "${cur_accepted}" != "${og_accepted}" ]; then
+      fx_why="受け入れのタグが ${cur_accepted:-記録なし} から ${og_accepted} に変わる（契約は ${new_contract} のまま）"
+    fi
+  fi
+  if [ -n "${fx_why}" ]; then
     fx_missing=""
     for fx_suffix in .ognk .json -draft-opfs.json -draft-idb.json; do
       git cat-file -e "HEAD:e2e/fixtures/og-${cur_og:0:7}${fx_suffix}" 2>/dev/null || fx_missing="${fx_missing} og-${cur_og:0:7}${fx_suffix}"
     done
-    [ -z "${fx_missing}" ] || die "契約が ${cur_contract:-記録なし} から ${new_contract} に変わるのに、今の埋め込み（OG ${cur_og:0:12}）のフィクスチャが HEAD にそろっていません（無い:${fx_missing}）。取り込む前に、今の public/paint で
+    [ -z "${fx_missing}" ] || die "${fx_why}のに、今の埋め込み（OG ${cur_og:0:12}）のフィクスチャが HEAD にそろっていません（無い:${fx_missing}）。取り込む前に、今の public/paint で
   CI=1 OG_FIXTURE_NAME=og-${cur_og:0:7} OG_DRAFT_FIXTURE_NAME=og-${cur_og:0:7}-draft npx playwright test --config=e2e/fixtures/og-fixture.config.ts
-を回し、4 つを名指しの git add でコミットしてからやり直してください（取り込んだ後は作れません。ADR-0013 D6-2）"
-    echo "import-paint: 今の埋め込み（OG ${cur_og:0:12}、契約 ${cur_contract}）のフィクスチャ 4 つが HEAD にあります（契約 ${new_contract} への取り込み）"
+を回し、4 つを名指しの git add でコミットしてからやり直してください（取り込んだ後は作れません。ADR-0013 D6-2・OG ADR-0016 D6-1）"
+    echo "import-paint: 今の埋め込み（OG ${cur_og:0:12}、契約 ${cur_contract:-記録なし}、受け入れ ${cur_accepted:-記録なし}）のフィクスチャ 4 つが HEAD にあります（${fx_why}取り込み）"
   fi
 fi
 
