@@ -15,7 +15,8 @@
 #   2b. 埋め込みのペイントの版（ADR-0008 D10、ilust-sup-followup-02）: HEAD の public/paint/BUILD.json が origin/main から変わったなら、
 #      その取り込みは ogCi = ran か recorded・ogClean = true・受け入れのタグ（ogAccepted）つきであること。ogCi = recorded（記録のある C の ci の
 #      使い回し、ADR-0013 D6-4）なら、BUILD.json の ogCiCommit が ogCommit そのものか祖先で差が docs/ だけ、ogCiRecord の sha256 が ogCommit の
-#      docs/PROGRESS.md の行と一致することを OG のリポジトリで確かめ直す（scripts/og-ci-record.mjs verify-build）。さらに新しい ogCommit が
+#      docs/PROGRESS.md の行（無ければ ogCommit を指す受け入れのタグの注釈・略した名前 + seal-facts の C、OG ADR-0017 D6-1 (iii)）と一致することを
+#      OG のリポジトリで確かめ直す（scripts/og-ci-record.mjs verify-build）。さらに新しい ogCommit が
 #      origin/main の ogCommit の子孫であること（OG のリポジトリ ${OG_DIR:-../OG-nanika} で git merge-base --is-ancestor。版の後退を拒む）。
 #      ogContract が origin/main と違うなら、配信中の版のフィクスチャ 4 つ e2e/fixtures/og-<origin/main の ogCommit の 7 字>{.ognk,.json,-draft-opfs.json,-draft-idb.json}
 #      がどれも HEAD のツリーにあること（ADR-0011 D6-4、ADR-0012 D6-2 / ilust-sup-followup-05 で「どれか 1 つ」から 4 つ全部に。7 字 = OG_FIXTURE_NAME の命名の

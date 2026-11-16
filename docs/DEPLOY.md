@@ -104,7 +104,7 @@ main への push は `tools/safe-push.sh` だけで行います（2026-10-19 の
 2. `tools/safe-push.sh` を実行する。次を全部確かめてから `git push origin HEAD:main`（fast-forward だけ。force は使わない）:
    - ブランチが main、origin/main が HEAD の祖先、作業木が clean、未追跡は手元の zip 1 つだけ、push する範囲に `.zip` が無い
    - 埋め込みのペイント（`public/paint/BUILD.json`）が origin/main から変わるなら、その取り込みが `ogCi = ran` か `recorded`・`ogClean = true`・受け入れのタグ（`ogAccepted`）つきで
-     （`recorded` なら `ogCiCommit` が `ogCommit` の祖先で差が `docs/` だけ・`ogCiRecord` が `ogCommit` の `docs/PROGRESS.md` の行と一致することを OG の git で確かめ直す）、
+     （`recorded` なら `ogCiCommit` が `ogCommit` の祖先で差が `docs/` だけ・`ogCiRecord` が `ogCommit` の `docs/PROGRESS.md` の行（無ければ受け入れのタグの注釈・略した名前 + seal-facts の C、下の段落）と一致することを OG の git で確かめ直す）、
      新しい `ogCommit` が origin/main の `ogCommit` の子孫（OG のリポジトリ `../OG-nanika` か `OG_DIR` で `git merge-base --is-ancestor`。版の後退を拒む）
    - port 4173 が空き、`npm ci`、`npm run build`、`node scripts/check-bundle.mjs`、`node scripts/check-paint-artifact.mjs`、`npm test`、
      `CI=1 npx playwright test --retries=0`（Service Worker を有効にした project を含む）がすべて緑
@@ -149,7 +149,11 @@ OG の作業木はそのコミットで、未追跡を含めて clean（`git sta
   `npm run ci` を省きます: 記録の commit が og のコミットそのものか祖先で差が `docs/` だけ、OG の `scripts/pkg/seal-check.sh --no-dist <記録> <og>` が exit 0、
   記録が exit 0・clean・e2e の retries 0（再試行 0）・失敗 0、記録の sha256 が og のコミットの `docs/PROGRESS.md` の行と一致。`build:embed` と `check:embed` は必ず回し、
   BUILD.json に `ogCi = recorded`・`ogCiRecord`（sha256）・`ogCiCommit` を書きます。記録は既定で PROGRESS の行から `../OG-nanika-pkg/logs/` に探し（`--og-ci-record=<path>` で明示、
-  `--og-ci-record=none` で使わない）、どれか欠ければ従来どおり ci を回します（`ogCi = ran`）
+  `--og-ci-record=none` で使わない）、どれか欠ければ従来どおり ci を回します（`ogCi = ran`）。
+  OG ADR-0017 D6-1 (iii)（ilust-sup-followup-01）から、og のコミットの PROGRESS に記録の commit の 40 桁の行が無いときだけ、第 2 の出どころとして
+  og のコミットを指す注釈つきの受け入れのタグ（`git for-each-ref --points-at <og> refs/tags/*-accepted`）の本文の 40 桁の行を読みます。略した名前（`<8 桁以上>…-ci.json`、
+  M16 の PROGRESS の形）は、sha256 が一致し、前置きで始まる記録の commit が seal-facts の C（タグの注釈の `candidate C = <sha>` を OG の `scripts/pkg/seal-facts.sh` の 3. と同じ規則で読み、
+  og のコミットの祖先か同じ）と同じときだけ認めます。PROGRESS に 40 桁の行があるのに sha256 が違えば注釈には逃げません（取り込みの判定・明示のパス・safe-push の 2b の 3 か所で同じ）
 - **取り込みの前のフィクスチャ**（ADR-0013 D6-2、ilust-sup-followup-01）: og のコミットの `src/core/VERSION` が今の（HEAD の）`public/paint/BUILD.json` の `ogContract` と違うのに、
   今の版の 4 つのフィクスチャ（下の段落）が HEAD に無ければ、OG の ci より前に止まります（生成のコマンドを出す。取り込んだ後は作れないため）。
   OG ADR-0016 D6-1 (iii)（ilust-sup-followup-02）から、契約が同じでも**受け入れのタグが変わる取り込み**（今の `ogAccepted` → og のコミットを指すタグ）は同じ 4 つを求めます
