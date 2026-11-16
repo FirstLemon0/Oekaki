@@ -21,6 +21,12 @@
  * 作品 ID（UUID、36 字）を書き、開いた `.ognk` の値を引き継ぐ（m14 以前は書かない。どちらの向きでも開ける = 形の変化だが互換）。
  * - 4 本目: 受け入れのタグが m15 以降のときだけ、描いて保存した `ogDocs` の `.ognk` に作品 ID があり、ギャラリーの『続きから描く』で描き足して保存し直しても同じ値（strict）。
  *   m14 以前は「書かない」を注記に記録する（pending。m15-accepted の取り込み = M16 で strict になる）
+ *
+ * m16 の埋め込み（OG m16-accepted = 1cb64330、契約 0.13.4、OG ADR-0017 D6-1 (v)・cycle17 ilust-sup-followup §2）: 新しい IndexedDB の名前は無い
+ * （`KNOWN_OG_DBS` の 6 つのまま、m16 用の新しい分岐は要らない）。埋め込みに届く M16 の変化は M16 の候補 4 で変わった埋め込みの既定
+ * （#6 の既定のキー = F2 / F3 / F4・Z・N・Ctrl+G など。ただし `files.*`・`shell.nextTab/prevTab` 宛ては埋め込みで外れる。#8 Shift+ホイール = 回転。
+ * #16 選択ペン / 選択消しのサブツールの欄）で、`og-nanika-settings`・`og-subtools` の**保存の形**は変えていない（OG ADR-0017 D6-5）。
+ * 1 本目は m16 以降でこの 1 行を `embed-defaults` の注記に残す（合否は変えない。物理キーボード / ホイールが前提で、ペンだけの操作は変わらない）。
  */
 import { strFromU8, unzipSync } from 'fflate';
 import { expect, test, type Page } from '@playwright/test';
@@ -37,6 +43,8 @@ const STRICT_FROM_MILESTONE = 13;
 const ABR_REFUSED_FROM_MILESTONE = 14;
 /** 埋め込みが保存する .ognk の manifest に作品 ID（workId）を書く受け入れの版（OG ADR-0016 D6-1） */
 const WORK_ID_FROM_MILESTONE = 15;
+/** M16 の候補 4 で埋め込みの既定（#6 のキー・Shift+ホイール・#16）が変わった受け入れの版（OG ADR-0017 D6-1 (v)、注記だけ） */
+const EMBED_DEFAULTS_M16 = 16;
 
 /** 'm12-accepted' / 'm11.1-accepted' → 12 / 11（形が違えば null） */
 function acceptedMilestone(tag: unknown): number | null {
@@ -75,6 +83,12 @@ test('embed-idb-names: 描いて保存した後に埋め込みが作った Index
     type: 'og-subtools',
     description: `${build.ogAccepted ?? '?'}: og-subtools ${og.includes('og-subtools') ? 'あり' : 'なし'}（${subtoolsNote(ms)}）`,
   });
+  if (ms !== null && ms >= EMBED_DEFAULTS_M16) {
+    test.info().annotations.push({
+      type: 'embed-defaults',
+      description: `${build.ogAccepted}: M16 の候補 4 で変わった埋め込みの既定（#6 のキー・Shift+ホイール = 回転・#16 選択ペン / 選択消しの欄）。DB の名前と保存の形は不変`,
+    });
+  }
   expect(og.length, '埋め込みの DB が 1 つも無い（埋め込みが開いていない?）').toBeGreaterThan(0);
   const unknown = og.filter((n) => !KNOWN_OG_DBS.includes(n) && n !== TIMELAPSE_DB);
   expect(unknown, '既知の一覧に無い DB（増やすなら一覧と OG の ADR を書き換える）').toEqual([]);
