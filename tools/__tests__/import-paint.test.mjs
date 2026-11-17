@@ -74,6 +74,22 @@ function write(dir, rel, body) {
   writeFileSync(join(dir, rel), body);
 }
 
+/** 偽の OG の lock（optional でない vite と、入っていなくてよい optional の部品） */
+const FAKE_LOCK = {
+  name: 'og-fake',
+  lockfileVersion: 3,
+  requires: true,
+  packages: {
+    '': { name: 'og-fake' },
+    'node_modules/vite': { version: '6.4.4', resolved: 'https://registry.npmjs.org/vite/-/vite-6.4.4.tgz', integrity: 'sha512-fakevite644', dev: true },
+    'node_modules/@esbuild/win32-x64': { version: '0.25.0', integrity: 'sha512-fakewin', optional: true, os: ['win32'] },
+  },
+};
+/** npm ci が書く hidden lockfile の形（root と、入らなかった optional を除く） */
+function hiddenLockOf(lock) {
+  return { name: lock.name, lockfileVersion: 3, requires: true, packages: Object.fromEntries(Object.entries(lock.packages).filter(([k, v]) => k !== '' && !v.optional)) };
+}
+
 /** 偽の OG: ci は無視されるディレクトリに印を置く（ciDirty なら追跡外のファイルを作る）、build:embed は dist-embed/ を作る */
 function makeOg(base, { ciDirty = false, ciScript = null } = {}) {
   const og = join(base, 'OG-nanika');
@@ -124,7 +140,10 @@ function makeOg(base, { ciDirty = false, ciScript = null } = {}) {
   write(og, 'src/embed/api.ts', 'export const EMBED_API_VERSION = 1;\n');
   write(og, '.gitignore', 'dist-embed/\nnode_modules/\nout/\n');
   write(og, 'node_modules/vite/package.json', JSON.stringify({ name: 'vite', version: '6.4.4' }));
-  git(og, 'add', 'package.json', 'tooling', 'src', '.gitignore', 'docs');
+  // lock と、npm が入れた中身の記録（hidden lockfile）。既定は一致（OG ADR-0018 D6-1 (v) の確かめを通る）
+  write(og, 'package-lock.json', `${JSON.stringify(FAKE_LOCK, null, 2)}\n`);
+  write(og, 'node_modules/.package-lock.json', JSON.stringify(hiddenLockOf(FAKE_LOCK)));
+  git(og, 'add', 'package.json', 'package-lock.json', 'tooling', 'src', '.gitignore', 'docs');
   git(og, 'commit', '-m', 'og v1');
   git(og, 'tag', '-a', 'm7-accepted', '-m', 'M7 accepted');
   return og;
@@ -138,7 +157,7 @@ function makeIlust(base) {
   git(il, 'init', '-b', 'main');
   copyFileSync(join(ROOT, 'tools', 'import-paint.sh'), join(il, 'tools', 'import-paint.sh'));
   chmodSync(join(il, 'tools', 'import-paint.sh'), 0o755);
-  for (const f of ['paint-artifact.mjs', 'check-paint-artifact.mjs', 'og-ci-record.mjs']) copyFileSync(join(ROOT, 'scripts', f), join(il, 'scripts', f));
+  for (const f of ['paint-artifact.mjs', 'check-paint-artifact.mjs', 'og-ci-record.mjs', 'og-deps-check.mjs']) copyFileSync(join(ROOT, 'scripts', f), join(il, 'scripts', f));
   return il;
 }
 
@@ -246,6 +265,8 @@ describe('tools/import-paint.sh', () => {
     git(og, 'worktree', 'add', '--detach', wt, 'm7-accepted');
     mkdirSync(join(wt, 'node_modules', 'vite'), { recursive: true });
     writeFileSync(join(wt, 'node_modules', 'vite', 'package.json'), JSON.stringify({ version: '6.4.4' }));
+    // worktree の node_modules も lock どおりに入っている（無ければ npm ci を回す = 下の依存の一致の試験）
+    writeFileSync(join(wt, 'node_modules', '.package-lock.json'), JSON.stringify(hiddenLockOf(FAKE_LOCK)));
     r = importPaint(il, wt, 'm7-accepted');
     expect(r.code, r.out).toBe(0);
     expect(readBuild(il)).toMatchObject({ ogAccepted: 'm7-accepted', ogCi: 'ran', ogClean: true });
@@ -519,5 +540,130 @@ describe('tools/import-paint.sh', () => {
     expect(r.code, r.out).not.toBe(0);
     expect(r.out).toMatch(/CSP の meta がありません/);
     expect(existsSync(join(il, 'public', 'paint'))).toBe(false);
+  });
+});
+
+// OG の node_modules と package-lock.json の一致（OG ADR-0018 D6-1 (v)、cycle18 ilust-sup-followup-08、受け入れ ilust-import-deps-check）。
+// npm は PATH の先頭に置いた偽物（ci は lock から hidden lockfile を書き直して印を置く。ほかのコマンドは本物の npm に渡す）
+describe('tools/import-paint.sh: OG の依存の一致（ilust-sup-followup-08）', () => {
+  const realNpm = execFileSync('bash', ['-c', 'command -v npm'], { encoding: 'utf8' }).trim();
+  function fakeNpmPath(base, { noop = false } = {}) {
+    const bin = join(base, 'fake-bin');
+    const writeHidden = noop
+      ? ':'
+      : `node -e "const fs=require('fs');const l=JSON.parse(fs.readFileSync('package-lock.json','utf8'));fs.mkdirSync('node_modules',{recursive:true});fs.writeFileSync('node_modules/.package-lock.json',JSON.stringify({name:l.name,lockfileVersion:3,requires:true,packages:Object.fromEntries(Object.entries(l.packages).filter(([k,v])=>k!==''&&!v.optional))}))"`;
+    write(
+      bin,
+      'npm',
+      ['#!/usr/bin/env bash', 'if [ "$1" = ci ]; then', '  echo "fake npm ci"', `  ${writeHidden}`, '  mkdir -p out && echo 1 > out/npm-ci-ran', '  exit 0', 'fi', `exec "${realNpm}" "$@"`, ''].join('\n'),
+    );
+    chmodSync(join(bin, 'npm'), 0o755);
+    return { PATH: `${bin}:${GIT_ENV.PATH}` };
+  }
+
+  /** 封の形（C → 記録 → E に m7.1-accepted）。上の sealLike の既定の場合だけの写し（記録が緑・差は docs/ だけ） */
+  function sealLikeForDeps(base, og) {
+    write(og, 'scripts/pkg/seal-check.sh', '#!/usr/bin/env bash\necho "sealed (fake) $*"\nexit 0\n');
+    chmodSync(join(og, 'scripts/pkg/seal-check.sh'), 0o755);
+    git(og, 'add', 'scripts');
+    git(og, 'commit', '-q', '-m', 'C');
+    const c = git(og, 'rev-parse', 'HEAD');
+    const record = {
+      schema: 'og-ci-record/1',
+      commit: c,
+      command: 'npm run ci',
+      ciEnv: 'unset',
+      exit: 0,
+      clean: true,
+      porcelainBefore: [],
+      porcelainAfter: [],
+      untracked: [],
+      headAfter: c,
+      vitest: { ran: true, failed: 0, filesFailed: 0, errors: 0 },
+      e2e: { ran: true, failed: 0, flaky: 0, didNotRun: 0, interrupted: 0, retryAttempts: 0, retries: 0 },
+    };
+    const body = `${JSON.stringify(record, null, 2)}\n`;
+    write(join(base, 'OG-nanika-pkg', 'logs'), `${c}-ci.json`, body);
+    const sha = createHash('sha256').update(body).digest('hex');
+    // M17 の E の形（表の行、「sha256」の語なし）で書く = progressRecordRows の表の行の読み（ilust-sup-followup-02）も通す
+    write(og, 'docs/PROGRESS.md', `# PROGRESS\n\n  | 記録 | sha256 | 中身 |\n  |---|---|---|\n  | \`../OG-nanika-pkg/logs/${c}-ci.json\` | \`${sha}\` | verify-final ok |\n`);
+    git(og, 'add', 'docs');
+    git(og, 'commit', '-q', '-m', 'E (evidence)');
+    git(og, 'tag', '-a', 'm7.1-accepted', '-m', 'M7.1 accepted (point release)');
+    return { c, sha };
+  }
+
+  it('一致していれば npm ci を回さない（依存 match）', () => {
+    const { base, og, il } = setup();
+    const r = importPaint(il, og, 'm7-accepted', fakeNpmPath(base));
+    expect(r.code, r.out).toBe(0);
+    expect(r.out).toContain('node_modules は package-lock.json と一致');
+    expect(r.out).toContain('依存 match');
+    expect(existsSync(join(og, 'out', 'npm-ci-ran'))).toBe(false);
+  });
+
+  it('版・integrity が外れている・入っていない・lock に無い部品があれば npm ci を回して確かめ直してから取り込む（ogCi = ran）', () => {
+    const drift = [
+      (h) => (h.packages['node_modules/vite'].version = '6.4.3'),
+      (h) => (h.packages['node_modules/vite'].integrity = 'sha512-other'),
+      (h) => delete h.packages['node_modules/vite'],
+      (h) => (h.packages['node_modules/left-pad'] = { version: '1.3.0' }),
+    ];
+    for (const mutate of drift) {
+      const { base, og, il } = setup();
+      const hidden = hiddenLockOf(FAKE_LOCK);
+      mutate(hidden);
+      write(og, 'node_modules/.package-lock.json', JSON.stringify(hidden));
+      const r = importPaint(il, og, 'm7-accepted', fakeNpmPath(base));
+      expect(r.code, r.out).toBe(0);
+      expect(r.out).toContain('npm ci を回します');
+      expect(r.out).toContain('fake npm ci');
+      expect(r.out).toContain('依存 reinstalled');
+      expect(existsSync(join(og, 'out', 'npm-ci-ran'))).toBe(true);
+      expect(readBuild(il).ogCi).toBe('ran');
+    }
+  });
+
+  it('記録の使い回し（ogCi = recorded、M17 の E の表の行）でも同じく確かめ、外れていれば npm ci を回してから build:embed', () => {
+    const { base, og, il } = setup();
+    const { c, sha } = sealLikeForDeps(base, og);
+    write(og, 'node_modules/.package-lock.json', JSON.stringify({ ...hiddenLockOf(FAKE_LOCK), packages: {} }));
+    const r = importPaint(il, og, 'm7.1-accepted', fakeNpmPath(base));
+    expect(r.code, r.out).toBe(0);
+    expect(r.out).toContain('npm ci を回します');
+    expect(r.out).toMatch(/npm run ci を記録で代えます/);
+    expect(r.out.indexOf('fake npm ci')).toBeLessThan(r.out.indexOf('== OG: npm run build:embed'));
+    expect(readBuild(il)).toMatchObject({ ogCi: 'recorded', ogCiRecord: sha, ogCiCommit: c });
+  });
+
+  it('npm ci の後も外れたまま・OG に package-lock.json が無ければ止め、public/paint/ を作らない。hidden lockfile が無ければ npm ci', () => {
+    {
+      const { base, og, il } = setup();
+      write(og, 'node_modules/.package-lock.json', JSON.stringify({ ...hiddenLockOf(FAKE_LOCK), packages: {} }));
+      const r = importPaint(il, og, 'm7-accepted', fakeNpmPath(base, { noop: true }));
+      expect(r.code).not.toBe(0);
+      expect(r.out).toMatch(/npm ci を回した後も node_modules が package-lock.json と一致しません/);
+      expect(existsSync(join(og, 'out', 'ci-ran'))).toBe(false);
+      expect(existsSync(join(il, 'public', 'paint'))).toBe(false);
+    }
+    {
+      const { base, og, il } = setup();
+      rmSync(join(og, 'node_modules', '.package-lock.json'));
+      const r = importPaint(il, og, 'm7-accepted', fakeNpmPath(base));
+      expect(r.code, r.out).toBe(0);
+      expect(r.out).toMatch(/node_modules\/\.package-lock\.json がありません/);
+      expect(r.out).toContain('依存 reinstalled');
+    }
+    {
+      const { base, og, il } = setup();
+      git(og, 'rm', '-q', 'package-lock.json');
+      git(og, 'commit', '-q', '-m', 'no lock');
+      git(og, 'tag', '-a', 'm7.2-accepted', '-m', 'no lock');
+      const r = importPaint(il, og, 'm7.2-accepted', fakeNpmPath(base));
+      expect(r.code).not.toBe(0);
+      expect(r.out).toMatch(/OG の依存を確かめられません/);
+      expect(existsSync(join(og, 'out', 'ci-ran'))).toBe(false);
+      expect(existsSync(join(il, 'public', 'paint'))).toBe(false);
+    }
   });
 });

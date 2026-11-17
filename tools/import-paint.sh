@@ -16,6 +16,8 @@
 #   記録の sha256 が og_commit の docs/PROGRESS.md の行と一致。BUILD.json に ogCi = recorded・ogCiRecord（sha256）・ogCiCommit を書く。
 #   記録は 2 つ目の引数 --og-ci-record=<path>（か環境変数 OG_CI_RECORD）。既定 auto = og_commit の PROGRESS の行から探す。none なら使わない。
 #   どれか欠ければ従来どおり ci を回す（ogCi = ran）。関門は緩めない
+# - OG の node_modules と package-lock.json の一致（OG ADR-0018 D6-1 (v)、cycle18 ilust-sup-followup-08）: ogCi に依らず build:embed の前に
+#   scripts/og-deps-check.mjs で optional でない packages の version / integrity を比べ、外れれば OG で npm ci を回してから確かめ直す（外れたままなら止める）
 # - 取り込みの前のフィクスチャ（ilust-sup-followup-01 / ADR-0013 D6-2）: og_commit の src/core/VERSION が今の（HEAD の）public/paint/BUILD.json の
 #   ogContract と違うのに、今の版の 4 つのフィクスチャ e2e/fixtures/og-<今の ogCommit 7 字>{.ognk,.json,-draft-opfs.json,-draft-idb.json} が
 #   HEAD に無ければ、OG の ci より前に止める（フィクスチャの生成器は今の public/paint で書くので、取り込んだ後は作れない。safe-push の 2b と同じ 4 つ）。
@@ -115,6 +117,23 @@ if [ -n "${cur_build}" ]; then
   fi
 fi
 
+# OG の node_modules と package-lock.json の一致（OG ADR-0018 D6-1 (v)、cycle18 ilust-sup-followup-08）。ogCi に依らず（ran でも recorded でも）
+# build:embed の前に確かめる（記録の使い回しでは OG の npm run ci が走らず、前に入れた node_modules から埋め込みを作るため）。
+# optional でない packages の version / integrity が外れていれば OG で npm ci を回し、もう一度確かめる（それでも外れれば止める）。
+# npm ci は node_modules（無視されるディレクトリ）だけを書き直す。作業木が clean のままかは下の確かめ（ci とビルドの後）が見る
+echo "== OG: node_modules と package-lock.json の一致（scripts/og-deps-check.mjs）"
+deps_rc=0
+node scripts/og-deps-check.mjs --og-dir="${OG_DIR}" || deps_rc=$?
+[ "${deps_rc}" != 2 ] || die "OG の依存を確かめられません（package-lock.json が無い・引数の誤り）"
+if [ "${deps_rc}" != 0 ]; then
+  echo "import-paint: OG の node_modules が lock と一致しないので npm ci を回します（${OG_DIR}）"
+  (cd "${OG_DIR}" && npm ci)
+  node scripts/og-deps-check.mjs --og-dir="${OG_DIR}" || die "OG で npm ci を回した後も node_modules が package-lock.json と一致しません"
+  og_deps=reinstalled
+else
+  og_deps=match
+fi
+
 og_ci=ran
 og_ci_record=""
 og_ci_commit=""
@@ -199,7 +218,7 @@ node scripts/check-paint-artifact.mjs --dir=public/paint || gate=$?
 
 after_files="$(find public/paint -type f | wc -l | tr -d ' ')"
 after_bytes="$(du -sb public/paint | cut -f1)"
-echo "import-paint: OG ${og_commit}（${commit_arg}、受け入れ ${og_accepted:-なし}、ci ${og_ci}${og_ci_commit:+（記録 ${og_ci_commit:0:12} sha256 ${og_ci_record}）}、契約 ${og_contract}、API v${embed_api}、vite ${og_vite}）"
+echo "import-paint: OG ${og_commit}（${commit_arg}、受け入れ ${og_accepted:-なし}、ci ${og_ci}${og_ci_commit:+（記録 ${og_ci_commit:0:12} sha256 ${og_ci_record}）}、依存 ${og_deps}、契約 ${og_contract}、API v${embed_api}、vite ${og_vite}）"
 echo "import-paint: public/paint/ ${before_files} ファイル ${before_bytes} B → ${after_files} ファイル ${after_bytes} B"
 if [ "${gate}" != 0 ]; then
   echo "import-paint: check-paint-artifact が不合格です（試験の取り込み = push できません。git checkout -- public/paint で戻せます）" >&2

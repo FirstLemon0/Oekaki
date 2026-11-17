@@ -17,6 +17,7 @@ import {
   matchRecordRow,
   progressRecordRows,
   recordContentProblems,
+  tableRecordPairs,
   tagFacts,
   verifyBuildRecord,
 } from '../og-ci-record.mjs';
@@ -395,5 +396,44 @@ describe('og-ci-record: 偽の OG のタグの注釈（本物の git、ilust-sup
       expect(checkAuto(o.og, o.e).ok).toBe(false);
       expect(verifyBuildRecord(o.og, o.e, o.c, o.sha).ok).toBe(false);
     }
+  });
+});
+
+// 表の行（OG ADR-0018 D6-1 (iv)、cycle18 ilust-sup-followup-02）。下の 4 行は OG の M17 の証跡のコミット E（166b7276）の
+// docs/PROGRESS.md:55-58 の写し（`git -C ../OG-nanika show 166b7276:docs/PROGRESS.md | sed -n 55,58p`、1 文字も変えない）。
+const M17_C = '0f2d4e5c6d1d1b01f3943858f399400e380b970b';
+const M17_RECORD_SHA = '2f8c58db30051c7584a515d7dfd57f42e093be3512debc63da07e225e603d238';
+const M17_LOG_SHA = '1d82f63d18e9114ed5c9ce045c5110cb19339fea0286fc722de054e051283152';
+const M17_E_PROGRESS_55_58 = [
+  '  | 記録 | sha256 | 中身 |',
+  '  |---|---|---|',
+  '  | `../OG-nanika-pkg/logs/0f2d4e5c6d1d1b01f3943858f399400e380b970b-ci.json` | `2f8c58db30051c7584a515d7dfd57f42e093be3512debc63da07e225e603d238` | `ci-record.py verify-final --commit C` = ok（状態ファイルの runId = 記録、skippedTests 4 ⊆ `e2e/skip-registry.json`）= `ci-green-final-c-m17` |',
+  '  | `../OG-nanika-pkg/logs/0f2d4e5c6d1d1b01f3943858f399400e380b970b-ci-20261117-165251.log` | `1d82f63d18e9114ed5c9ce045c5110cb19339fea0286fc722de054e051283152` | e2e の全 project 失敗 0（skip 4 = 撮影 1・`OG_TIMELAPSE_PERF` の [perf] の記録 1・Ilust の SW 2）= `regression-e2e-m1-m16` |',
+].join('\n');
+
+describe('og-ci-record: 表の行（ilust-sup-followup-02、OG ADR-0018 D6-1 (iv)）', () => {
+  it('M17 の E の docs/PROGRESS.md:58 の写し: 記録の名前のセルの後ろの 64 桁のセルを組にする（ログの行・見出しの行は拾わない）', () => {
+    expect(progressRecordRows(M17_E_PROGRESS_55_58)).toEqual([{ commit: M17_C, name: `${M17_C}-ci.json`, sha256: M17_RECORD_SHA }]);
+    expect(progressRecordRows(M17_E_PROGRESS_55_58).some((r) => r.sha256 === M17_LOG_SHA)).toBe(false);
+  });
+
+  it('照合: 表の行だけで PROGRESS の第 1 の読み手が決める（source = progress、タグの注釈に頼らない）・sha256 が違えば拒む', () => {
+    expect(matchRecordRow({ rec: M17_C, recordSha: M17_RECORD_SHA, progressText: M17_E_PROGRESS_55_58 })).toEqual({ ok: true, source: 'progress', reason: '' });
+    const bad = matchRecordRow({ rec: M17_C, recordSha: 'e'.repeat(64), progressText: M17_E_PROGRESS_55_58, tagTexts: [tagRecLine(M17_C, 'e'.repeat(64))] });
+    expect(bad.ok).toBe(false);
+    expect(bad.reason).toContain('docs/PROGRESS.md');
+  });
+
+  it('表のセルの読み方: 中身が 64 桁だけのセル（前後の空白とバッククォートは外す）。略した sha・後ろに文字の続くセル・表でない行・名前の前のセルは拾わない', () => {
+    const sha = 'c'.repeat(64);
+    expect(tableRecordPairs(`| ${C}-ci.json | ${sha} |`)).toEqual([{ commit: C, sha256: sha }]);
+    expect(tableRecordPairs(`| \`${C}-ci.json\` | 中身 | \` ${sha} \` |`)).toEqual([{ commit: C, sha256: sha }]);
+    expect(tableRecordPairs(`| \`${C}-ci.json\` | \`${sha.slice(0, 8)}…${sha.slice(-4)}\` |`)).toEqual([]);
+    expect(tableRecordPairs(`| \`${C}-ci.json\` | \`${sha}\` の写し |`)).toEqual([]);
+    expect(tableRecordPairs(`| \`${sha}\` | \`${C}-ci.json\` |`)).toEqual([]);
+    expect(tableRecordPairs(`記録 \`${C}-ci.json\` \`${sha}\``)).toEqual([]);
+    expect(tableRecordPairs(`| \`${C}-ci.json.bak\` | \`${sha}\` |`)).toEqual([]);
+    // 文の行（sha256 の語あり）は今までどおり文の規則で読み、表の規則と二重にしない
+    expect(progressRecordRows(`| 記録 \`${C}-ci.json\`（sha256 \`${sha}\`） | \`${'d'.repeat(64)}\` |`)).toEqual([{ commit: C, name: `${C}-ci.json`, sha256: sha }]);
   });
 });

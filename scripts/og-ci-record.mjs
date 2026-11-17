@@ -35,25 +35,59 @@ const SHA40 = /^[0-9a-f]{40}$/;
 const SHA64 = /^[0-9a-f]{64}$/;
 
 /**
+ * Markdown の表の行（`| … | … |`）から「記録の名前（<40 桁>-ci.json）のセルの後ろで最初の、中身が 64 桁だけのセル」の組を拾う
+ * （OG ADR-0018 D6-1 (iv)、cycle18 ilust-sup-followup-02: M17 の E の docs/PROGRESS.md:58 は
+ * `| \`…/<40 桁>-ci.json\` | \`<64 桁>\` | … |` = 「sha256」の語が無い表の形）。
+ * セルの中身は前後の空白とバッククォートを外して比べる（64 桁の後ろに文字が続くセル・略した sha は拾わない）。表の行でなければ []。
+ */
+export function tableRecordPairs(line) {
+  const t = String(line ?? '').trim();
+  if (!t.startsWith('|')) return [];
+  const cells = t.replace(/^\|/, '').replace(/\|$/, '').split('|');
+  const out = [];
+  cells.forEach((cell, i) => {
+    const names = [...cell.matchAll(/([0-9a-f]{40})-ci\.json(?![0-9A-Za-z_.-])/g)];
+    if (names.length !== 1) return;
+    for (const later of cells.slice(i + 1)) {
+      const v = later.trim().replace(/^`+|`+$/g, '').trim();
+      if (SHA64.test(v)) {
+        out.push({ commit: names[0][1], sha256: v });
+        return;
+      }
+    }
+  });
+  return out;
+}
+
+/**
  * og_commit の PROGRESS の本文から「記録の名前（<40 桁>-ci.json）と sha256 が同じ行にある」組を拾う。
+ * 2 つの形を読む:
+ *   - 文の行: 記録の名前の直後の `sha256 <64 桁>`（M13〜M16 の形。ログの sha256 と取り違えない）
+ *   - 表の行: 記録の名前のセルの後ろで最初の 64 桁だけのセル（M17 の E の形、tableRecordPairs）
  * 戻り値: [{ commit, name, sha256 }]（同じ組は 1 つに）
  */
 export function progressRecordRows(progressText) {
   const out = [];
   const seen = new Set();
+  const push = (commit, sha256) => {
+    const key = `${commit}:${sha256}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ commit, name: `${commit}-ci.json`, sha256 });
+  };
   for (const line of String(progressText ?? '').split('\n')) {
     const names = [...line.matchAll(/([0-9a-f]{40})-ci\.json/g)];
+    if (names.length === 0) continue;
     const shas = [...line.matchAll(/sha256\s*`?([0-9a-f]{64})`?/g)];
-    if (names.length === 0 || shas.length === 0) continue;
-    // 記録の名前の直後の sha256 を組にする（ログの sha256 と取り違えない）
-    for (const n of names) {
-      const after = shas.find((s) => s.index > n.index) ?? null;
-      if (!after) continue;
-      const key = `${n[1]}:${after[1]}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      out.push({ commit: n[1], name: `${n[1]}-ci.json`, sha256: after[1] });
+    if (shas.length > 0) {
+      // 記録の名前の直後の sha256 を組にする（ログの sha256 と取り違えない）
+      for (const n of names) {
+        const after = shas.find((s) => s.index > n.index) ?? null;
+        if (after) push(n[1], after[1]);
+      }
+      continue;
     }
+    for (const p of tableRecordPairs(line)) push(p.commit, p.sha256);
   }
   return out;
 }
