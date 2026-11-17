@@ -27,11 +27,23 @@
  * （#6 の既定のキー = F2 / F3 / F4・Z・N・Ctrl+G など。ただし `files.*`・`shell.nextTab/prevTab` 宛ては埋め込みで外れる。#8 Shift+ホイール = 回転。
  * #16 選択ペン / 選択消しのサブツールの欄）で、`og-nanika-settings`・`og-subtools` の**保存の形**は変えていない（OG ADR-0017 D6-5）。
  * 1 本目は m16 以降でこの 1 行を `embed-defaults` の注記に残す（合否は変えない。物理キーボード / ホイールが前提で、ペンだけの操作は変わらない）。
+ *
+ * m17 の埋め込み（OG m17-accepted = E 166b7276 / C 0f2d4e5c、契約 0.13.4、OG ADR-0018 D6-1 (vi)(vii)・cycle18 ilust-sup-followup-01 / -05）: 新しい IndexedDB の名前は無い
+ * （`KNOWN_OG_DBS` の 6 つのまま）。埋め込みに届く M17 の変化（`EMBED_DEFAULTS_M17`）= F2（切り取りの別キー）/ F3 / F4・Shift+F7 は**キャンバスの領域だけ**
+ * （scope canvas。スライダーの直接入力・サブツールの名前の変更の F2 と同時に動かない = M16 の F2 の誤動作の直し、cycle17 fidelity-ui-workflow-01）、
+ * Ctrl+B = レイヤーカラーの切り替え、刻印の配列（JIS / US）で変わる既定、`defaultsRev`（起動の時に印の古い `customize.keymap.user` を 1 回だけ書き直す移し替え =
+ * 前の版で利用者が足したキーと同じキーの新しい既定を外し、info の通知を 1 件）。1 本目は m17 以降でこの 1 行も `embed-defaults` の注記に残す（合否は変えない）。
+ * 5 本目（embed-settings-cross-version）: m16 の埋め込みが書いた設定とサブツールの実物（e2e/fixtures/og-<版>-stores-idb.json、make-og-settings-fixture.gen.ts）を
+ * 書き戻して今の埋め込みで開く → 起動のエラー 0・利用者の F2（全体表示）が残り切り取りに戻らない・選択ペンのブラシサイズとクイックアクセスの表示が残る。
+ * m17 以降は `defaultsRev` = 17 の印と移し替えの通知が 1 回（2 回目の起動で通知なし）を strict に求める。フィクスチャと同じ版の埋め込みでは理由つきで飛ばす。
  */
+import { readdirSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { strFromU8, unzipSync } from 'fflate';
 import { expect, test, type Page } from '@playwright/test';
 import { gotoApp } from './helpers';
-import { drawOg, finishOg, openOgFree, setOgEngine, waitOgContent } from './og-helpers';
+import { drawOg, finishOg, ogPixels, openOgFree, setOgEngine, waitOgContent } from './og-helpers';
 
 /** 埋め込みが作ってよい IndexedDB（OG の files / materials / gradient / settings / tools-core の保存） */
 const KNOWN_OG_DBS = ['og-files-autosave', 'og-files-recent', 'og-materials', 'og-nanika-gradients', 'og-nanika-settings', 'og-subtools'];
@@ -45,6 +57,8 @@ const ABR_REFUSED_FROM_MILESTONE = 14;
 const WORK_ID_FROM_MILESTONE = 15;
 /** M16 の候補 4 で埋め込みの既定（#6 のキー・Shift+ホイール・#16）が変わった受け入れの版（OG ADR-0017 D6-1 (v)、注記だけ） */
 const EMBED_DEFAULTS_M16 = 16;
+/** M17 で埋め込みの既定（F2 / F3 / F4・Shift+F7 はキャンバスだけ・Ctrl+B・JIS の刻印・defaultsRev の移し替え）が変わった受け入れの版（OG ADR-0018 D6-1 (vii)、注記と 5 本目） */
+const EMBED_DEFAULTS_M17 = 17;
 
 /** 'm12-accepted' / 'm11.1-accepted' → 12 / 11（形が違えば null） */
 function acceptedMilestone(tag: unknown): number | null {
@@ -87,6 +101,12 @@ test('embed-idb-names: 描いて保存した後に埋め込みが作った Index
     test.info().annotations.push({
       type: 'embed-defaults',
       description: `${build.ogAccepted}: M16 の候補 4 で変わった埋め込みの既定（#6 のキー・Shift+ホイール = 回転・#16 選択ペン / 選択消しの欄）。DB の名前と保存の形は不変`,
+    });
+  }
+  if (ms !== null && ms >= EMBED_DEFAULTS_M17) {
+    test.info().annotations.push({
+      type: 'embed-defaults',
+      description: `${build.ogAccepted}: M17 で変わった埋め込みの既定（F2 / F3 / F4・Shift+F7 はキャンバスの領域だけ = M16 の F2 の誤動作の直し、Ctrl+B = レイヤーカラー、JIS / US の刻印の既定、defaultsRev の移し替え = 前の版で足したキーと衝突する新しい既定を 1 回だけ外して通知）。DB の名前は不変`,
     });
   }
   expect(og.length, '埋め込みの DB が 1 つも無い（埋め込みが開いていない?）').toBeGreaterThan(0);
@@ -291,3 +311,167 @@ test('embed-ognk-work-id: m15 以降の埋め込みは保存した .ognk に作�
   expect(second[0]!.workId, '開いた .ognk の作品 ID を引き継ぐ').toBe(workId);
   test.info().annotations.push({ type: 'embed-ognk-work-id', description: `${build.ogAccepted}: workId ${workId}（保存し直しても同じ）` });
 });
+
+// 設定とサブツールの版またぎ（OG ADR-0018 D6-1 (iii)(vii)・cycle18 ilust-sup-followup-05、受け入れ ilust-settings-fixture）。
+// フィクスチャ e2e/fixtures/og-<版>-stores-idb.json = その版の埋め込みの画面で「F2 → 全体表示（置き換える）・選択ペンのブラシサイズ・
+// クイックアクセスの表示 = アイコンだけ」を変えた後の og-nanika-settings / og-subtools の全ストア（make-og-settings-fixture.gen.ts、埋め込みが書いたまま）。
+// 書き戻して今の埋め込みを開き、利用者の値が残ることを見る。m17 以降は defaultsRev の移し替え（印 17・切り取りの既定 F2（canvas）を removed へ・通知 1 回）も strict。
+const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
+const STORES_FIXTURE = /^og-([0-9a-f]{7,12})-stores-idb\.json$/;
+const STORES_FILES = readdirSync(FIXTURES).filter((f) => STORES_FIXTURE.test(f)).sort();
+/** m17 の移し替えの通知（OG strings/ja/customize.json の customize.keys.defaultsMigrated の頭） */
+const MIGRATED_TOAST = '前の版で追加したショートカットと同じキーに新しい既定の割当があったため';
+
+interface StoresFixture {
+  ogCommit: string;
+  ogAccepted: string | null;
+  changed: {
+    keymap: { chord: string; id: string };
+    selectionPenBrushSize: { before: number; after: number };
+    quickAccessDisplay: string;
+  };
+  dbs: Record<string, null | { version: number; stores: { name: string; keyPath: string | string[] | null; autoIncrement: boolean; entries: { key: IDBValidKey; value: unknown }[] }[] }>;
+}
+
+interface KeyBinding {
+  chord: string;
+  id: string;
+  scope?: string;
+}
+interface UserKeymapValue {
+  version: number;
+  added?: KeyBinding[];
+  removed?: KeyBinding[];
+  defaultsRev?: number;
+}
+
+/** og-nanika-settings の settings ストアの 1 件・og-subtools の state（埋め込みの iframe とは別に、親のページから読む = 同じオリジン） */
+async function readOgStores(page: Page): Promise<{ keymap: UserKeymapValue | null; qaDisplay: unknown; selPenSize: unknown }> {
+  return page.evaluate(async () => {
+    const open = (name: string) =>
+      new Promise<IDBDatabase>((res, rej) => {
+        const r = indexedDB.open(name);
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+      });
+    const get = (db: IDBDatabase, store: string, key: string) =>
+      new Promise<unknown>((res, rej) => {
+        const g = db.transaction(store, 'readonly').objectStore(store).get(key);
+        g.onsuccess = () => res(g.result);
+        g.onerror = () => rej(g.error);
+      });
+    const s = await open('og-nanika-settings');
+    const keymap = (await get(s, 'settings', 'customize.keymap.user')) as UserKeymapValue | null;
+    const qaDisplay = await get(s, 'settings', 'customize.quickAccess.display');
+    s.close();
+    const t = await open('og-subtools');
+    const state = (await get(t, 'state', 'state')) as { presets?: Record<string, { settings?: { size?: unknown } }> } | undefined;
+    t.close();
+    return { keymap: keymap ?? null, qaDisplay, selPenSize: state?.presets?.['selection.pen.pen']?.settings?.size };
+  });
+}
+
+test('embed-settings-fixtures: 設定とサブツールの実物の控えが 1 つ以上ある（e2e/fixtures/og-<版>-stores-idb.json）', () => {
+  expect(STORES_FILES.length, 'make-og-settings-fixture.gen.ts で取り込み直しの前に作る（OG ADR-0018 D6-1 (iii)）').toBeGreaterThan(0);
+});
+
+for (const file of STORES_FILES) {
+  test(`embed-settings-cross-version: ${file}（前の版の埋め込みが書いた設定・サブツール）を今の埋め込みで開くと利用者の値が残る（m17 以降は defaultsRev の移し替えと通知 1 回）`, async ({ page }) => {
+    test.setTimeout(150_000);
+    const fx = JSON.parse(readFileSync(join(FIXTURES, file), 'utf8')) as StoresFixture;
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await setOgEngine(page, true);
+    const build = (await page.evaluate(async () => (await fetch('/paint/BUILD.json', { cache: 'no-store' })).json())) as { ogCommit: string; ogAccepted?: string | null };
+    test.skip(
+      build.ogCommit.startsWith(STORES_FIXTURE.exec(file)![1]!),
+      `${file} は今の public/paint/ と同じ版（取り込み直しの前に作ったフィクスチャ、OG ADR-0018 D6-1 (iii)）= 版をまたがない。次の取り込みの後に走る`,
+    );
+    const ms = acceptedMilestone(build.ogAccepted);
+    const want = fx.changed;
+
+    // 前の版の埋め込みが書いたものをそのまま書く（アプリの JS が動かない同じオリジンのページで）
+    await page.goto('/manifest.webmanifest');
+    await page.evaluate(async (dbs) => {
+      for (const [name, db] of Object.entries(dbs)) {
+        if (!db) continue;
+        await new Promise<void>((res, rej) => {
+          const d = indexedDB.deleteDatabase(name);
+          d.onsuccess = () => res();
+          d.onerror = () => rej(d.error);
+        });
+        await new Promise<void>((resolve, reject) => {
+          const req = indexedDB.open(name, db.version);
+          req.onupgradeneeded = () => {
+            for (const s of db.stores) req.result.createObjectStore(s.name, { keyPath: s.keyPath ?? undefined, autoIncrement: s.autoIncrement });
+          };
+          req.onsuccess = () => {
+            const conn = req.result;
+            const tx = conn.transaction(db.stores.map((s) => s.name), 'readwrite');
+            for (const s of db.stores) for (const e of s.entries) tx.objectStore(s.name).put(e.value, s.keyPath ? undefined : e.key);
+            tx.oncomplete = () => {
+              conn.close();
+              resolve();
+            };
+            tx.onerror = () => reject(tx.error);
+          };
+          req.onerror = () => reject(req.error);
+        });
+      }
+    }, fx.dbs);
+
+    // 1 回目の起動
+    const frame = await openOgFree(page);
+    const toast = frame.locator('.og-w-toast').filter({ hasText: MIGRATED_TOAST });
+    if (ms !== null && ms >= EMBED_DEFAULTS_M17) {
+      await expect.poll(async () => (await readOgStores(page)).keymap?.defaultsRev, { timeout: 20_000, message: 'defaultsRev の印（移し替え）' }).toBe(EMBED_DEFAULTS_M17);
+      await expect(toast, '移し替えの通知（info）が 1 件').toHaveCount(1, { timeout: 10_000 });
+    } else {
+      await page.waitForTimeout(3000);
+      test.info().annotations.push({
+        type: 'pending',
+        description: `${build.ogAccepted ?? '?'} の埋め込みは defaultsRev の移し替えをしない（m${EMBED_DEFAULTS_M17} 以降で strict）`,
+      });
+    }
+    const first = await readOgStores(page);
+    const added = first.keymap?.added ?? [];
+    const removed = first.keymap?.removed ?? [];
+    expect(added, `利用者が足した ${want.keymap.chord} → ${want.keymap.id} が残る`).toContainEqual(expect.objectContaining({ chord: want.keymap.chord, id: want.keymap.id }));
+    expect(removed, '前の版で「置き換える」で外した切り取りの F2 は外れたまま').toContainEqual(expect.objectContaining({ chord: 'F2', id: 'edit-ops.cut', scope: 'global' }));
+    if (ms !== null && ms >= EMBED_DEFAULTS_M17) {
+      expect(removed, '新しい既定（F2 = 切り取り、キャンバスの領域）も外す（移し替え）').toContainEqual(expect.objectContaining({ chord: 'F2', id: 'edit-ops.cut', scope: 'canvas' }));
+    }
+    expect(first.qaDisplay, 'クイックアクセスの表示').toBe(want.quickAccessDisplay);
+    expect(first.selPenSize, '選択ペンのブラシサイズ（og-subtools）').toBe(want.selectionPenBrushSize.after);
+
+    // 画面でも: 選択ペンのブラシサイズ
+    const f = page.frameLocator('[data-testid="og-free-frame"]');
+    await f.getByRole('button', { name: '選択ペン', exact: true }).first().click();
+    await expect(f.getByRole('slider', { name: /ブラシサイズ/ }).first()).toHaveAttribute('aria-valuenow', String(want.selectionPenBrushSize.after));
+    await f.getByRole('button', { name: 'ペン', exact: true }).last().click();
+
+    // 2 回目の起動: 通知は出ない・印と割当はそのまま
+    await gotoApp(page, '#/');
+    const frame2 = await openOgFree(page);
+    await page.waitForTimeout(3000);
+    await expect(frame2.locator('.og-w-toast').filter({ hasText: MIGRATED_TOAST }), '2 回目の起動で通知なし').toHaveCount(0);
+    const second = await readOgStores(page);
+    expect(second.keymap, '2 回目の起動で差分を書き直さない').toEqual(first.keymap);
+
+    // 押して確かめる: キャンバスの領域で F2 = 全体表示（切り取りにならない = 描いた線が残る）
+    await drawOg(page, 2);
+    await waitOgContent(frame2);
+    const before = await ogPixels(frame2);
+    await f.locator('[data-og-viewport]').first().focus().catch(() => {});
+    await f.locator('.og-canvas-status').first().click();
+    await page.keyboard.press('F2');
+    await page.waitForTimeout(1500);
+    const after = await ogPixels(frame2);
+    expect(after.opaque, 'F2 で絵が切り取られない（利用者の F2 = 全体表示が先に動く）').toBe(before.opaque);
+    expect(errors, '起動のエラー').toEqual([]);
+    test.info().annotations.push({
+      type: 'embed-settings-cross-version',
+      description: `${fx.ogAccepted ?? fx.ogCommit.slice(0, 7)} → ${build.ogAccepted ?? build.ogCommit.slice(0, 7)}: keymap ${JSON.stringify(first.keymap)}, qa ${String(first.qaDisplay)}, selPen ${String(first.selPenSize)}`,
+    });
+  });
+}
