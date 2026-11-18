@@ -11,7 +11,8 @@
 # - OG の `npm run ci`・`npm run build:embed`・`npm run check:embed` が緑のときだけ置き換える
 #   （IMPORT_PAINT_SKIP_OG_CI=1 は試験用。BUILD.json の ogCi が skipped になり、check-paint-artifact が拒む = push できない）
 # - 記録のある C の ci の使い回し（ogCi = recorded、ilust-sup-followup-06 / ADR-0013 D6-4）: scripts/og-ci-record.mjs が次を全部確かめたときだけ
-#   OG の `npm run ci` を省く（build:embed と check:embed は必ず回す）: 記録の commit が og_commit そのものか祖先で差が docs/ だけ、
+#   OG の `npm run ci` を省く（build:embed と check:embed は必ず回す）: 記録の commit が og_commit そのものか祖先で差が docs/ だけ
+#   （名指しの一覧 NON_DOCS_ALLOWED = bench/history.jsonl とちょうど一致するパスは除く、OG ADR-0019 D6-1 (iv)）、
 #   OG の `scripts/pkg/seal-check.sh --no-dist <記録の commit> <og_commit>` が exit 0、記録が exit 0・clean・retries 0・失敗 0、
 #   記録の sha256 が og_commit の docs/PROGRESS.md の行と一致。BUILD.json に ogCi = recorded・ogCiRecord（sha256）・ogCiCommit を書く。
 #   記録は 2 つ目の引数 --og-ci-record=<path>（か環境変数 OG_CI_RECORD）。既定 auto = og_commit の PROGRESS の行から探す。none なら使わない。
