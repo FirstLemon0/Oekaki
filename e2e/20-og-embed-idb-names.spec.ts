@@ -36,6 +36,19 @@
  * 5 本目（embed-settings-cross-version）: m16 の埋め込みが書いた設定とサブツールの実物（e2e/fixtures/og-<版>-stores-idb.json、make-og-settings-fixture.gen.ts）を
  * 書き戻して今の埋め込みで開く → 起動のエラー 0・利用者の F2（全体表示）が残り切り取りに戻らない・選択ペンのブラシサイズとクイックアクセスの表示が残る。
  * m17 以降は `defaultsRev` = 17 の印と移し替えの通知が 1 回（2 回目の起動で通知なし）を strict に求める。フィクスチャと同じ版の埋め込みでは理由つきで飛ばす。
+ * フィクスチャの差分が既に印 17 を持つ（m17 の埋め込みが書いた og-166b727 など）ときは、m18 の埋め込みは移し替えない = 通知なし・印 17 のまま（strict）。
+ * 前の版の埋め込みが書いた `removed` は全部残る（フィクスチャの差分の removed をそのまま求める）。
+ *
+ * m18 の埋め込み（OG m18-accepted = E fa6f2550 / C c6927d6d、契約 0.13.5、OG ADR-0019 D6-1 (v)(vii)・cycle19 ilust-sup-followup-02）: `EMBED_DEFAULTS_M18` =
+ * キーボードの配列（JIS / US）の推定の印と最初の keydown での確定（cycle18 fidelity-ui-workflow-01）、`defaultsRev` の移し替えは**印より後に足した / 変えた既定
+ * （OG の DEFAULTS_DELTA: 16 = F2 切り取り・Z、17 = Ctrl+B・JIS の刻印）だけ**（cycle18 code-domain-06。前の版からある global の既定は動かさない）、
+ * 新しい IndexedDB の名前は無い（`KNOWN_OG_DBS` の 6 つのまま）、`.ognk` のタイムラプスの塊は埋め込みでは書かない / 読まない（候補 7 は埋め込みの外）、
+ * 共有（候補 8）は埋め込みに無い。1 本目は m18 以降でこの 1 行も `embed-defaults` の注記に残す（合否は変えない）。
+ * 6 本目（embed-keymap-revless-global-chord、ilust-sup-followup-02 の 2）: 印の無い差分（m14 / m15 の利用者の形）が M16 より前からある global の既定と
+ * 同じ和音を canvas に足している（Ctrl+X → 全体表示、canvas）→ m18 以降の埋め込みでは global の既定（Ctrl+X = 切り取り）を `removed` に入れない・
+ * 差分を書き直さない・通知なし（strict）。m17 の埋め込みは広い移し替えで入れてしまう（負の対照として strict に記録 = この試験が効いている印）。
+ * 実物は m17 の埋め込みでは作れない（印 17 を書く）ので、設定の DB の形（版・ストア・meta）は stores のフィクスチャから借り、
+ * `customize.keymap.user` だけを手で作る（REVLESS_KEYMAP）。
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -59,6 +72,8 @@ const WORK_ID_FROM_MILESTONE = 15;
 const EMBED_DEFAULTS_M16 = 16;
 /** M17 で埋め込みの既定（F2 / F3 / F4・Shift+F7 はキャンバスだけ・Ctrl+B・JIS の刻印・defaultsRev の移し替え）が変わった受け入れの版（OG ADR-0018 D6-1 (vii)、注記と 5 本目） */
 const EMBED_DEFAULTS_M17 = 17;
+/** M18 で埋め込みの既定（配列の推定の印・移し替えは DEFAULTS_DELTA だけ）が変わった受け入れの版（OG ADR-0019 D6-1 (v)(vii)、注記と 6 本目） */
+const EMBED_DEFAULTS_M18 = 18;
 
 /** 'm12-accepted' / 'm11.1-accepted' → 12 / 11（形が違えば null） */
 function acceptedMilestone(tag: unknown): number | null {
@@ -107,6 +122,12 @@ test('embed-idb-names: 描いて保存した後に埋め込みが作った Index
     test.info().annotations.push({
       type: 'embed-defaults',
       description: `${build.ogAccepted}: M17 で変わった埋め込みの既定（F2 / F3 / F4・Shift+F7 はキャンバスの領域だけ = M16 の F2 の誤動作の直し、Ctrl+B = レイヤーカラー、JIS / US の刻印の既定、defaultsRev の移し替え = 前の版で足したキーと衝突する新しい既定を 1 回だけ外して通知）。DB の名前は不変`,
+    });
+  }
+  if (ms !== null && ms >= EMBED_DEFAULTS_M18) {
+    test.info().annotations.push({
+      type: 'embed-defaults',
+      description: `${build.ogAccepted}: M18 で変わった埋め込みの既定（キーボードの配列の推定の印と最初の keydown での確定、defaultsRev の移し替えは印より後に足した / 変えた既定 = DEFAULTS_DELTA だけで global の古い既定は動かさない）。.ognk のタイムラプスの塊は書かない / 読まない・共有は無い。DB の名前は不変`,
     });
   }
   expect(og.length, '埋め込みの DB が 1 つも無い（埋め込みが開いていない?）').toBeGreaterThan(0);
@@ -389,6 +410,10 @@ for (const file of STORES_FILES) {
     );
     const ms = acceptedMilestone(build.ogAccepted);
     const want = fx.changed;
+    // フィクスチャの差分（前の版の埋め込みが書いたまま）。印が既に 17 以上なら m17 以降の埋め込みは移し替えない
+    const fxKeymap = (fx.dbs['og-nanika-settings']?.stores.find((s) => s.name === 'settings')?.entries.find((e) => e.key === 'customize.keymap.user')?.value ?? null) as UserKeymapValue | null;
+    const fxRev = typeof fxKeymap?.defaultsRev === 'number' ? fxKeymap.defaultsRev : null;
+    const fxStale = fxRev === null || fxRev < EMBED_DEFAULTS_M17;
 
     // 前の版の埋め込みが書いたものをそのまま書く（アプリの JS が動かない同じオリジンのページで）
     await page.goto('/manifest.webmanifest');
@@ -423,9 +448,14 @@ for (const file of STORES_FILES) {
     // 1 回目の起動
     const frame = await openOgFree(page);
     const toast = frame.locator('.og-w-toast').filter({ hasText: MIGRATED_TOAST });
-    if (ms !== null && ms >= EMBED_DEFAULTS_M17) {
+    if (ms !== null && ms >= EMBED_DEFAULTS_M17 && fxStale) {
       await expect.poll(async () => (await readOgStores(page)).keymap?.defaultsRev, { timeout: 20_000, message: 'defaultsRev の印（移し替え）' }).toBe(EMBED_DEFAULTS_M17);
       await expect(toast, '移し替えの通知（info）が 1 件').toHaveCount(1, { timeout: 10_000 });
+    } else if (ms !== null && ms >= EMBED_DEFAULTS_M17) {
+      // 印 17 の差分（m17 の埋め込みが書いた）: m18 の埋め込み（KEYMAP_DEFAULTS_REV 17 のまま）は移し替えない = 印はそのまま・通知なし
+      await page.waitForTimeout(3000);
+      expect((await readOgStores(page)).keymap?.defaultsRev, `印 ${fxRev} の差分の印はそのまま`).toBe(fxRev);
+      await expect(toast, '印の新しい差分は移し替えない = 通知なし').toHaveCount(0);
     } else {
       await page.waitForTimeout(3000);
       test.info().annotations.push({
@@ -437,7 +467,11 @@ for (const file of STORES_FILES) {
     const added = first.keymap?.added ?? [];
     const removed = first.keymap?.removed ?? [];
     expect(added, `利用者が足した ${want.keymap.chord} → ${want.keymap.id} が残る`).toContainEqual(expect.objectContaining({ chord: want.keymap.chord, id: want.keymap.id }));
-    expect(removed, '前の版で「置き換える」で外した切り取りの F2 は外れたまま').toContainEqual(expect.objectContaining({ chord: 'F2', id: 'edit-ops.cut', scope: 'global' }));
+    // 前の版で「置き換える」で外した切り取りの F2（m16 = global、m17 = canvas）は外れたまま = フィクスチャの差分の removed は全部残る
+    expect(fxKeymap?.removed?.length ?? 0, 'フィクスチャの差分に外した割当がある（置き換える）').toBeGreaterThan(0);
+    for (const r of fxKeymap?.removed ?? []) {
+      expect(removed, `前の版で外した ${r.chord} → ${r.id}（${r.scope ?? 'global'}）は外れたまま`).toContainEqual(expect.objectContaining({ chord: r.chord, id: r.id, scope: r.scope ?? 'global' }));
+    }
     if (ms !== null && ms >= EMBED_DEFAULTS_M17) {
       expect(removed, '新しい既定（F2 = 切り取り、キャンバスの領域）も外す（移し替え）').toContainEqual(expect.objectContaining({ chord: 'F2', id: 'edit-ops.cut', scope: 'canvas' }));
     }
@@ -475,3 +509,100 @@ for (const file of STORES_FILES) {
     });
   });
 }
+
+// 印の無い差分が M16 より前からある global の既定と同じ和音を canvas に足している（OG ADR-0019 D6-1 (v)・cycle19 ilust-sup-followup-02 の 2、
+// 受け入れ ilust-keymap-migration-case。OG 側の同じ 1 件は src/customize/__tests__ = w1-ui-shell）。
+// m14 / m15 の利用者の形（defaultsRev なし）。Ctrl+X は M16 より前からある global の既定（切り取り）で、DEFAULTS_DELTA（16・17）に無い。
+const REVLESS_KEYMAP: UserKeymapValue = { version: 1, added: [{ chord: 'Ctrl+KeyX', id: 'view.fit', scope: 'canvas' }], removed: [] };
+const GLOBAL_CUT = { chord: 'Ctrl+KeyX', id: 'edit-ops.cut', scope: 'global' };
+
+test('embed-keymap-revless-global-chord: 印の無い差分が global の古い既定（Ctrl+X = 切り取り）と同じ和音を canvas に足していても、m18 以降の埋め込みはその既定を removed に入れない', async ({ page }) => {
+  test.setTimeout(120_000);
+  expect(STORES_FILES.length, '設定の DB の形を借りる stores のフィクスチャ').toBeGreaterThan(0);
+  const fx = JSON.parse(readFileSync(join(FIXTURES, STORES_FILES[STORES_FILES.length - 1]!), 'utf8')) as StoresFixture;
+  const shape = fx.dbs['og-nanika-settings'];
+  if (!shape) throw new Error('stores のフィクスチャに og-nanika-settings がありません');
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await setOgEngine(page, true);
+  const build = (await page.evaluate(async () => (await fetch('/paint/BUILD.json', { cache: 'no-store' })).json())) as { ogCommit: string; ogAccepted?: string | null };
+  const ms = acceptedMilestone(build.ogAccepted);
+  test.skip(ms === null || ms < EMBED_DEFAULTS_M17, `${build.ogAccepted ?? '?'} の埋め込みは defaultsRev の移し替えをしない（m${EMBED_DEFAULTS_M17} より前）`);
+
+  // og-nanika-settings を「meta（フィクスチャのまま）+ settings は手で作った印なしの差分 1 件だけ」で書く（アプリの JS が動かない同じオリジンのページで）
+  await page.goto('/manifest.webmanifest');
+  await page.evaluate(
+    async ([db, keymap]) => {
+      await new Promise<void>((res, rej) => {
+        const d = indexedDB.deleteDatabase('og-nanika-settings');
+        d.onsuccess = () => res();
+        d.onerror = () => rej(d.error);
+      });
+      await new Promise<void>((resolve, reject) => {
+        const req = indexedDB.open('og-nanika-settings', db.version);
+        req.onupgradeneeded = () => {
+          for (const s of db.stores) req.result.createObjectStore(s.name, { keyPath: s.keyPath ?? undefined, autoIncrement: s.autoIncrement });
+        };
+        req.onsuccess = () => {
+          const conn = req.result;
+          const tx = conn.transaction(db.stores.map((s) => s.name), 'readwrite');
+          for (const s of db.stores) {
+            if (s.name === 'settings') tx.objectStore('settings').put(keymap, 'customize.keymap.user');
+            else for (const e of s.entries) tx.objectStore(s.name).put(e.value, s.keyPath ? undefined : e.key);
+          }
+          tx.oncomplete = () => {
+            conn.close();
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+        };
+        req.onerror = () => reject(req.error);
+      });
+    },
+    [shape, REVLESS_KEYMAP] as const,
+  );
+  const readKeymap = () =>
+    page.evaluate(
+      () =>
+        new Promise<UserKeymapValue | null>((resolve, reject) => {
+          const r = indexedDB.open('og-nanika-settings');
+          r.onsuccess = () => {
+            const g = r.result.transaction('settings', 'readonly').objectStore('settings').get('customize.keymap.user');
+            g.onsuccess = () => {
+              r.result.close();
+              resolve((g.result as UserKeymapValue | undefined) ?? null);
+            };
+            g.onerror = () => reject(g.error);
+          };
+          r.onerror = () => reject(r.error);
+        }),
+    );
+
+  const frame = await openOgFree(page);
+  const toast = frame.locator('.og-w-toast').filter({ hasText: MIGRATED_TOAST });
+  if (ms !== null && ms < EMBED_DEFAULTS_M18) {
+    // 負の対照（m17 の埋め込み = 広い移し替え、cycle18 code-domain-06）: global の古い既定まで removed に入れて印 17 を書く。
+    // この試験が m18 の直しを見分けられる印（m17 を本番に押すと、この形の利用者の Ctrl+X の切り取りが外れて戻らない = ilust-sup-followup-02）
+    await expect.poll(async () => (await readKeymap())?.defaultsRev, { timeout: 20_000, message: 'm17 は印 17 を書く' }).toBe(EMBED_DEFAULTS_M17);
+    const km = await readKeymap();
+    expect(km?.removed ?? [], 'm17 は global の古い既定（Ctrl+X = 切り取り）も removed に入れる（負の対照）').toContainEqual(expect.objectContaining(GLOBAL_CUT));
+    await expect(toast, 'm17 は移し替えの通知を出す').toHaveCount(1, { timeout: 10_000 });
+    test.info().annotations.push({ type: 'negative-control', description: `${build.ogAccepted}: 広い移し替え ${JSON.stringify(km)}（m18 で直る）` });
+    return;
+  }
+  await page.waitForTimeout(3000);
+  const first = await readKeymap();
+  expect(first?.added ?? [], '利用者が足した Ctrl+X → 全体表示（canvas）は残る').toContainEqual(expect.objectContaining(REVLESS_KEYMAP.added![0]!));
+  expect(first?.removed ?? [], 'global の古い既定（Ctrl+X = 切り取り）を removed に入れない').not.toContainEqual(expect.objectContaining(GLOBAL_CUT));
+  expect(first?.removed ?? [], 'removed は利用者のまま（空）').toEqual([]);
+  expect(first, '動かす既定が無いので差分を書き直さない（印も付けない）').toEqual(REVLESS_KEYMAP);
+  await expect(toast, '移し替えの通知なし').toHaveCount(0);
+  // 2 回目の起動でも同じ
+  await gotoApp(page, '#/');
+  const frame2 = await openOgFree(page);
+  await page.waitForTimeout(3000);
+  await expect(frame2.locator('.og-w-toast').filter({ hasText: MIGRATED_TOAST }), '2 回目の起動で通知なし').toHaveCount(0);
+  expect(await readKeymap(), '2 回目の起動でも差分はそのまま').toEqual(REVLESS_KEYMAP);
+  expect(errors, '起動のエラー').toEqual([]);
+  test.info().annotations.push({ type: 'embed-keymap-revless-global-chord', description: `${build.ogAccepted}: ${JSON.stringify(first)}` });
+});
