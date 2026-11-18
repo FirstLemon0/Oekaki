@@ -7,7 +7,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  NON_DOCS_ALLOWED,
   abbreviatedRecordRows,
+  blockingNonDocsDiff,
   annotationSealC,
   annotationSealE,
   autoCandidates,
@@ -435,5 +437,147 @@ describe('og-ci-record: 表の行（ilust-sup-followup-02、OG ADR-0018 D6-1 (iv
     expect(tableRecordPairs(`| \`${C}-ci.json.bak\` | \`${sha}\` |`)).toEqual([]);
     // 文の行（sha256 の語あり）は今までどおり文の規則で読み、表の規則と二重にしない
     expect(progressRecordRows(`| 記録 \`${C}-ci.json\`（sha256 \`${sha}\`） | \`${'d'.repeat(64)}\` |`)).toEqual([{ commit: C, name: `${C}-ci.json`, sha256: sha }]);
+  });
+});
+
+/**
+ * OG ADR-0019 D6-1 (iv)・ilust-sup-followup-01: OG の封は性能の段の記録（bench/history.jsonl の追記）を証跡のコミット E に入れる。
+ * M18 の C c6927d6d..E fa6f2550 の差の実物の一覧（`git diff --name-only c6927d6d fa6f2550`、8 件）。
+ */
+const M18_C = 'c6927d6d29a4b5c06ee22edfa2a0c2ec445a83be';
+const M18_E = 'fa6f2550e36614df65d403bd8fac2bb17a8ff46d';
+const M18_C_E_FILES = [
+  'bench/history.jsonl',
+  'docs/HANDOFF.md',
+  'docs/PROGRESS.md',
+  'docs/ROADMAP.md',
+  'docs/plans/user-requests.md',
+  'docs/progress/m18/README.md',
+  'docs/progress/m18/perf.json',
+  'docs/progress/m18/records.json',
+];
+/** git diff --name-only <C> <E> -- . ':!docs' と同じ（docs/ の外だけ） */
+const outsideDocs = (files) => files.filter((f) => !f.startsWith('docs/'));
+
+/** 偽の OG: C（src・bench・seal-check.sh）→ E（docs と、extra に渡したパスの変更）。記録は ../OG-nanika-pkg/logs に置く */
+function makeOgWith(extra, { sealExit = 0 } = {}) {
+  const base = mkdtempSync(join(tmpdir(), 'og-ci-record-allow-'));
+  tmpDirs.push(base);
+  const og = join(base, 'OG-nanika');
+  mkdirSync(og, { recursive: true });
+  git(og, 'init', '-b', 'main');
+  write(og, 'src/core/VERSION', '0.13.5\n');
+  write(og, 'bench/run.mjs', '// run\n');
+  write(og, 'bench/lib/common.mjs', '// common\n');
+  write(og, 'bench/history.jsonl', '{"scenario":"a"}\n');
+  write(og, 'scripts/pkg/seal-check.sh', `#!/usr/bin/env bash\necho "sealed (fake) $*"\nexit ${sealExit}\n`);
+  chmodSync(join(og, 'scripts/pkg/seal-check.sh'), 0o755);
+  write(og, 'docs/PROGRESS.md', '# PROGRESS\n');
+  git(og, 'add', '.');
+  git(og, 'commit', '-m', 'C');
+  const c = git(og, 'rev-parse', 'HEAD');
+  const body = `${JSON.stringify(goodRecord(c), null, 2)}\n`;
+  const logs = join(base, 'OG-nanika-pkg', 'logs');
+  write(logs, `${c}-ci.json`, body);
+  const sha = sha256(body);
+  write(og, 'docs/PROGRESS.md', `# PROGRESS\n${progressLine(c, sha)}\n`);
+  for (const f of extra) write(og, f, `// changed after C: ${f}\n{"scenario":"b"}\n`);
+  git(og, 'add', '.');
+  git(og, 'commit', '-m', 'E (docs + extra)');
+  const e = git(og, 'rev-parse', 'HEAD');
+  return { og, c, e, sha };
+}
+
+describe('og-ci-record: bench/history.jsonl の名指しの許し（ilust-sup-followup-01、OG ADR-0019 D6-1 (iv)）', () => {
+  it('名指しの一覧は bench/history.jsonl の 1 つだけで、変えられない', () => {
+    expect([...NON_DOCS_ALLOWED]).toEqual(['bench/history.jsonl']);
+    expect(Object.isFrozen(NON_DOCS_ALLOWED)).toBe(true);
+    expect(blockingNonDocsDiff(null)).toBeNull();
+    expect(blockingNonDocsDiff(['bench/history.jsonl'])).toEqual([]);
+  });
+
+  it('M18 の C / E の実物の一覧: docs/ の外は bench/history.jsonl だけ → ok（rowSource progress）', () => {
+    const sha = 'f'.repeat(64);
+    const nonDocsDiff = outsideDocs(M18_C_E_FILES);
+    expect(nonDocsDiff).toEqual(['bench/history.jsonl']);
+    const r = evaluateRecord({
+      ogCommit: M18_E,
+      record: goodRecord(M18_C),
+      recordSha: sha,
+      progressText: progressLine(M18_C, sha),
+      isAncestor: true,
+      nonDocsDiff,
+      sealExit: 0,
+    });
+    expect(r).toEqual({ ok: true, reasons: [], rowSource: 'progress' });
+  });
+
+  it('負の例: bench/run.mjs・bench/lib/common.mjs・bench/history.jsonl と src/ の組・ちょうど一致しない名前 → ng（名指しの外だけを理由に挙げる）', () => {
+    const sha = 'f'.repeat(64);
+    const base = { ogCommit: M18_E, record: goodRecord(M18_C), recordSha: sha, progressText: progressLine(M18_C, sha), isAncestor: true, sealExit: 0 };
+    const cases = [
+      [['bench/run.mjs'], 'bench/run.mjs'],
+      [['bench/lib/common.mjs'], 'bench/lib/common.mjs'],
+      [['bench/history.jsonl', 'bench/run.mjs'], 'bench/run.mjs'],
+      [['bench/history.jsonl', 'src/app/main.ts'], 'src/app/main.ts'],
+      [['bench/history.jsonl.bak'], 'bench/history.jsonl.bak'],
+      [['bench/history.jsonl/x'], 'bench/history.jsonl/x'],
+      [['x/bench/history.jsonl'], 'x/bench/history.jsonl'],
+      [['bench/History.jsonl'], 'bench/History.jsonl'],
+    ];
+    for (const [nonDocsDiff, named] of cases) {
+      const r = evaluateRecord({ ...base, nonDocsDiff });
+      expect(r.ok, JSON.stringify(nonDocsDiff)).toBe(false);
+      const why = r.reasons.join('\n');
+      expect(why).toContain(`docs/ の外があります: ${named}`);
+      expect(why).not.toMatch(/外があります: bench\/history\.jsonl( |$)/);
+    }
+  });
+
+  it('seal-check が exit 0 でなければ bench/history.jsonl だけの差でも ng（sealExit === 0 は必須のまま）', () => {
+    const sha = 'f'.repeat(64);
+    const base = { ogCommit: M18_E, record: goodRecord(M18_C), recordSha: sha, progressText: progressLine(M18_C, sha), isAncestor: true, nonDocsDiff: ['bench/history.jsonl'] };
+    for (const sealExit of [1, 2, null]) {
+      const r = evaluateRecord({ ...base, sealExit });
+      expect(r.ok, String(sealExit)).toBe(false);
+      expect(r.reasons.join('\n')).toMatch(/seal-check/);
+    }
+    // 祖先でない記録も今までどおり拒む
+    expect(evaluateRecord({ ...base, sealExit: 0, isAncestor: false }).ok).toBe(false);
+  });
+
+  it('偽の OG（本物の git）: E で bench/history.jsonl に追記しただけ → checkAuto・verify-build（safe-push の 2b）の両方で ok', () => {
+    const { og, c, e, sha } = makeOgWith(['bench/history.jsonl']);
+    const r = checkAuto(og, e);
+    expect(r.reasons).toEqual([]);
+    expect(r).toMatchObject({ ok: true, recordCommit: c, recordSha: sha, rowSource: 'progress' });
+    expect(verifyBuildRecord(og, e, c, sha)).toEqual({ ok: true, reasons: [], rowSource: 'progress' });
+  });
+
+  it('偽の OG: bench/run.mjs・bench/lib/common.mjs・src/ と組の差 → checkAuto（seal-check を回さない）と verify-build で ng', () => {
+    for (const extra of [['bench/run.mjs'], ['bench/lib/common.mjs'], ['bench/history.jsonl', 'src/core/VERSION']]) {
+      const { og, c, e, sha } = makeOgWith(extra);
+      let sealed = 0;
+      const r = checkAuto(og, e, {
+        sealCheck: () => {
+          sealed++;
+          return { exit: 0, out: '' };
+        },
+      });
+      const blocked = extra.filter((f) => f !== 'bench/history.jsonl');
+      expect(r.ok, extra.join(' ')).toBe(false);
+      expect(r.reasons.join('\n')).toContain(`docs/ の外があります: ${blocked.join(' ')}`);
+      expect(sealed).toBe(0);
+      const v = verifyBuildRecord(og, e, c, sha);
+      expect(v.ok).toBe(false);
+      expect(v.reasons.join('\n')).toContain(`docs/ の外があります: ${blocked.join(' ')}`);
+    }
+  });
+
+  it('偽の OG: bench/history.jsonl だけの差でも seal-check が exit 1 なら checkAuto は ng', () => {
+    const { og, e } = makeOgWith(['bench/history.jsonl'], { sealExit: 1 });
+    const r = checkAuto(og, e);
+    expect(r.ok).toBe(false);
+    expect(r.reasons.join('\n')).toMatch(/seal-check.*exit 0 ではありません（1）/);
   });
 });

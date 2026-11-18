@@ -5,7 +5,8 @@
  * OG の封（Seal）は候補 C で `npm run ci` の全部を回し、その記録（scripts/pkg/ci-record.sh の og-ci-record/1 の JSON）の sha256 を
  * OG の docs/PROGRESS.md に書く。受け入れのタグ（証跡のコミット E）は C に docs を足しただけなので、取り込みのたびに E で
  * 1.5〜2 時間の全通しを回し直す代わりに、次を **全部** 満たすときだけ OG の `npm run ci` を省く（build:embed・check:embed は必ず回す）:
- *   1. 記録の commit が og_commit そのものか、og_commit の祖先で差が docs/ だけ（`git diff --name-only <rec> <og_commit> -- . ':!docs'` が空）
+ *   1. 記録の commit が og_commit そのものか、og_commit の祖先で差が docs/ だけ（`git diff --name-only <rec> <og_commit> -- . ':!docs'` が空。
+ *      ただし名指しの一覧 NON_DOCS_ALLOWED = ['bench/history.jsonl'] とちょうど一致するパスは除く、OG ADR-0019 D6-1 (iv)）
  *   2. `scripts/pkg/seal-check.sh --no-dist <rec> <og_commit>` が exit 0（共用の機械では --no-dist、ADR-0012 D4-2 R8）
  *   3. 記録が exit 0・clean（前後の porcelain が空）・e2e の retries 0（再試行 0 回）・失敗 0・`npm run ci`・HEAD が動いていない
  *   4. 記録のファイルの sha256 が、og_commit の docs/PROGRESS.md の「その記録の名前（か commit）と sha256 を同じ行に書いた行」と一致。
@@ -33,6 +34,21 @@ import { fileURLToPath } from 'node:url';
 export const RECORD_SCHEMA_RE = /^og-ci-record\/\d+$/;
 const SHA40 = /^[0-9a-f]{40}$/;
 const SHA64 = /^[0-9a-f]{64}$/;
+
+/**
+ * 判定 1 の「docs/ の外の差」から外してよいパスの名指しの一覧（OG ADR-0019 D6-1 (iv)、ilust-sup-followup-01）。
+ * OG の封は C の後に性能の段の記録（`bench/history.jsonl` に追記した行）を証跡のコミット E に入れる（M18 の C c6927d6d..E fa6f2550 の
+ * docs/ の外の差はこの 1 つだけ）。これは測った値の追記で、app も試験も ci の入力も変えない。
+ * **パスがちょうど一致するものだけ**を外す（接頭辞・glob・ディレクトリでは外さない: bench/run.mjs・bench/lib/** は ci の入力なので外さない）。
+ * 判定 2（seal-check.sh --no-dist が exit 0）は今までどおり必須。
+ */
+export const NON_DOCS_ALLOWED = Object.freeze(['bench/history.jsonl']);
+
+/** docs/ の外の差から名指しの一覧（NON_DOCS_ALLOWED、ちょうど一致）だけを外した残り。null（確かめられない）はそのまま返す */
+export function blockingNonDocsDiff(nonDocsDiff) {
+  if (!Array.isArray(nonDocsDiff)) return null;
+  return nonDocsDiff.filter((f) => !NON_DOCS_ALLOWED.includes(f));
+}
 
 /**
  * Markdown の表の行（`| … | … |`）から「記録の名前（<40 桁>-ci.json）のセルの後ろで最初の、中身が 64 桁だけのセル」の組を拾う
@@ -230,7 +246,8 @@ export function recordContentProblems(record) {
  */
 export function evaluateRecord(facts) {
   const reasons = [];
-  const { ogCommit, record, recordSha, progressText, isAncestor, nonDocsDiff, sealExit } = facts;
+  const { ogCommit, record, recordSha, progressText, isAncestor, sealExit } = facts;
+  const nonDocsDiff = blockingNonDocsDiff(facts.nonDocsDiff);
   if (!SHA40.test(String(ogCommit ?? ''))) reasons.push(`og_commit が 40 桁の sha ではありません: ${ogCommit}`);
   if (!SHA64.test(String(recordSha ?? ''))) reasons.push(`記録の sha256 が不正です: ${recordSha}`);
   reasons.push(...recordContentProblems(record));
@@ -414,9 +431,11 @@ export function verifyBuildRecord(ogDir, ogCommit, recCommit, recSha) {
   if (reasons.length) return { ok: false, reasons };
   const f = gitFacts(ogDir, recCommit, ogCommit);
   if (recCommit !== ogCommit) {
+    // 判定 1 と同じ名指しの一覧（NON_DOCS_ALLOWED）だけを外す（取り込みの check と safe-push の 2b で同じ規則）
+    const blocking = blockingNonDocsDiff(f.nonDocsDiff);
     if (f.isAncestor !== true) reasons.push(`ogCiCommit ${recCommit.slice(0, 12)} が ogCommit ${ogCommit.slice(0, 12)} の祖先ではありません`);
-    if (!Array.isArray(f.nonDocsDiff)) reasons.push('ogCiCommit と ogCommit の差を確かめられませんでした');
-    else if (f.nonDocsDiff.length > 0) reasons.push(`ogCiCommit と ogCommit の差に docs/ の外があります: ${f.nonDocsDiff.slice(0, 5).join(' ')}`);
+    if (!Array.isArray(blocking)) reasons.push('ogCiCommit と ogCommit の差を確かめられませんでした');
+    else if (blocking.length > 0) reasons.push(`ogCiCommit と ogCommit の差に docs/ の外があります: ${blocking.slice(0, 5).join(' ')}`);
   }
   // 判定 4 と同じ照合（PROGRESS の 40 桁の行、無ければ受け入れのタグの注釈・略した名前 + seal-facts の C、ilust-sup-followup-01）
   const m = matchRecordRow({ rec: recCommit, recordSha: recSha, progressText: f.progressText, tagTexts: f.tagTexts ?? [], sealCs: f.sealCs ?? [] });
