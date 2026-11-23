@@ -1,0 +1,719 @@
+{
+  "comment": "make-og-settings-fixture.gen.ts が書いた。埋め込みの画面で F2 → 全体表示（置き換える）・選択ペンのブラシサイズ・クイックアクセスの表示（アイコンだけ）を変えた後の og-nanika-settings と og-subtools の全ストア（埋め込みが書いたまま）",
+  "ogCommit": "fa6f2550e36614df65d403bd8fac2bb17a8ff46d",
+  "buildId": "fa6f2550e366-c28422e7ccb2",
+  "ogContract": "0.13.5",
+  "embedApi": 1,
+  "ogAccepted": "m18-accepted",
+  "createdAt": "2026-11-23T09:08:05.365Z",
+  "changed": {
+    "keymap": {
+      "chord": "F2",
+      "id": "view.fit",
+      "title": "全体表示",
+      "conflict": "F2 は「切り取り」に割り当て済みです 置き換える 両方に割り当てる 割り当てない",
+      "choice": "replace"
+    },
+    "selectionPenBrushSize": {
+      "before": 20,
+      "after": 29,
+      "via": "ArrowRight x5"
+    },
+    "quickAccessDisplay": "icon"
+  },
+  "dbs": {
+    "og-nanika-settings": {
+      "version": 1,
+      "stores": [
+        {
+          "name": "meta",
+          "keyPath": null,
+          "autoIncrement": false,
+          "entries": [
+            {
+              "key": "schemaVersion",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "settings",
+          "keyPath": null,
+          "autoIncrement": false,
+          "entries": [
+            {
+              "key": "color.history.items",
+              "value": [
+                "#2b2a28"
+              ]
+            },
+            {
+              "key": "color.sets.data",
+              "value": {
+                "v": 1,
+                "current": "preset.basic",
+                "sets": [
+                  {
+                    "id": "preset.basic",
+                    "name": "基本の色相",
+                    "preset": "preset.basic",
+                    "colors": [
+                      "#000000",
+                      "#404040",
+                      "#808080",
+                      "#c0c0c0",
+                      "#ffffff",
+                      "#f21818",
+                      "#f28518",
+                      "#f2f218",
+                      "#85f218",
+                      "#18f218",
+                      "#18f285",
+                      "#18f2f2",
+                      "#1885f2",
+                      "#1818f2",
+                      "#8518f2",
+                      "#f218f2",
+                      "#f21885",
+                      "#8c1515",
+                      "#8c5115",
+                      "#8c8c15",
+                      "#518c15",
+                      "#158c15",
+                      "#158c51",
+                      "#158c8c",
+                      "#15518c",
+                      "#15158c",
+                      "#51158c",
+                      "#8c158c",
+                      "#8c1551"
+                    ],
+                    "names": [
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null
+                    ]
+                  },
+                  {
+                    "id": "preset.skin",
+                    "name": "人肌のトーン",
+                    "preset": "preset.skin",
+                    "colors": [
+                      "#fff1e8",
+                      "#fde3d3",
+                      "#f9d2bb",
+                      "#f2bf9f",
+                      "#e6a985",
+                      "#d4926c",
+                      "#bb7a56",
+                      "#9c6244",
+                      "#7a4b35",
+                      "#583628",
+                      "#e9b2a2",
+                      "#d8907f",
+                      "#c2706a",
+                      "#f4a5a0",
+                      "#d9757a",
+                      "#b4565e"
+                    ],
+                    "names": [
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null
+                    ]
+                  },
+                  {
+                    "id": "preset.gray",
+                    "name": "無彩色の段階",
+                    "preset": "preset.gray",
+                    "colors": [
+                      "#ffffff",
+                      "#eeeeee",
+                      "#dddddd",
+                      "#cccccc",
+                      "#bbbbbb",
+                      "#aaaaaa",
+                      "#999999",
+                      "#888888",
+                      "#777777",
+                      "#666666",
+                      "#555555",
+                      "#444444",
+                      "#333333",
+                      "#222222",
+                      "#111111",
+                      "#000000"
+                    ],
+                    "names": [
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null
+                    ]
+                  },
+                  {
+                    "id": "preset.pastel",
+                    "name": "やわらかい色",
+                    "preset": "preset.pastel",
+                    "colors": [
+                      "#ffd5c7",
+                      "#fff1c7",
+                      "#f1ffc7",
+                      "#d5ffc7",
+                      "#c7ffd5",
+                      "#c7fff1",
+                      "#c7f1ff",
+                      "#c7d5ff",
+                      "#d5c7ff",
+                      "#f1c7ff",
+                      "#ffc7f1",
+                      "#ffc7d5",
+                      "#f5af98",
+                      "#f5de98",
+                      "#def598",
+                      "#aff598",
+                      "#98f5af",
+                      "#98f5de",
+                      "#98def5",
+                      "#98aff5",
+                      "#af98f5",
+                      "#de98f5",
+                      "#f598de",
+                      "#f598af"
+                    ],
+                    "names": [
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null
+                    ]
+                  },
+                  {
+                    "id": "preset.earth",
+                    "name": "土と草木",
+                    "preset": "preset.earth",
+                    "colors": [
+                      "#efe3c8",
+                      "#d8c29a",
+                      "#b89a6a",
+                      "#8f7248",
+                      "#6b5133",
+                      "#4a3624",
+                      "#a35a3a",
+                      "#7d3f2a",
+                      "#c9b458",
+                      "#9aa65a",
+                      "#6f8a45",
+                      "#4d6b36",
+                      "#334d2b",
+                      "#5e7d6a",
+                      "#8aa39a",
+                      "#a7b7c0"
+                    ],
+                    "names": [
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      null
+                    ]
+                  }
+                ],
+                "seeded": [
+                  "preset.basic",
+                  "preset.skin",
+                  "preset.gray",
+                  "preset.pastel",
+                  "preset.earth"
+                ]
+              }
+            },
+            {
+              "key": "customize.keymap.user",
+              "value": {
+                "version": 1,
+                "added": [
+                  {
+                    "chord": "F2",
+                    "id": "view.fit",
+                    "scope": "global"
+                  }
+                ],
+                "removed": [
+                  {
+                    "chord": "F2",
+                    "id": "edit-ops.cut",
+                    "scope": "canvas"
+                  }
+                ],
+                "defaultsRev": 17
+              }
+            },
+            {
+              "key": "customize.quickAccess.display",
+              "value": "icon"
+            },
+            {
+              "key": "edit-ops.lastNewCanvas",
+              "value": {
+                "width": 2048,
+                "height": 1195,
+                "dpi": 150,
+                "unit": "px",
+                "paperColor": [
+                  242,
+                  239,
+                  232
+                ]
+              }
+            },
+            {
+              "key": "layers-ui.layerFrame",
+              "value": {
+                "newLayerKind": "raster",
+                "layerColorMain": [
+                  70,
+                  130,
+                  230
+                ],
+                "layerColorSub": [
+                  255,
+                  255,
+                  255
+                ]
+              }
+            },
+            {
+              "key": "layers-ui.paletteDisplay",
+              "value": {
+                "thumbSize": "medium",
+                "showMeta": true,
+                "showColorLabel": true,
+                "showLayerColor": true,
+                "toolbarPosition": "top"
+              }
+            },
+            {
+              "key": "tools-paint.brushShapes",
+              "value": {
+                "v": 1,
+                "shapes": []
+              }
+            },
+            {
+              "key": "view.workspace.views",
+              "value": {
+                "d1mhpa9019kvst4": [
+                  {
+                    "scale": 0.5703125,
+                    "rotation": 0,
+                    "flipX": false,
+                    "flipY": false,
+                    "center": {
+                      "x": 1024,
+                      "y": 597.5
+                    }
+                  }
+                ],
+                "dna4ok2imoat4": [
+                  {
+                    "scale": 0.5703125,
+                    "rotation": 0,
+                    "flipX": false,
+                    "flipY": false,
+                    "center": {
+                      "x": 1024,
+                      "y": 597.5
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "og-subtools": {
+      "version": 1,
+      "stores": [
+        {
+          "name": "state",
+          "keyPath": null,
+          "autoIncrement": false,
+          "entries": [
+            {
+              "key": "state",
+              "value": {
+                "version": 1,
+                "presets": {
+                  "selection.pen.pen": {
+                    "settings": {
+                      "size": 29,
+                      "hardness": 100,
+                      "antiAlias": 2,
+                      "stabilization": 0
+                    }
+                  }
+                },
+                "groups": {
+                  "tools-paint.pen.pen": {
+                    "toolId": "tools-paint.pen",
+                    "nameKey": "tools-paint.group.pen",
+                    "order": 0,
+                    "members": [
+                      "tools-paint.pen.flex",
+                      "tools-paint.pen.fine",
+                      "tools-paint.pen.uniform",
+                      "tools-paint.pen.slant"
+                    ]
+                  },
+                  "tools-paint.pen.marker": {
+                    "toolId": "tools-paint.pen",
+                    "nameKey": "tools-paint.group.marker",
+                    "order": 1,
+                    "members": [
+                      "tools-paint.pen.markerBold",
+                      "tools-paint.pen.markerHighlight"
+                    ]
+                  },
+                  "tools-paint.pencil.pencil": {
+                    "toolId": "tools-paint.pencil",
+                    "nameKey": "tools-paint.group.pencil",
+                    "order": 0,
+                    "members": [
+                      "tools-paint.pencil.hard",
+                      "tools-paint.pencil.soft",
+                      "tools-paint.pencil.fine",
+                      "tools-paint.pencil.pastel"
+                    ]
+                  },
+                  "tools-paint.brush.ink": {
+                    "toolId": "tools-paint.brush",
+                    "nameKey": "tools-paint.group.brushInk",
+                    "order": 0,
+                    "members": [
+                      "tools-paint.brush.roundInk",
+                      "tools-paint.brush.sumi",
+                      "tools-paint.brush.dryInk",
+                      "tools-paint.brush.splitInk"
+                    ]
+                  },
+                  "tools-paint.brush.watercolor": {
+                    "toolId": "tools-paint.brush",
+                    "nameKey": "tools-paint.group.brushWatercolor",
+                    "order": 1,
+                    "members": [
+                      "tools-paint.brush.watercolor",
+                      "tools-paint.brush.transparentWatercolor",
+                      "tools-paint.brush.flatWatercolor"
+                    ]
+                  },
+                  "tools-paint.brush.oil": {
+                    "toolId": "tools-paint.brush",
+                    "nameKey": "tools-paint.group.brushOil",
+                    "order": 2,
+                    "members": [
+                      "tools-paint.brush.oil",
+                      "tools-paint.brush.oilFlat",
+                      "tools-paint.brush.oilStretch"
+                    ]
+                  },
+                  "tools-paint.airbrush.airbrush": {
+                    "toolId": "tools-paint.airbrush",
+                    "nameKey": "tools-paint.group.airbrush",
+                    "order": 0,
+                    "members": [
+                      "tools-paint.airbrush.soft",
+                      "tools-paint.airbrush.strong",
+                      "tools-paint.airbrush.fine",
+                      "tools-paint.airbrush.spray"
+                    ]
+                  },
+                  "tools-paint.decoration.decoration": {
+                    "toolId": "tools-paint.decoration",
+                    "nameKey": "tools-paint.group.decoration",
+                    "order": 0,
+                    "members": [
+                      "tools-paint.decoration.stars",
+                      "tools-paint.decoration.vine",
+                      "tools-paint.decoration.feather",
+                      "tools-paint.decoration.dotted"
+                    ]
+                  },
+                  "tools-paint.eraser.eraser": {
+                    "toolId": "tools-paint.eraser",
+                    "nameKey": "tools-paint.group.eraser",
+                    "order": 0,
+                    "members": [
+                      "tools-paint.eraser.hard",
+                      "tools-paint.eraser.soft",
+                      "tools-paint.eraser.vector",
+                      "tools-paint.eraser.allLayers"
+                    ]
+                  },
+                  "tools-paint.blend.blend": {
+                    "toolId": "tools-paint.blend",
+                    "nameKey": "tools-paint.group.blend",
+                    "order": 0,
+                    "members": [
+                      "tools-paint.blend.blur",
+                      "tools-paint.blend.smudge",
+                      "tools-paint.blend.mix"
+                    ]
+                  },
+                  "fill.bucket.fill": {
+                    "toolId": "fill.bucket",
+                    "nameKey": "fill.group.fill",
+                    "order": 0,
+                    "members": [
+                      "fill.bucket.editingOnly",
+                      "fill.bucket.referOthers"
+                    ]
+                  },
+                  "fill.enclose.fill": {
+                    "toolId": "fill.enclose",
+                    "nameKey": "fill.group.enclose",
+                    "order": 0,
+                    "members": [
+                      "fill.enclose.default"
+                    ]
+                  },
+                  "fill.unfilled.fill": {
+                    "toolId": "fill.unfilled",
+                    "nameKey": "fill.group.unfilled",
+                    "order": 1,
+                    "members": [
+                      "fill.unfilled.default"
+                    ]
+                  },
+                  "fill.lasso.fill": {
+                    "toolId": "fill.lasso",
+                    "nameKey": "fill.group.lasso",
+                    "order": 2,
+                    "members": [
+                      "fill.lasso.default"
+                    ]
+                  },
+                  "selection.rect.basic": {
+                    "toolId": "selection.rect",
+                    "nameKey": "selection.group.rect",
+                    "order": 0,
+                    "members": [
+                      "selection.rect.rect",
+                      "selection.rect.roundRect"
+                    ]
+                  },
+                  "selection.ellipse.basic": {
+                    "toolId": "selection.ellipse",
+                    "nameKey": "selection.group.ellipse",
+                    "order": 0,
+                    "members": [
+                      "selection.ellipse.ellipse"
+                    ]
+                  },
+                  "selection.lasso.basic": {
+                    "toolId": "selection.lasso",
+                    "nameKey": "selection.group.lasso",
+                    "order": 0,
+                    "members": [
+                      "selection.lasso.lasso"
+                    ]
+                  },
+                  "selection.auto.basic": {
+                    "toolId": "selection.auto",
+                    "nameKey": "selection.group.auto",
+                    "order": 0,
+                    "members": [
+                      "selection.auto.editingOnly",
+                      "selection.auto.referOthers",
+                      "selection.auto.referReference"
+                    ]
+                  },
+                  "selection.polyline.basic": {
+                    "toolId": "selection.polyline",
+                    "nameKey": "selection.group.polyline",
+                    "order": 0,
+                    "members": [
+                      "selection.polyline.polyline"
+                    ]
+                  },
+                  "selection.pen.basic": {
+                    "toolId": "selection.pen",
+                    "nameKey": "selection.group.pen",
+                    "order": 0,
+                    "members": [
+                      "selection.pen.pen"
+                    ]
+                  },
+                  "selection.eraser.basic": {
+                    "toolId": "selection.eraser",
+                    "nameKey": "selection.group.eraser",
+                    "order": 0,
+                    "members": [
+                      "selection.eraser.eraser"
+                    ]
+                  },
+                  "selection.moveOutline.basic": {
+                    "toolId": "selection.moveOutline",
+                    "nameKey": "selection.group.moveOutline",
+                    "order": 0,
+                    "members": [
+                      "selection.moveOutline.moveOutline"
+                    ]
+                  },
+                  "selection.shrink.basic": {
+                    "toolId": "selection.shrink",
+                    "nameKey": "selection.group.shrink",
+                    "order": 0,
+                    "members": [
+                      "selection.shrink.lasso",
+                      "selection.shrink.polyline"
+                    ]
+                  },
+                  "transform.move.move": {
+                    "toolId": "transform.move",
+                    "nameKey": "transform.group.move",
+                    "order": 0,
+                    "members": [
+                      "transform.move.layer"
+                    ]
+                  },
+                  "transform.object.object": {
+                    "toolId": "transform.object",
+                    "nameKey": "transform.group.object",
+                    "order": 0,
+                    "members": [
+                      "transform.object.default"
+                    ]
+                  },
+                  "transform.liquify.liquify": {
+                    "toolId": "transform.liquify",
+                    "nameKey": "transform.group.liquify",
+                    "order": 0,
+                    "members": [
+                      "transform.liquify.default"
+                    ]
+                  },
+                  "vector.group.correct": {
+                    "toolId": "vector.correct",
+                    "nameKey": "vector.group.correct",
+                    "order": 0,
+                    "members": [
+                      "vector.subtool.width",
+                      "vector.subtool.simplify",
+                      "vector.subtool.controlPoint",
+                      "vector.subtool.pinch",
+                      "vector.subtool.connect",
+                      "vector.subtool.redraw",
+                      "vector.subtool.redrawWidth"
+                    ]
+                  },
+                  "rulers.group.ruler": {
+                    "toolId": "rulers.tool",
+                    "nameKey": "rulers.group.ruler",
+                    "order": 0,
+                    "members": [
+                      "rulers.subtool.straight",
+                      "rulers.subtool.curve",
+                      "rulers.subtool.figure",
+                      "rulers.subtool.special",
+                      "rulers.subtool.guide",
+                      "rulers.subtool.perspective",
+                      "rulers.subtool.symmetry",
+                      "rulers.subtool.pen",
+                      "rulers.subtool.gridOrigin"
+                    ]
+                  }
+                },
+                "removed": [],
+                "removedGroups": []
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
