@@ -104,7 +104,7 @@ main への push は `tools/safe-push.sh` だけで行います（2026-10-19 の
 2. `tools/safe-push.sh` を実行する。次を全部確かめてから `git push origin HEAD:main`（fast-forward だけ。force は使わない）:
    - ブランチが main、origin/main が HEAD の祖先、作業木が clean、未追跡は手元の zip 1 つだけ、push する範囲に `.zip` が無い
    - 埋め込みのペイント（`public/paint/BUILD.json`）が origin/main から変わるなら、その取り込みが `ogCi = ran` か `recorded`・`ogClean = true`・受け入れのタグ（`ogAccepted`）つきで
-     （`recorded` なら `ogCiCommit` が `ogCommit` の祖先で差が `docs/` だけ（名指しの許し `bench/history.jsonl` は除く、下の段落）・`ogCiRecord` が `ogCommit` の `docs/PROGRESS.md` の行（無ければ受け入れのタグの注釈・略した名前 + seal-facts の C、下の段落）と一致することを OG の git で確かめ直す）、
+     （`recorded` なら `ogCiCommit` が `ogCommit` の祖先で差が `docs/` だけ（名指しの許し `bench/history.jsonl` と、`ogCommit` の木の `docs/progress/<ms>/ci-delta.json` がちょうど名指す試験だけの差は除く、下の段落）・`ogCiRecord` が `ogCommit` の `docs/PROGRESS.md` の行（無ければ受け入れのタグの注釈・略した名前 + seal-facts の C、下の段落）と一致することを OG の git で確かめ直す）、
      新しい `ogCommit` が origin/main の `ogCommit` の子孫（OG のリポジトリ `../OG-nanika` か `OG_DIR` で `git merge-base --is-ancestor`。版の後退を拒む）
    - port 4173 が空き、`npm ci`、`npm run build`、`node scripts/check-bundle.mjs`、`node scripts/check-paint-artifact.mjs`、`npm test`、
      `CI=1 npx playwright test --retries=0`（Service Worker を有効にした project を含む）がすべて緑
@@ -146,7 +146,7 @@ OG の作業木はそのコミットで、未追跡を含めて clean（`git sta
 - **揺れ（1 本の flaky）で落ちたら同じコマンドでやり直す**（関門は緩めない）
 - **記録のある C の ci の使い回し**（ogCi = recorded、ADR-0013 D6-4、ilust-sup-followup-06）: OG の封は候補 C で `npm run ci` の全部を回し、記録の JSON の sha256 を
   `docs/PROGRESS.md` に書きます。受け入れのタグ（証跡のコミット E）が C に docs を足しただけなら、`scripts/og-ci-record.mjs` が次を **全部** 確かめたときだけ OG の
-  `npm run ci` を省きます: 記録の commit が og のコミットそのものか祖先で差が `docs/` だけ（OG ADR-0019 D6-1 (iv)・ilust-sup-followup-01 から、名指しの一覧 `NON_DOCS_ALLOWED` = `bench/history.jsonl` とちょうど一致するパスだけは許す。OG の封の E は性能の段の `bench/history.jsonl` を持つため。`bench/run.mjs` など他の `bench/` や `src/` は許さない、記録の exit 0 は必須のまま）、OG の `scripts/pkg/seal-check.sh --no-dist <記録> <og>` が exit 0、
+  `npm run ci` を省きます: 記録の commit が og のコミットそのものか祖先で差が `docs/` だけ（OG ADR-0019 D6-1 (iv)・ilust-sup-followup-01 から、名指しの一覧 `NON_DOCS_ALLOWED` = `bench/history.jsonl` とちょうど一致するパスだけは許す。OG の封の E は性能の段の `bench/history.jsonl` を持つため。`bench/run.mjs` など他の `bench/` や `src/` は許さない、記録の exit 0 は必須のまま。OG ADR-0020 D6-2 (iv)・cycle20 ilust-sup-followup-01 から、C の後の試験だけのコミット（性能の段のデバッグ）が残す docs/ の外の差は、OG の封が E^ ≠ C のときに E に入れる `docs/progress/<ms>/ci-delta.json`（`og-ci-delta/1`: `c`・`eParent`・`nonDocsPaths`・`sealCheck.exit`・`enginePathDiff`）が記録の commit を `c` に持ち、`eParent` が og のコミットの最初の親で、`nonDocsPaths` が実際の C..E^ の差・C..E の差（どちらも `bench/history.jsonl` を除く）と集合で一致し、どの道も `scripts/pkg/`・`__tests__/`・`e2e/` に入り（glob・`src/` の本体・`bench/run.mjs`・設定は名指しても拒む）、`sealCheck.exit` 0・`enginePathDiff` 0 のときだけ外す。一覧は glob で広げない）、OG の `scripts/pkg/seal-check.sh --no-dist <記録> <og>` が exit 0、
   記録が exit 0・clean・e2e の retries 0（再試行 0）・失敗 0、記録の sha256 が og のコミットの `docs/PROGRESS.md` の行と一致。`build:embed` と `check:embed` は必ず回し、
   BUILD.json に `ogCi = recorded`・`ogCiRecord`（sha256）・`ogCiCommit` を書きます。記録は既定で PROGRESS の行から `../OG-nanika-pkg/logs/` に探し（`--og-ci-record=<path>` で明示、
   `--og-ci-record=none` で使わない）、どれか欠ければ従来どおり ci を回します（`ogCi = ran`）。
@@ -169,14 +169,15 @@ ci の後にもう一度 clean を確かめます（例外は OG の e2e が証�
 
 受け入れのタグ（`ogAccepted`）か OGNK の形式か `ogContract` が変わる取り込みの前には（**取り込み直す前の `public/paint/` のうちに**）、その版の埋め込みで保存した `.ognk` と下書きのフィクスチャを
 `OG_FIXTURE_NAME=og-<7 字> OG_DRAFT_FIXTURE_NAME=og-<7 字>-draft npx playwright test --config=e2e/fixtures/og-fixture.config.ts` で作り、名指しの `git add` でコミットします
-（4 つ: `og-<7 字>.ognk`・`og-<7 字>.json`・`og-<7 字>-draft-opfs.json`・`og-<7 字>-draft-idb.json`。今あるのは `8af7b0f`・`b1433b4`・`8ea71f2`・`9b77f43`・`6f70b01`・`fcf778e`・`9c4a7d9`）。
+（4 つ: `og-<7 字>.ognk`・`og-<7 字>.json`・`og-<7 字>-draft-opfs.json`・`og-<7 字>-draft-idb.json`。今ある版は `e2e/fixtures/` の `og-*` の全部 = `ls e2e/fixtures/og-*`。ここには版を並べない）。
 `e2e/13-og-free.spec.ts`（「ギャラリーから続けると同じ画素」）と `e2e/19-og-draft-cross-version.spec.ts`（下書きの「続きから」）は `e2e/fixtures/` を列挙して版ごとに回すので、試験に手で足す必要はありません
 （一覧が空なら赤。今の `public/paint/` と同じ版の下書きのフィクスチャは版をまたがないので理由つきで飛ばし、次の取り込みの後に走る。ADR-0012 D6-2、ilust-sup-followup-05）。
 `ogContract` か `ogAccepted` が origin/main から変わるのに配信中の版のフィクスチャの 4 つのどれかが無いと `safe-push.sh` の手順 2b が止めます（取り込みの前は `import-paint.sh` が HEAD の版で同じ 4 つを求める）。
 
 **取り込みを積む / 積まないの規則（OG M20 から、OG ADR-0019 D6-3・completeness-m19-readiness-07）**: OG の次の M の day 0 に、OG の `node scripts/check-ilust-remote.mjs --expect-pushed=head` で origin/main を読みます（fetch しない。手元の `refs/remotes/origin/main` を読む）。
 - 利用者が push 済み（未 push 0 件）なら、次の受け入れのタグを 1 レーンで取り込む（フィクスチャ 4 つ → 記録の読み手の確かめ → `import-paint.sh` → e2e 13 / 16 / 19 / 20 → `safe-push.sh --dry-run`、push はしない）。
-- 未 push（手元の HEAD が origin/main より先）なら**取り込みを積まない**。次の受け入れのタグの 4 つのフィクスチャと設定の実物（`og-<7 字>-stores-idb.json`）・記録の読み手（`scripts/og-ci-record.mjs check --record=auto`）の確かめだけを作る（check-ilust-remote は未 push のとき note「push が無い間は取り込みを積まない（M20 から）」を出す）。
+- 未 push（手元の HEAD が origin/main より先）なら**取り込みを積まない**。**今の `public/paint/` の版**（`og-<今の BUILD.json の ogCommit の 7 字>`）の 4 つのフィクスチャと設定の実物（`og-<7 字>-stores-idb.json`）・記録の読み手（`scripts/og-ci-record.mjs check --record=auto`）の確かめだけを作る（フィクスチャはその版の埋め込みでしか作れない = 次の受け入れのタグの版のものは今は作れない。OG ADR-0020 D6-2 (iii)・cycle20 ilust-sup-followup-02。check-ilust-remote は未 push のとき note「push が無い間は取り込みを積まない（M20 から）」を出す）。
+- OG M20 は push の有無に依らず取り込まない（OG ADR-0020 D6-1: m19-accepted の E は記録の読み手で使えず、m19 に埋め込みの利用者に見える差が無い）。今の版 `og-fa6f255`（m18）の 4 つと設定の実物は M20 の半レーンで作った。push が見えていれば OG M21 の day 0 に `m20-accepted` を取り込む（m19 を飛ばす）。
 - 例外は、本番の利用者のデータを壊す / 焼き付ける直しを含む版だけ。その M の OG の ADR で名指す（M19 の m18-accepted の取り込みはこの例外 = OG ADR-0019 D6-1: m17 の広い defaultsRev の移し替えの焼き付きを防ぐため。実際は利用者が 2026-11-19 に m17 を push した後に積んだ）。
 - 取り込みの後の埋め込みの初期 JS（`ogInitialJsGzipBytes`）: m17 556,996 B → m18 558,016 B（Ilust の 98 % の警告 561,971 B まで 3,955 B）。
 `e2e/20-og-embed-idb-names.spec.ts` は、描いて保存した後に埋め込みが作った IndexedDB（`og-` で始まるもの）が既知の一覧だけであることを確かめます

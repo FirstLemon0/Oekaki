@@ -6,7 +6,11 @@
  * OG の docs/PROGRESS.md に書く。受け入れのタグ（証跡のコミット E）は C に docs を足しただけなので、取り込みのたびに E で
  * 1.5〜2 時間の全通しを回し直す代わりに、次を **全部** 満たすときだけ OG の `npm run ci` を省く（build:embed・check:embed は必ず回す）:
  *   1. 記録の commit が og_commit そのものか、og_commit の祖先で差が docs/ だけ（`git diff --name-only <rec> <og_commit> -- . ':!docs'` が空。
- *      ただし名指しの一覧 NON_DOCS_ALLOWED = ['bench/history.jsonl'] とちょうど一致するパスは除く、OG ADR-0019 D6-1 (iv)）
+ *      ただし名指しの一覧 NON_DOCS_ALLOWED = ['bench/history.jsonl'] とちょうど一致するパスは除く、OG ADR-0019 D6-1 (iv)）。
+ *      残りの docs/ の外の差は、og_commit（= E）の木の docs/progress/<ms>/ci-delta.json（OG の封が E^ ≠ C のときに書く証拠、OG ADR-0020 D6-2 (iv)・
+ *      ilust-sup-followup-01）が **その道をちょうど名指し**、一覧が実際の差（C..E^、と C..E から名指しの一覧を外したもの）と一致し、
+ *      どの道も C の後の試験だけのコミットの形（scripts/pkg/・__tests__/・e2e/）に入り、seal-check の結果 0・エンジンの道の差 0 のときだけ外す
+ *      （ciDeltaVerdict。glob・接頭辞で NON_DOCS_ALLOWED を広げない。判定 2 の seal-check は必須のまま）
  *   2. `scripts/pkg/seal-check.sh --no-dist <rec> <og_commit>` が exit 0（共用の機械では --no-dist、ADR-0012 D4-2 R8）
  *   3. 記録が exit 0・clean（前後の porcelain が空）・e2e の retries 0（再試行 0 回）・失敗 0・`npm run ci`・HEAD が動いていない
  *   4. 記録のファイルの sha256 が、og_commit の docs/PROGRESS.md の「その記録の名前（か commit）と sha256 を同じ行に書いた行」と一致。
@@ -48,6 +52,97 @@ export const NON_DOCS_ALLOWED = Object.freeze(['bench/history.jsonl']);
 export function blockingNonDocsDiff(nonDocsDiff) {
   if (!Array.isArray(nonDocsDiff)) return null;
   return nonDocsDiff.filter((f) => !NON_DOCS_ALLOWED.includes(f));
+}
+
+/**
+ * C..E の docs/ の外の差の証拠 = OG の封が E^ ≠ C のときに E に入れる `docs/progress/<ms>/ci-delta.json`（OG ADR-0020 D6-2 (iv)、ilust-sup-followup-01）。
+ * 書き手は OG の Seal stage（final-repack の後・E の前）、予行は OG の seal-rehearse-m20.sh（この読み手に読むだけで当てる）。形（og-ci-delta/1）:
+ *   {
+ *     "schema": "og-ci-delta/1",
+ *     "milestone": "m20",
+ *     "c": "<40 桁 = 候補 C = 記録の commit>",
+ *     "eParent": "<40 桁 = E^（E の最初の親）>",
+ *     "nonDocsPaths": ["<git diff --name-only C E^ -- . ':!docs' の 1 行ずつ>", …],
+ *     "sealCheck": { "command": "bash scripts/pkg/seal-check.sh --no-dist <C> <E^>", "exit": 0 },
+ *     "enginePathDiff": 0,
+ *     "measurePathDiff": 0          // 任意（あれば 0 が必須）
+ *   }
+ * 受け入れるのは次を全部満たすときだけ（どれか欠ければ今までどおり「docs/ の外があります」で拒む = 関門は緩めない）:
+ *   - og_commit の木に c = 記録の commit の ci-delta.json がちょうど 1 つ、schema が og-ci-delta/<n>
+ *   - eParent = og_commit の最初の親（git rev-parse <E>^）
+ *   - nonDocsPaths の道がどれも C の後の試験だけのコミットの形（CI_DELTA_PATH_SHAPES: scripts/pkg/・どこかの __tests__/・e2e/、または NON_DOCS_ALLOWED の名前）
+ *     で、glob の文字・`..`・先頭の `/` を含まない（src/ の本体・bench/run.mjs・設定は名指しても拒む）
+ *   - 一覧（NON_DOCS_ALLOWED を外す）= 実際の C..E^ の docs/ の外の差（同じく外す）= 実際の C..E の docs/ の外の差（同じく外す）（集合が一致）
+ *   - sealCheck.exit === 0・enginePathDiff === 0（measurePathDiff があれば 0）
+ */
+export const CI_DELTA_SCHEMA_RE = /^og-ci-delta\/\d+$/;
+export const CI_DELTA_FILE_RE = /^docs\/progress\/(m\d+(?:\.\d+)?)\/ci-delta\.json$/;
+/** C の後の試験だけのコミットが変えてよい道の形（OG の ORDERING RULE、ADR-0020 D3-4 (3) の写し。docs/ は判定 1 がもう外している） */
+export const CI_DELTA_PATH_SHAPES = Object.freeze([/^scripts\/pkg\/[^/]/, /^(?:[^/]+\/)*__tests__\/[^/]/, /^e2e\/[^/]/]);
+
+/** ci-delta.json の 1 つの道が C の後の試験だけのコミットの形に入るか（NON_DOCS_ALLOWED のちょうど一致も可） */
+export function ciDeltaPathShapeOk(p) {
+  if (typeof p !== 'string' || p === '') return false;
+  if (/[*?[\]{}\\]/.test(p) || p.startsWith('/') || p.split('/').some((s) => s === '..' || s === '.' || s === '')) return false;
+  if (NON_DOCS_ALLOWED.includes(p)) return true;
+  return CI_DELTA_PATH_SHAPES.some((re) => re.test(p));
+}
+
+const setEq = (a, b) => {
+  const x = new Set(a);
+  const y = new Set(b);
+  return x.size === y.size && [...x].every((v) => y.has(v));
+};
+
+/**
+ * ci-delta.json の判定（純関数）。facts:
+ *   { rec, ogCommit, eParent: string|null, deltas: [{ path, text }]（og_commit の木の docs/progress/<ms>/ci-delta.json の全部）,
+ *     nonDocsDiff: string[]|null（C..E）, parentNonDocsDiff: string[]|null（C..E^） }
+ * 戻り値: { ok, path, accepted: string[], reason }
+ */
+export function ciDeltaVerdict({ rec, ogCommit, eParent, deltas = [], nonDocsDiff, parentNonDocsDiff }) {
+  const no = (reason, path = null) => ({ ok: false, path, accepted: [], reason: `ci-delta.json: ${reason}` });
+  const files = (deltas ?? []).filter((d) => CI_DELTA_FILE_RE.test(String(d?.path ?? '')));
+  if (files.length === 0) return no(`og_commit ${String(ogCommit).slice(0, 12)} の木に docs/progress/<ms>/ci-delta.json がありません（E^ ≠ C の封の証拠が無い）`);
+  const parsed = [];
+  for (const d of files) {
+    try {
+      parsed.push({ path: d.path, json: JSON.parse(String(d.text ?? '')) });
+    } catch (e) {
+      parsed.push({ path: d.path, json: null, error: e instanceof Error ? e.message : String(e) });
+    }
+  }
+  const mine = parsed.filter((d) => d.json && typeof d.json === 'object' && d.json.c === rec);
+  if (mine.length === 0) {
+    const bad = parsed.filter((d) => !d.json).map((d) => `${d.path}（読めない: ${d.error}）`);
+    return no(`記録の commit ${String(rec).slice(0, 12)} を c に持つ ci-delta.json がありません（${[...parsed.filter((d) => d.json).map((d) => `${d.path} c=${String(d.json?.c ?? '?').slice(0, 12)}`), ...bad].join(', ')}）`);
+  }
+  if (mine.length > 1) return no(`記録の commit ${String(rec).slice(0, 12)} を c に持つ ci-delta.json が 2 つ以上あります（${mine.map((d) => d.path).join(', ')}）`);
+  const { path, json: d } = mine[0];
+  if (!CI_DELTA_SCHEMA_RE.test(String(d.schema ?? ''))) return no(`schema が og-ci-delta/<n> ではありません: ${d.schema}`, path);
+  if (!SHA40.test(String(d.eParent ?? '')) || !SHA40.test(String(eParent ?? '')) || d.eParent !== eParent)
+    return no(`eParent ${String(d.eParent ?? '?').slice(0, 12)} が og_commit の最初の親 ${String(eParent ?? '?').slice(0, 12)} ではありません`, path);
+  if (!Array.isArray(d.nonDocsPaths) || d.nonDocsPaths.some((p) => typeof p !== 'string')) return no('nonDocsPaths が文字列の配列ではありません', path);
+  if (new Set(d.nonDocsPaths).size !== d.nonDocsPaths.length) return no('nonDocsPaths に同じ道が 2 回あります', path);
+  const badShape = d.nonDocsPaths.filter((p) => !ciDeltaPathShapeOk(p));
+  if (badShape.length) return no(`C の後の試験だけのコミットの形（scripts/pkg/・__tests__/・e2e/）に入らない道を名指しています: ${badShape.slice(0, 5).join(' ')}`, path);
+  if (d.sealCheck?.exit !== 0) return no(`sealCheck.exit が 0 ではありません: ${d.sealCheck?.exit}`, path);
+  if (d.enginePathDiff !== 0) return no(`enginePathDiff が 0 ではありません: ${d.enginePathDiff}`, path);
+  if (d.measurePathDiff !== undefined && d.measurePathDiff !== 0) return no(`measurePathDiff が 0 ではありません: ${d.measurePathDiff}`, path);
+  const listed = blockingNonDocsDiff(d.nonDocsPaths);
+  const parent = blockingNonDocsDiff(parentNonDocsDiff);
+  const whole = blockingNonDocsDiff(nonDocsDiff);
+  if (!Array.isArray(parent) || !Array.isArray(whole)) return no('C..E^ / C..E の docs/ の外の差を確かめられませんでした', path);
+  if (!setEq(listed, parent)) {
+    const missing = parent.filter((p) => !listed.includes(p));
+    const extra = listed.filter((p) => !parent.includes(p));
+    return no(`一覧が実際の C..E^ の差と一致しません（一覧に無い: ${missing.join(' ') || '-'}、差に無い: ${extra.join(' ') || '-'}）`, path);
+  }
+  if (!setEq(listed, whole)) {
+    const missing = whole.filter((p) => !listed.includes(p));
+    return no(`E^..E が一覧の外の docs/ の外の道を変えています: ${missing.join(' ') || '-'}`, path);
+  }
+  return { ok: true, path, accepted: [...listed], reason: '' };
 }
 
 /**
@@ -240,14 +335,16 @@ export function recordContentProblems(record) {
 
 /**
  * 判定の本体（純関数。git や seal-check の結果は呼び手が渡す）。
- * facts: { ogCommit, record, recordSha, progressText, tagTexts?: string[], sealCs?: string[], isAncestor, nonDocsDiff: string[] | null, sealExit: number | null }
+ * facts: { ogCommit, record, recordSha, progressText, tagTexts?: string[], sealCs?: string[], isAncestor, nonDocsDiff: string[] | null, sealExit: number | null,
+ *          ciDelta?: ciDeltaVerdict の戻り値 | null }
  *   tagTexts = og_commit を指す受け入れのタグの注釈の本文、sealCs = その注釈から seal-facts の規則で読んだ C（40 桁、og_commit の祖先か同じ）
- * 戻り値: { ok, reasons, rowSource }
+ * 戻り値: { ok, reasons, rowSource, ciDelta?（docs/ の外の差を ci-delta.json で外したときだけ、その道） }
  */
 export function evaluateRecord(facts) {
   const reasons = [];
   const { ogCommit, record, recordSha, progressText, isAncestor, sealExit } = facts;
   const nonDocsDiff = blockingNonDocsDiff(facts.nonDocsDiff);
+  let deltaPath = null;
   if (!SHA40.test(String(ogCommit ?? ''))) reasons.push(`og_commit が 40 桁の sha ではありません: ${ogCommit}`);
   if (!SHA64.test(String(recordSha ?? ''))) reasons.push(`記録の sha256 が不正です: ${recordSha}`);
   reasons.push(...recordContentProblems(record));
@@ -256,14 +353,24 @@ export function evaluateRecord(facts) {
   if (SHA40.test(rec) && rec !== ogCommit) {
     if (isAncestor !== true) reasons.push(`記録の commit ${rec.slice(0, 12)} が og_commit ${String(ogCommit).slice(0, 12)} の祖先ではありません`);
     if (!Array.isArray(nonDocsDiff)) reasons.push('記録の commit と og_commit の差（docs/ の外）を確かめられませんでした');
-    else if (nonDocsDiff.length > 0) reasons.push(`記録の commit と og_commit の差に docs/ の外があります: ${nonDocsDiff.slice(0, 5).join(' ')}${nonDocsDiff.length > 5 ? ' …' : ''}`);
+    else if (nonDocsDiff.length > 0) {
+      // E の木の ci-delta.json がこの差をちょうど名指すときだけ外す（ciDeltaVerdict、OG ADR-0020 D6-2 (iv)）
+      const cd = facts.ciDelta ?? null;
+      if (cd && cd.ok === true && setEq(cd.accepted, nonDocsDiff)) deltaPath = cd.path;
+      else {
+        reasons.push(`記録の commit と og_commit の差に docs/ の外があります: ${nonDocsDiff.slice(0, 5).join(' ')}${nonDocsDiff.length > 5 ? ' …' : ''}`);
+        if (cd && cd.reason) reasons.push(cd.reason);
+      }
+    }
   }
   // 2. seal-check
   if (sealExit !== 0) reasons.push(`seal-check.sh --no-dist ${rec.slice(0, 12) || '?'} ${String(ogCommit).slice(0, 12)} が exit 0 ではありません（${sealExit ?? '回せない'}）`);
   // 4. PROGRESS の行と一致（無ければ受け入れのタグの注釈・略した名前 + seal-facts の C、ilust-sup-followup-01）
   const m = matchRecordRow({ rec, recordSha, progressText, tagTexts: facts.tagTexts ?? [], sealCs: facts.sealCs ?? [] });
   if (!m.ok) reasons.push(m.reason);
-  return { ok: reasons.length === 0, reasons, rowSource: m.source };
+  const out = { ok: reasons.length === 0, reasons, rowSource: m.source };
+  if (deltaPath) out.ciDelta = deltaPath;
+  return out;
 }
 
 function git(cwd, args, { allowFail = false } = {}) {
@@ -322,7 +429,30 @@ function gitFacts(ogDir, recCommit, ogCommit) {
     const d = git(ogDir, ['diff', '--name-only', recCommit, ogCommit, '--', '.', ':!docs'], { allowFail: true });
     nonDocsDiff = d === null ? null : d.split('\n').filter(Boolean);
   }
-  return { progressText, tagTexts, sealCs, isAncestor, nonDocsDiff };
+  const ciDelta = isAncestor === true && recCommit !== ogCommit && (blockingNonDocsDiff(nonDocsDiff)?.length ?? 0) > 0 ? ciDeltaFacts(ogDir, recCommit, ogCommit, nonDocsDiff) : null;
+  return { progressText, tagTexts, sealCs, isAncestor, nonDocsDiff, ciDelta };
+}
+
+/**
+ * og_commit の木の docs/progress/<ms>/ci-delta.json を全部読み、E^ と C..E^ の差を git で取って ciDeltaVerdict に渡す（読むだけ）。
+ * 戻り値は ciDeltaVerdict の戻り値。
+ */
+export function ciDeltaFacts(ogDir, recCommit, ogCommit, nonDocsDiff) {
+  const listed = git(ogDir, ['ls-tree', '-r', '--name-only', ogCommit, '--', 'docs/progress'], { allowFail: true }) ?? '';
+  const deltas = listed
+    .split('\n')
+    .filter((p) => CI_DELTA_FILE_RE.test(p))
+    .map((p) => ({ path: p, text: git(ogDir, ['show', `${ogCommit}:${p}`], { allowFail: true }) ?? '' }));
+  const eParent = (git(ogDir, ['rev-parse', '--verify', '--quiet', `${ogCommit}^1`], { allowFail: true }) ?? '').trim() || null;
+  let parentNonDocsDiff = null;
+  if (eParent && SHA40.test(eParent)) {
+    if (eParent === recCommit) parentNonDocsDiff = [];
+    else if (spawnSync('git', ['-C', ogDir, 'merge-base', '--is-ancestor', recCommit, eParent]).status === 0) {
+      const d = git(ogDir, ['diff', '--name-only', recCommit, eParent, '--', '.', ':!docs'], { allowFail: true });
+      parentNonDocsDiff = d === null ? null : d.split('\n').filter(Boolean);
+    }
+  }
+  return ciDeltaVerdict({ rec: recCommit, ogCommit, eParent, deltas, nonDocsDiff, parentNonDocsDiff });
 }
 
 /** 記録のファイルを探す場所（--record=auto） */
@@ -353,13 +483,15 @@ export function checkRecordFile(ogDir, ogCommit, path, { sealCheck = runSealChec
     return { ok: false, path, reasons: [`記録を読めません（${path}）: ${e instanceof Error ? e.message : String(e)}`] };
   }
   const rec = String(record?.commit ?? '');
-  const facts = SHA40.test(rec) ? gitFacts(ogDir, rec, ogCommit) : { progressText: '', tagTexts: [], sealCs: [], isAncestor: false, nonDocsDiff: null };
+  const facts = SHA40.test(rec) ? gitFacts(ogDir, rec, ogCommit) : { progressText: '', tagTexts: [], sealCs: [], isAncestor: false, nonDocsDiff: null, ciDelta: null };
   // seal-check は 1 が満たされたときだけ回す（祖先でない・docs の外の差がある記録に時間を使わない）
   const pre = evaluateRecord({ ogCommit, record, recordSha, ...facts, sealExit: 0 });
   let seal = { exit: null, out: '' };
   if (pre.ok) seal = sealCheck(ogDir, rec, ogCommit);
   const verdict = pre.ok ? evaluateRecord({ ogCommit, record, recordSha, ...facts, sealExit: seal.exit }) : pre;
-  return { ok: verdict.ok, path, reasons: verdict.reasons, recordSha, recordCommit: rec, rowSource: verdict.rowSource ?? null, seal: seal.out.split('\n')[0] ?? '' };
+  const out = { ok: verdict.ok, path, reasons: verdict.reasons, recordSha, recordCommit: rec, rowSource: verdict.rowSource ?? null, seal: seal.out.split('\n')[0] ?? '' };
+  if (verdict.ciDelta) out.ciDelta = verdict.ciDelta;
+  return out;
 }
 
 /**
@@ -430,17 +562,28 @@ export function verifyBuildRecord(ogDir, ogCommit, recCommit, recSha) {
   if (!SHA64.test(String(recSha ?? ''))) reasons.push(`ogCiRecord が 64 桁の sha256 ではありません: ${recSha}`);
   if (reasons.length) return { ok: false, reasons };
   const f = gitFacts(ogDir, recCommit, ogCommit);
+  let deltaPath = null;
   if (recCommit !== ogCommit) {
     // 判定 1 と同じ名指しの一覧（NON_DOCS_ALLOWED）だけを外す（取り込みの check と safe-push の 2b で同じ規則）
+    // 残りは E の木の ci-delta.json がちょうど名指すときだけ外す（取り込みの check と同じ ciDeltaVerdict、OG ADR-0020 D6-2 (iv)）
     const blocking = blockingNonDocsDiff(f.nonDocsDiff);
     if (f.isAncestor !== true) reasons.push(`ogCiCommit ${recCommit.slice(0, 12)} が ogCommit ${ogCommit.slice(0, 12)} の祖先ではありません`);
     if (!Array.isArray(blocking)) reasons.push('ogCiCommit と ogCommit の差を確かめられませんでした');
-    else if (blocking.length > 0) reasons.push(`ogCiCommit と ogCommit の差に docs/ の外があります: ${blocking.slice(0, 5).join(' ')}`);
+    else if (blocking.length > 0) {
+      const cd = f.ciDelta ?? null;
+      if (cd && cd.ok === true && setEq(cd.accepted, blocking)) deltaPath = cd.path;
+      else {
+        reasons.push(`ogCiCommit と ogCommit の差に docs/ の外があります: ${blocking.slice(0, 5).join(' ')}`);
+        if (cd && cd.reason) reasons.push(cd.reason);
+      }
+    }
   }
   // 判定 4 と同じ照合（PROGRESS の 40 桁の行、無ければ受け入れのタグの注釈・略した名前 + seal-facts の C、ilust-sup-followup-01）
   const m = matchRecordRow({ rec: recCommit, recordSha: recSha, progressText: f.progressText, tagTexts: f.tagTexts ?? [], sealCs: f.sealCs ?? [] });
   if (!m.ok) reasons.push(`ogCommit の docs/PROGRESS.md（と受け入れのタグの注釈）に ${recCommit.slice(0, 12)}…-ci.json と sha256 ${recSha.slice(0, 12)}… の行がありません: ${m.reason}`);
-  return { ok: reasons.length === 0, reasons, rowSource: m.source };
+  const out = { ok: reasons.length === 0, reasons, rowSource: m.source };
+  if (deltaPath) out.ciDelta = deltaPath;
+  return out;
 }
 
 function parseArgs(argv) {
@@ -473,7 +616,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
   else if (mode === 'auto') r = checkAuto(ogDir, ogCommit);
   else r = checkRecordFile(ogDir, ogCommit, isAbsolute(mode) ? mode : resolve(mode));
   if (args.json) process.stdout.write(`${JSON.stringify(r)}\n`);
-  else if (r.ok) console.log(`og-ci-record: 使える: ${r.path}（sha256 ${r.recordSha}、commit ${r.recordCommit}、行の出どころ ${r.rowSource}、${r.seal}）`);
+  else if (r.ok) console.log(`og-ci-record: 使える: ${r.path}（sha256 ${r.recordSha}、commit ${r.recordCommit}、行の出どころ ${r.rowSource}${r.ciDelta ? `、docs/ の外の差は ${r.ciDelta} が名指し` : ''}、${r.seal}）`);
   else for (const x of r.reasons) console.log(`og-ci-record: 使えない: ${x}`);
   process.exit(r.ok ? 0 : 1);
 }

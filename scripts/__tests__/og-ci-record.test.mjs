@@ -13,8 +13,11 @@ import {
   annotationSealC,
   annotationSealE,
   autoCandidates,
+  CI_DELTA_PATH_SHAPES,
   checkAuto,
   checkRecordFile,
+  ciDeltaPathShapeOk,
+  ciDeltaVerdict,
   evaluateRecord,
   matchRecordRow,
   progressRecordRows,
@@ -576,6 +579,279 @@ describe('og-ci-record: bench/history.jsonl の名指しの許し（ilust-sup-fo
 
   it('偽の OG: bench/history.jsonl だけの差でも seal-check が exit 1 なら checkAuto は ng', () => {
     const { og, e } = makeOgWith(['bench/history.jsonl'], { sealExit: 1 });
+    const r = checkAuto(og, e);
+    expect(r.ok).toBe(false);
+    expect(r.reasons.join('\n')).toMatch(/seal-check.*exit 0 ではありません（1）/);
+  });
+});
+
+/**
+ * OG ADR-0020 D6-2 (iv)・ilust-sup-followup-01（cycle20）: m19-accepted の E は C の後に試験だけの 2 コミット（78a4f2db・c5fe38c4）を持つ。
+ * NON_DOCS_ALLOWED を glob で広げず、E の木の docs/progress/<ms>/ci-delta.json がその差をちょうど名指すときだけ外す。
+ * 下の一覧は M19 の実物（`git diff --name-only 4fee7ce1 2b660c68 -- . ':!docs'` と `… 4fee7ce1 2b660c68^ …`）の写し。
+ */
+const M19_C = '4fee7ce16c879d0986f8efc026ab83788cf3c407';
+const M19_E = '2b660c6824ea75ec74a9ac372939270416b03d60';
+const M19_E_PARENT = 'c5fe38c44c78903312479272160f4e297a28998c';
+const M19_C_E_PARENT_NON_DOCS = [
+  'scripts/pkg/perf-stage.mjs',
+  'scripts/pkg/seal-rehearse.sh',
+  'src/desktop/config/__tests__/pkg-m19.test.ts',
+  'src/desktop/config/__tests__/pkg-seal-rehearse-handoff.test.ts',
+];
+const M19_C_E_NON_DOCS = ['bench/history.jsonl', ...M19_C_E_PARENT_NON_DOCS];
+/** OG の封が書く ci-delta.json（og-ci-delta/1）の M19 の実物の差を写した形 */
+const ciDeltaM19 = (over = {}) => ({
+  schema: 'og-ci-delta/1',
+  milestone: 'm19',
+  c: M19_C,
+  eParent: M19_E_PARENT,
+  nonDocsPaths: [...M19_C_E_PARENT_NON_DOCS],
+  sealCheck: { command: `bash scripts/pkg/seal-check.sh --no-dist ${M19_C} ${M19_E_PARENT}`, exit: 0 },
+  enginePathDiff: 0,
+  measurePathDiff: 0,
+  ...over,
+});
+const deltaFile = (json, path = 'docs/progress/m19/ci-delta.json') => ({ path, text: `${JSON.stringify(json, null, 2)}\n` });
+const m19Facts = (over = {}) => ({
+  rec: M19_C,
+  ogCommit: M19_E,
+  eParent: M19_E_PARENT,
+  deltas: [deltaFile(ciDeltaM19())],
+  nonDocsDiff: [...M19_C_E_NON_DOCS],
+  parentNonDocsDiff: [...M19_C_E_PARENT_NON_DOCS],
+  ...over,
+});
+
+describe('og-ci-record: ci-delta.json に結んだ docs/ の外の差（ilust-sup-followup-01、OG ADR-0020 D6-2 (iv)）', () => {
+  it('NON_DOCS_ALLOWED は広げない（bench/history.jsonl の 1 つのまま）。道の形は試験だけのコミットの 3 つ', () => {
+    expect([...NON_DOCS_ALLOWED]).toEqual(['bench/history.jsonl']);
+    expect(CI_DELTA_PATH_SHAPES.length).toBe(3);
+    for (const p of [...M19_C_E_PARENT_NON_DOCS, 'e2e/m16/timelapse-large-doc-capture.spec.ts', 'src/app/__tests__/x.test.ts', 'bench/history.jsonl'])
+      expect(ciDeltaPathShapeOk(p), p).toBe(true);
+    for (const p of [
+      'src/app/main.ts',
+      'src/core/VERSION',
+      'bench/run.mjs',
+      'bench/lib/common.mjs',
+      'package.json',
+      'scripts/lib/x.mjs',
+      'scripts/pkg/*',
+      'scripts/pkg/**',
+      'e2e/../src/app/main.ts',
+      '/scripts/pkg/a.sh',
+      'scripts/pkg/',
+      'scripts/pkgx/a.sh',
+      'src/__tests__x/a.ts',
+      '',
+    ])
+      expect(ciDeltaPathShapeOk(p), p).toBe(false);
+  });
+
+  it('M19 の実物の一覧を写した ci-delta → ciDeltaVerdict ok、evaluateRecord ok（ciDelta = その道、seal-check は必須のまま）', () => {
+    const v = ciDeltaVerdict(m19Facts());
+    expect(v).toEqual({ ok: true, path: 'docs/progress/m19/ci-delta.json', accepted: M19_C_E_PARENT_NON_DOCS, reason: '' });
+    const sha = 'f'.repeat(64);
+    const base = { ogCommit: M19_E, record: goodRecord(M19_C), recordSha: sha, progressText: progressLine(M19_C, sha), isAncestor: true, nonDocsDiff: M19_C_E_NON_DOCS };
+    // ci-delta が無ければ今までどおり ng（m19-accepted の実際 = E に ci-delta.json が無い）
+    const without = evaluateRecord({ ...base, sealExit: 0 });
+    expect(without.ok).toBe(false);
+    expect(without.reasons.join('\n')).toContain('docs/ の外があります: scripts/pkg/perf-stage.mjs');
+    const r = evaluateRecord({ ...base, sealExit: 0, ciDelta: v });
+    expect(r).toEqual({ ok: true, reasons: [], rowSource: 'progress', ciDelta: 'docs/progress/m19/ci-delta.json' });
+    for (const sealExit of [1, 2, null]) {
+      const x = evaluateRecord({ ...base, sealExit, ciDelta: v });
+      expect(x.ok, String(sealExit)).toBe(false);
+      expect(x.reasons.join('\n')).toMatch(/seal-check/);
+    }
+  });
+
+  it('負の例: 一覧の外の道・src を含む差・一覧の過不足・glob・形・数値・親・c・schema → ng（理由つき）', () => {
+    const cases = [
+      // 実際の差に一覧の外の道（src の本体）
+      [{ nonDocsDiff: [...M19_C_E_NON_DOCS, 'src/app/main.ts'], parentNonDocsDiff: [...M19_C_E_PARENT_NON_DOCS, 'src/app/main.ts'] }, /一致しません.*src\/app\/main\.ts/],
+      // src を一覧に名指しても形で拒む
+      [
+        {
+          deltas: [deltaFile(ciDeltaM19({ nonDocsPaths: [...M19_C_E_PARENT_NON_DOCS, 'src/app/main.ts'] }))],
+          nonDocsDiff: [...M19_C_E_NON_DOCS, 'src/app/main.ts'],
+          parentNonDocsDiff: [...M19_C_E_PARENT_NON_DOCS, 'src/app/main.ts'],
+        },
+        /形.*src\/app\/main\.ts/,
+      ],
+      // 一覧に足りない道
+      [{ deltas: [deltaFile(ciDeltaM19({ nonDocsPaths: M19_C_E_PARENT_NON_DOCS.slice(1) }))] }, /一覧に無い: scripts\/pkg\/perf-stage\.mjs/],
+      // 一覧にある道が実際の差に無い
+      [{ deltas: [deltaFile(ciDeltaM19({ nonDocsPaths: [...M19_C_E_PARENT_NON_DOCS, 'e2e/extra.spec.ts'] }))] }, /差に無い: e2e\/extra\.spec\.ts/],
+      // glob で広げた一覧
+      [{ deltas: [deltaFile(ciDeltaM19({ nonDocsPaths: ['scripts/pkg/**', 'src/desktop/config/__tests__/*'] }))] }, /形/],
+      // E^..E が一覧の外の道を変えた
+      [{ nonDocsDiff: [...M19_C_E_NON_DOCS, 'scripts/pkg/late.sh'] }, /E\^\.\.E が一覧の外.*scripts\/pkg\/late\.sh/],
+      [{ deltas: [deltaFile(ciDeltaM19({ sealCheck: { exit: 1 } }))] }, /sealCheck\.exit/],
+      [{ deltas: [deltaFile(ciDeltaM19({ sealCheck: undefined }))] }, /sealCheck\.exit/],
+      [{ deltas: [deltaFile(ciDeltaM19({ enginePathDiff: 1 }))] }, /enginePathDiff/],
+      [{ deltas: [deltaFile(ciDeltaM19({ enginePathDiff: undefined }))] }, /enginePathDiff/],
+      [{ deltas: [deltaFile(ciDeltaM19({ measurePathDiff: 2 }))] }, /measurePathDiff/],
+      [{ deltas: [deltaFile(ciDeltaM19({ eParent: M19_C }))] }, /eParent/],
+      [{ eParent: null }, /eParent/],
+      [{ deltas: [deltaFile(ciDeltaM19({ c: 'a'.repeat(40) }))] }, /c に持つ ci-delta\.json がありません/],
+      [{ deltas: [deltaFile(ciDeltaM19({ schema: 'og-ci-delta' }))] }, /schema/],
+      [{ deltas: [deltaFile(ciDeltaM19({ nonDocsPaths: 'scripts/pkg/perf-stage.mjs' }))] }, /文字列の配列/],
+      [{ deltas: [deltaFile(ciDeltaM19({ nonDocsPaths: [...M19_C_E_PARENT_NON_DOCS, M19_C_E_PARENT_NON_DOCS[0]] }))] }, /2 回/],
+      [{ deltas: [] }, /ci-delta\.json がありません/],
+      // 決まった場所の外（docs/progress/<ms>/ の外）の ci-delta は読まない
+      [{ deltas: [deltaFile(ciDeltaM19(), 'docs/ci-delta.json')] }, /ci-delta\.json がありません/],
+      [{ deltas: [{ path: 'docs/progress/m19/ci-delta.json', text: '{ not json' }] }, /読めない/],
+      [{ deltas: [deltaFile(ciDeltaM19()), deltaFile(ciDeltaM19(), 'docs/progress/m20/ci-delta.json')] }, /2 つ以上/],
+      [{ parentNonDocsDiff: null }, /確かめられませんでした/],
+    ];
+    const sha = 'f'.repeat(64);
+    for (const [over, why] of cases) {
+      const f = m19Facts(over);
+      const v = ciDeltaVerdict(f);
+      expect(v.ok, JSON.stringify(over).slice(0, 160)).toBe(false);
+      expect(v.reason).toMatch(why);
+      expect(v.reason.startsWith('ci-delta.json: ')).toBe(true);
+      // evaluateRecord も ng で、今までの「docs/ の外があります」と ci-delta の理由の両方を出す
+      const r = evaluateRecord({
+        ogCommit: M19_E,
+        record: goodRecord(M19_C),
+        recordSha: sha,
+        progressText: progressLine(M19_C, sha),
+        isAncestor: true,
+        nonDocsDiff: f.nonDocsDiff,
+        sealExit: 0,
+        ciDelta: v,
+      });
+      expect(r.ok).toBe(false);
+      expect(r.reasons.join('\n')).toMatch(/docs\/ の外があります/);
+      expect(r.reasons.join('\n')).toMatch(why);
+    }
+  });
+
+  it('ok の ci-delta でも、渡された C..E の差と accepted が一致しなければ evaluateRecord は外さない', () => {
+    const v = ciDeltaVerdict(m19Facts());
+    const sha = 'f'.repeat(64);
+    const r = evaluateRecord({
+      ogCommit: M19_E,
+      record: goodRecord(M19_C),
+      recordSha: sha,
+      progressText: progressLine(M19_C, sha),
+      isAncestor: true,
+      nonDocsDiff: [...M19_C_E_NON_DOCS, 'src/core/VERSION'],
+      sealExit: 0,
+      ciDelta: v,
+    });
+    expect(r.ok).toBe(false);
+    expect(r.reasons.join('\n')).toContain('src/core/VERSION');
+  });
+});
+
+/**
+ * 偽の OG（本物の git）: C → D（C の後の試験だけのコミット = scripts/pkg・__tests__・e2e、dChanges）→ E（docs + bench/history.jsonl + ci-delta.json、eChanges）。
+ * ci-delta.json の nonDocsPaths は delta（既定は D の実際の差）。
+ */
+function makeOgWithDelta({ dChanges, eChanges = [], delta, withDelta = true, sealExit = 0, deltaOver = {} }) {
+  const base = mkdtempSync(join(tmpdir(), 'og-ci-record-delta-'));
+  tmpDirs.push(base);
+  const og = join(base, 'OG-nanika');
+  mkdirSync(og, { recursive: true });
+  git(og, 'init', '-b', 'main');
+  write(og, 'src/core/VERSION', '0.13.6\n');
+  write(og, 'src/app/main.ts', '// main\n');
+  write(og, 'scripts/pkg/perf-stage.mjs', '// perf-stage\n');
+  write(og, 'src/desktop/config/__tests__/pkg-m20.test.ts', '// test\n');
+  write(og, 'bench/history.jsonl', '{"scenario":"a"}\n');
+  write(og, 'scripts/pkg/seal-check.sh', `#!/usr/bin/env bash\necho "sealed (fake) $*"\nexit ${sealExit}\n`);
+  chmodSync(join(og, 'scripts/pkg/seal-check.sh'), 0o755);
+  write(og, 'docs/PROGRESS.md', '# PROGRESS\n');
+  git(og, 'add', '.');
+  git(og, 'commit', '-m', 'C');
+  const c = git(og, 'rev-parse', 'HEAD');
+  for (const f of dChanges) write(og, f, `// test-only change after C: ${f}\n`);
+  git(og, 'add', '.');
+  git(og, 'commit', '-m', 'D (test-only)');
+  const d = git(og, 'rev-parse', 'HEAD');
+  const body = `${JSON.stringify(goodRecord(c), null, 2)}\n`;
+  write(join(base, 'OG-nanika-pkg', 'logs'), `${c}-ci.json`, body);
+  const sha = sha256(body);
+  write(og, 'docs/PROGRESS.md', `# PROGRESS\n${progressLine(c, sha)}\n`);
+  write(og, 'bench/history.jsonl', '{"scenario":"a"}\n{"scenario":"b"}\n');
+  for (const f of eChanges) write(og, f, `// changed in E: ${f}\n`);
+  if (withDelta) {
+    const json = {
+      schema: 'og-ci-delta/1',
+      milestone: 'm20',
+      c,
+      eParent: d,
+      nonDocsPaths: delta ?? [...dChanges],
+      sealCheck: { command: `bash scripts/pkg/seal-check.sh --no-dist ${c} ${d}`, exit: 0 },
+      enginePathDiff: 0,
+      measurePathDiff: 0,
+      ...deltaOver,
+    };
+    write(og, 'docs/progress/m20/ci-delta.json', `${JSON.stringify(json, null, 2)}\n`);
+  }
+  git(og, 'add', '.');
+  git(og, 'commit', '-m', 'E (docs + history + ci-delta)');
+  const e = git(og, 'rev-parse', 'HEAD');
+  return { og, c, d, e, sha };
+}
+
+describe('og-ci-record: 偽の OG の ci-delta.json（本物の git、ilust-sup-followup-01、OG ADR-0020 D6-2 (iv)）', () => {
+  const TEST_ONLY = ['scripts/pkg/perf-stage.mjs', 'src/desktop/config/__tests__/pkg-m20.test.ts', 'e2e/m20/acceptance.spec.ts'];
+
+  it('C → 試験だけの D → E（ci-delta.json あり）: checkAuto と verify-build（safe-push の 2b）の両方で ok、seal-check を 1 回回す', () => {
+    const { og, c, e, sha } = makeOgWithDelta({ dChanges: TEST_ONLY });
+    let sealed = 0;
+    const r = checkAuto(og, e, {
+      sealCheck: () => {
+        sealed++;
+        return { exit: 0, out: 'sealed (fake)' };
+      },
+    });
+    expect(r.reasons).toEqual([]);
+    expect(r).toMatchObject({ ok: true, recordCommit: c, recordSha: sha, rowSource: 'progress', ciDelta: 'docs/progress/m20/ci-delta.json' });
+    expect(sealed).toBe(1);
+    expect(verifyBuildRecord(og, e, c, sha)).toEqual({ ok: true, reasons: [], rowSource: 'progress', ciDelta: 'docs/progress/m20/ci-delta.json' });
+  });
+
+  it('ci-delta.json が無い E（m19-accepted の形）→ ng（今までどおり全 ci に落ちる）', () => {
+    const { og, c, e, sha } = makeOgWithDelta({ dChanges: TEST_ONLY, withDelta: false });
+    const r = checkAuto(og, e);
+    expect(r.ok).toBe(false);
+    expect(r.reasons.join('\n')).toContain('docs/ の外があります: e2e/m20/acceptance.spec.ts');
+    expect(r.reasons.join('\n')).toMatch(/ci-delta\.json がありません/);
+    expect(verifyBuildRecord(og, e, c, sha).ok).toBe(false);
+  });
+
+  it('負の例（本物の git）: D が src の本体を変える・一覧が足りない・一覧の外の道を E で変える・seal-check exit 1・enginePathDiff 1 → ng', () => {
+    const cases = [
+      [{ dChanges: [...TEST_ONLY, 'src/app/main.ts'] }, /形.*src\/app\/main\.ts/],
+      [{ dChanges: TEST_ONLY, delta: TEST_ONLY.slice(1) }, /一覧に無い: scripts\/pkg\/perf-stage\.mjs/],
+      [{ dChanges: TEST_ONLY, delta: [...TEST_ONLY, 'e2e/m20/other.spec.ts'] }, /差に無い: e2e\/m20\/other\.spec\.ts/],
+      [{ dChanges: TEST_ONLY, eChanges: ['scripts/pkg/late.sh'] }, /E\^\.\.E が一覧の外.*scripts\/pkg\/late\.sh/],
+      [{ dChanges: TEST_ONLY, deltaOver: { enginePathDiff: 1 } }, /enginePathDiff/],
+      [{ dChanges: TEST_ONLY, deltaOver: { nonDocsPaths: ['scripts/pkg/*', 'src/desktop/config/__tests__/*', 'e2e/**'] } }, /形/],
+    ];
+    for (const [opt, why] of cases) {
+      const { og, c, e, sha } = makeOgWithDelta(opt);
+      let sealed = 0;
+      const r = checkAuto(og, e, {
+        sealCheck: () => {
+          sealed++;
+          return { exit: 0, out: '' };
+        },
+      });
+      expect(r.ok, JSON.stringify(opt)).toBe(false);
+      expect(r.reasons.join('\n')).toMatch(why);
+      expect(sealed, 'seal-check is not run when the delta is refused').toBe(0);
+      const v = verifyBuildRecord(og, e, c, sha);
+      expect(v.ok).toBe(false);
+      expect(v.reasons.join('\n')).toMatch(why);
+    }
+    // seal-check が exit 1 なら ci-delta が正しくても ng（sealExit === 0 は必須のまま）
+    const { og, e } = makeOgWithDelta({ dChanges: TEST_ONLY, sealExit: 1 });
     const r = checkAuto(og, e);
     expect(r.ok).toBe(false);
     expect(r.reasons.join('\n')).toMatch(/seal-check.*exit 0 ではありません（1）/);
