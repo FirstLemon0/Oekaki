@@ -569,6 +569,142 @@ describe('tools/safe-push.sh の STOP の行の mode（ilust-sup-followup-04、A
   });
 });
 
+/** safe-push の記録の行（TAB 区切り）を { kind, head, key: value } に読む（OG の check-ilust-remote.mjs の parseSafePushLog と同じ読み方） */
+function readSafePushLog(work) {
+  const text = readFileSync(git(work, 'rev-parse', '--path-format=absolute', '--git-path', 'safe-push.log'), 'utf8');
+  return text
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      const cols = line.split('\t');
+      const kv = {};
+      for (const c of cols.slice(3)) {
+        const i = c.indexOf('=');
+        if (i > 0) kv[c.slice(0, i)] = c.slice(i + 1);
+      }
+      return { kind: cols[1], head: cols[2], cols: cols.length, ...kv };
+    });
+}
+
+/** 偽の e2e: PLAYWRIGHT_JSON_OUTPUT_NAME に Playwright の JSON の形を書いて exit する（node の 1 行） */
+const fakeE2e = (report, exit) =>
+  `node -e 'require("fs").writeFileSync(process.env.PLAYWRIGHT_JSON_OUTPUT_NAME, process.argv[1]); process.exit(${exit})' '${JSON.stringify(report).replaceAll("'", "'\\''")}'`;
+
+describe('tools/safe-push.sh の e2e の記録と STOP の spec の名（ilust-sup-followup-05 (a)、OG ADR-0020 D6-2 (v)）', () => {
+  /** 作業の clone に tools/e2e-first-failure.mjs を足す（safe-push はコミットのツリーの道具を使う） */
+  function withHelper(work) {
+    copyFileSync(join(ROOT, 'tools', 'e2e-first-failure.mjs'), join(work, 'tools', 'e2e-first-failure.mjs'));
+    git(work, 'add', 'tools/e2e-first-failure.mjs');
+    git(work, 'commit', '-q', '-m', 'e2e-first-failure');
+  }
+  const failing = {
+    suites: [
+      {
+        title: '20-og-embed-idb-names.spec.ts',
+        file: '20-og-embed-idb-names.spec.ts',
+        specs: [{ title: '通る', ok: true, tests: [{ projectName: 'chromium', status: 'expected' }] }],
+        suites: [
+          {
+            title: 'embed-settings',
+            file: '20-og-embed-idb-names.spec.ts',
+            specs: [{ title: '揺れた\t題\nの例', ok: false, tests: [{ projectName: 'chromium', status: 'unexpected' }] }],
+          },
+        ],
+      },
+    ],
+    errors: [],
+  };
+  const FAILED = '20-og-embed-idb-names.spec.ts::embed-settings › 揺れた 題 の例';
+
+  it('e2e が落ちたら push せず、STOP の行に failed=<最初に落ちた spec::題> と e2eReport=<.git/safe-push-e2e-<UTC>.json>（TAB と改行は空白、列は崩れない）', () => {
+    const { origin, work } = setup();
+    withHelper(work);
+    const before = originHead(origin);
+    commitFile(work, 'a.txt');
+    const r = safePush(work, 'true', { SAFE_PUSH_TEST_E2E: fakeE2e(failing, 1) });
+    expect(r.code).not.toBe(0);
+    expect(r.out).toMatch(/e2e（--retries=0、SW を有効にした project を含む）が失敗しました/);
+    expect(r.out).toContain(`failed=${FAILED}`);
+    expect(originHead(origin)).toBe(before);
+    const rows = readSafePushLog(work);
+    expect(rows).toHaveLength(1);
+    const row = rows[0];
+    expect(row).toMatchObject({ kind: 'STOP', head: git(work, 'rev-parse', 'HEAD'), mode: 'PUSH', failed: FAILED });
+    expect(row.cols).toBe(7); // 時刻・STOP・HEAD・mode・reason・failed・e2eReport
+    expect(row.reason).toMatch(/e2e.*失敗しました/);
+    expect(row.e2eReport).toMatch(/^\.git\/safe-push-e2e-\d{8}T\d{6}Z\.json$/);
+    // 記録の JSON は残る（落ちた spec の名前を後から読める）
+    expect(JSON.parse(readFileSync(join(work, row.e2eReport), 'utf8'))).toEqual(failing);
+  });
+
+  it('dry-run でも同じ（mode=DRY-RUN の STOP に failed= と e2eReport=）', () => {
+    const { work } = setup();
+    withHelper(work);
+    commitFile(work, 'a.txt');
+    const r = spawnSync('bash', ['tools/safe-push.sh', '--dry-run'], {
+      cwd: work,
+      env: { ...GIT_ENV, SAFE_PUSH_TEST_CHECKS: 'true', SAFE_PUSH_TEST_E2E: fakeE2e(failing, 1), SEICHOTSU_DEPLOY_URL: '' },
+      encoding: 'utf8',
+    });
+    expect(r.status).not.toBe(0);
+    const row = readSafePushLog(work).at(-1);
+    expect(row).toMatchObject({ kind: 'STOP', mode: 'DRY-RUN', failed: FAILED });
+    expect(row.e2eReport).toMatch(/^\.git\/safe-push-e2e-/);
+  });
+
+  it('記録の JSON が書かれないまま落ちたら failed=unknown と e2eReport=<道>（書かれていない）', () => {
+    const { origin, work } = setup();
+    withHelper(work);
+    const before = originHead(origin);
+    commitFile(work, 'a.txt');
+    const r = safePush(work, 'true', { SAFE_PUSH_TEST_E2E: 'echo "webServer failed" >&2; exit 1' });
+    expect(r.code).not.toBe(0);
+    expect(originHead(origin)).toBe(before);
+    const row = readSafePushLog(work).at(-1);
+    expect(row).toMatchObject({ kind: 'STOP', failed: 'unknown' });
+    expect(row.e2eReport).toMatch(/^\.git\/safe-push-e2e-\d{8}T\d{6}Z\.json（書かれていない）$/);
+  });
+
+  it('e2e が通れば push し、記録の JSON の道を出す（PUSHED の行に failed は無い）', () => {
+    const { origin, work } = setup();
+    withHelper(work);
+    commitFile(work, 'a.txt');
+    const ok = { suites: [{ title: 'a.spec.ts', file: 'a.spec.ts', specs: [{ title: 'ok', ok: true, tests: [{ projectName: 'chromium', status: 'expected' }] }] }], errors: [] };
+    const r = safePush(work, 'true', { SAFE_PUSH_TEST_E2E: fakeE2e(ok, 0) });
+    expect(r.out).toMatch(/e2e の記録 \.git\/safe-push-e2e-\d{8}T\d{6}Z\.json/);
+    expect(r.code).toBe(0);
+    expect(originHead(origin)).toBe(git(work, 'rev-parse', 'HEAD'));
+    const row = readSafePushLog(work).at(-1);
+    expect(row.kind).toBe('PUSHED');
+    expect(row.checks).toBe('test-override,e2e(test)');
+    expect(row.failed).toBeUndefined();
+  });
+
+  it('SAFE_PUSH_TEST_E2E は SAFE_PUSH_TEST_CHECKS なしでは使えず、origin が GitHub だと使えない', () => {
+    const { work } = setup();
+    commitFile(work, 'a.txt');
+    let r = spawnSync('bash', ['tools/safe-push.sh'], { cwd: work, env: { ...GIT_ENV, SAFE_PUSH_TEST_E2E: 'exit 0', SEICHOTSU_DEPLOY_URL: '' }, encoding: 'utf8' });
+    expect(r.status).not.toBe(0);
+    expect(`${r.stdout}${r.stderr}`).toMatch(/SAFE_PUSH_TEST_CHECKS と一緒にだけ/);
+    git(work, 'remote', 'set-url', 'origin', 'https://github.com/example/never-used.git');
+    r = spawnSync('bash', ['tools/safe-push.sh'], {
+      cwd: work,
+      env: { ...GIT_ENV, SAFE_PUSH_TEST_CHECKS: 'true', SAFE_PUSH_TEST_E2E: 'exit 0', SEICHOTSU_DEPLOY_URL: '' },
+      encoding: 'utf8',
+    });
+    expect(r.status).not.toBe(0);
+    expect(`${r.stdout}${r.stderr}`).toMatch(/ローカルのパスのときだけ/);
+  });
+
+  it('本物の手順 3 は --reporter=line,json で e2e を回し、run_e2e が PLAYWRIGHT_JSON_OUTPUT_NAME を渡す', () => {
+    const text = readFileSync(join(ROOT, 'tools', 'safe-push.sh'), 'utf8');
+    expect(text).toMatch(/run_e2e npx playwright test --retries=0 --reporter=line,json/);
+    expect(text).toMatch(/PLAYWRIGHT_JSON_OUTPUT_NAME="\$\{abs\}"/);
+    expect(text).toMatch(/safe-push-e2e-\$\(date -u \+%Y%m%dT%H%M%SZ\)\.json/);
+    expect(text).toMatch(/"failed=\$\{first:-unknown\}" "e2eReport=\$\{rel\}"/);
+  });
+});
+
 describe('tools/safe-push.sh 手順 5 の待ち（ilust-sup-followup-09）', () => {
   it('壁時計で区切る（コメントと実装が 600 秒で一致し、30 回の固定の繰り返しが無い）', () => {
     const text = readFileSync(join(ROOT, 'tools', 'safe-push.sh'), 'utf8');

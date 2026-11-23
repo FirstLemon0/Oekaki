@@ -107,7 +107,11 @@ main への push は `tools/safe-push.sh` だけで行います（2026-10-19 の
      （`recorded` なら `ogCiCommit` が `ogCommit` の祖先で差が `docs/` だけ（名指しの許し `bench/history.jsonl` と、`ogCommit` の木の `docs/progress/<ms>/ci-delta.json` がちょうど名指す試験だけの差は除く、下の段落）・`ogCiRecord` が `ogCommit` の `docs/PROGRESS.md` の行（無ければ受け入れのタグの注釈・略した名前 + seal-facts の C、下の段落）と一致することを OG の git で確かめ直す）、
      新しい `ogCommit` が origin/main の `ogCommit` の子孫（OG のリポジトリ `../OG-nanika` か `OG_DIR` で `git merge-base --is-ancestor`。版の後退を拒む）
    - port 4173 が空き、`npm ci`、`npm run build`、`node scripts/check-bundle.mjs`、`node scripts/check-paint-artifact.mjs`、`npm test`、
-     `CI=1 npx playwright test --retries=0`（Service Worker を有効にした project を含む）がすべて緑
+     `CI=1 npx playwright test --retries=0 --reporter=line,json`（Service Worker を有効にした project を含む）がすべて緑。
+     e2e の JSON の記録は `.git/safe-push-e2e-<UTC>.json` に残り、e2e で止めたときは `.git/safe-push.log` の STOP の行に
+     `failed=<最初に落ちた spec::題>`（`tools/e2e-first-failure.mjs`）と `e2eReport=<その JSON の道>` が付く
+     （OG ADR-0020 D6-2 (v)、cycle20 ilust-sup-followup-05 (a): 2026-11-19 の 1 回目の STOP は落ちた spec の名前が残らなかった）。
+     止まったら、その行をそのまま会話に貼ってください（OG の `check-ilust-remote.mjs` も押された sha の前の STOP を note に出す）
 3. push の後、配信中の `/BUILD_ID`（ビルドしたコミット）が HEAD と一致するまで壁時計で最大 600 秒（`SAFE_PUSH_DEPLOY_WAIT_S`）待ち、
    配信中の `/paint/BUILD.json` の buildId と HEAD の `public/paint/BUILD.json` の一致（`paint_deploy=match|mismatch|unknown`）とあわせて記録する。配信の URL は
    `git config seichotsu.deployUrl https://<サービス名>.onrender.com` で一度だけ設定しておく（無ければ照合は飛ばす）。

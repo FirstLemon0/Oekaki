@@ -32,9 +32,14 @@
 #      記録する（一致しなくても巻き戻さない）。配信の URL は環境変数 SEICHOTSU_DEPLOY_URL か `git config seichotsu.deployUrl`
 #      （無ければ照合は飛ばして記録だけ）
 #   記録は .git/safe-push.log（手元だけ）に 1 行ずつ追記し（止めたときは STOP の行に mode=DRY-RUN|PUSH と reason=…）、最後に要約を出す（OG の docs/progress/m8/README.md に写す）。
+#   e2e は --reporter=line,json で回し、JSON を .git/safe-push-e2e-<UTC>.json に残す。e2e で止めたときは STOP の行に
+#   failed=<最初に落ちた spec::題>（tools/e2e-first-failure.mjs）と e2eReport=<その JSON の道> を足す（OG ADR-0020 D6-2 (v)、cycle20 ilust-sup-followup-05 (a):
+#   2026-11-19 の 1 回目の STOP は落ちた spec の名前がどこにも残らなかった）。
 #
 # 試験用: SAFE_PUSH_TEST_CHECKS に手順 3 の代わりのコマンドを入れられる（origin がローカルのパスのときだけ。GitHub には使えない）。
 #   そのときだけ手順 2b の ogCi = skipped・受け入れのタグなしを警告にする（check-paint-artifact と同じ）。
+#   SAFE_PUSH_TEST_E2E（同じくローカルの origin のときだけ）は手順 3 の e2e の代わりのコマンド（PLAYWRIGHT_JSON_OUTPUT_NAME に JSON を書く偽の e2e）で、
+#   SAFE_PUSH_TEST_CHECKS の後に本物と同じ記録の道（run_e2e）で回す。
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 export CI=1
@@ -55,21 +60,43 @@ MODE=PUSH
 [ "${DRY_RUN}" = 1 ] && MODE=DRY-RUN
 # 記録の行（TAB 区切り: 時刻・STOP・HEAD の 40 字・mode=…・reason=…）。OG の check-ilust-remote.mjs の parseSafePushLog が
 # key=value として読める形にする（HEAD を短くしない）。理由の中の TAB と改行は空白にする（列を崩さない）
+# STOP_EXTRA = reason の後ろに足す key=value の列（e2e の failed= と e2eReport=。値の TAB と改行も空白にする）
+STOP_EXTRA=()
 die() {
-  local reason
+  local reason extra='' kv
   reason="$(printf '%s' "$*" | tr '\t\r\n' '   ')"
+  for kv in "${STOP_EXTRA[@]}"; do extra="${extra}"$'\t'"$(printf '%s' "${kv}" | tr '\t\r\n' '   ')"; done
   echo "safe-push: 止めました（mode=${MODE}）: $*" >&2
-  printf '%s\tSTOP\t%s\tmode=%s\treason=%s\n' "${started}" "$(git rev-parse HEAD 2>/dev/null || echo '-')" "${MODE}" "${reason}" >> "${LOG}" 2>/dev/null || true
+  [ -z "${extra}" ] || echo "safe-push: ${extra//$'\t'/ }" >&2
+  printf '%s\tSTOP\t%s\tmode=%s\treason=%s%s\n' "${started}" "$(git rev-parse HEAD 2>/dev/null || echo '-')" "${MODE}" "${reason}" "${extra}" >> "${LOG}" 2>/dev/null || true
   exit 1
+}
+
+# e2e（--retries=0）を JSON の記録つきで回す。引数 = e2e のコマンド（PLAYWRIGHT_JSON_OUTPUT_NAME に JSON を書く）。
+# 落ちたら STOP の行に failed=<最初に落ちた spec::題> と e2eReport=<.git/safe-push-e2e-<UTC>.json> を足して止める（OG ADR-0020 D6-2 (v)）
+run_e2e() {
+  local rel abs first
+  rel="$(git rev-parse --git-path "safe-push-e2e-$(date -u +%Y%m%dT%H%M%SZ).json")"
+  abs="$(git rev-parse --path-format=absolute --git-path "$(basename "${rel}")")"
+  if PLAYWRIGHT_JSON_OUTPUT_NAME="${abs}" "$@"; then
+    echo "safe-push: e2e の記録 ${rel}"
+    return 0
+  fi
+  first=""
+  if [ -f "${abs}" ] && [ -f tools/e2e-first-failure.mjs ]; then first="$(node tools/e2e-first-failure.mjs "${abs}" 2>/dev/null || true)"; fi
+  [ -f "${abs}" ] || rel="${rel}（書かれていない）"
+  STOP_EXTRA=("failed=${first:-unknown}" "e2eReport=${rel}")
+  die "e2e（--retries=0、SW を有効にした project を含む）が失敗しました"
 }
 step() { echo "== safe-push: $*"; }
 
 origin_url="$(git remote get-url origin 2>/dev/null)" || die "origin がありません"
-if [ -n "${SAFE_PUSH_TEST_CHECKS:-}" ]; then
+if [ -n "${SAFE_PUSH_TEST_CHECKS:-}" ] || [ -n "${SAFE_PUSH_TEST_E2E:-}" ]; then
   case "${origin_url}" in
     /*|file://*) ;;
-    *) die "SAFE_PUSH_TEST_CHECKS は origin がローカルのパスのときだけ使えます（${origin_url}）" ;;
+    *) die "SAFE_PUSH_TEST_CHECKS / SAFE_PUSH_TEST_E2E は origin がローカルのパスのときだけ使えます（${origin_url}）" ;;
   esac
+  [ -n "${SAFE_PUSH_TEST_CHECKS:-}" ] || die "SAFE_PUSH_TEST_E2E は SAFE_PUSH_TEST_CHECKS と一緒にだけ使えます"
 fi
 
 # 0. フック
@@ -168,6 +195,10 @@ step "3. 緑の確認"
 if [ -n "${SAFE_PUSH_TEST_CHECKS:-}" ]; then
   bash -c "${SAFE_PUSH_TEST_CHECKS}" || die "緑の確認（試験用）が失敗しました"
   checks="test-override"
+  if [ -n "${SAFE_PUSH_TEST_E2E:-}" ]; then
+    run_e2e bash -c "${SAFE_PUSH_TEST_E2E}"
+    checks="test-override,e2e(test)"
+  fi
 else
   if node -e "const s=require('net').createServer();s.once('error',()=>process.exit(1));s.listen(4173,'127.0.0.1',()=>s.close(()=>process.exit(0)))"; then :; else
     die "port 4173 が使われています（古い preview を試験に使わないよう、止めてから）"
@@ -177,7 +208,7 @@ else
   node scripts/check-bundle.mjs || die "check-bundle（初期 JS の予算・paint/ の混入）が失敗しました"
   node scripts/check-paint-artifact.mjs || die "check-paint-artifact（BUILD.json の照合）が失敗しました"
   npm test || die "vitest が失敗しました"
-  npx playwright test --retries=0 || die "e2e（--retries=0、SW を有効にした project を含む）が失敗しました"
+  run_e2e npx playwright test --retries=0 --reporter=line,json
   checks="npm-ci,build,check-bundle,check-paint-artifact,vitest,e2e(retries=0)"
 fi
 
